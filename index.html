@@ -112,20 +112,32 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <body>
 <div class="app">
 
-<div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:380px">
-  <div style="width:100%;max-width:300px;background:#fff;border:0.5px solid #e0e0da;border-radius:10px;padding:1.4rem">
-    <p style="font-size:17px;font-weight:600;margin-bottom:3px">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.4</span></p>
-    <p style="font-size:12px;color:#888;margin-bottom:1.2rem">Selecciona tu perfil</p>
-    <div style="display:flex;flex-direction:column;gap:8px">
-      <button class="btn btn-primary" onclick="login('admin')">👑 Administrador</button>
-      <button class="btn" onclick="login('staff')">👤 Staff / Recepción</button>
+<div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
+  <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.5</span></p>
+    <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
+        <input type="text" id="login-user" placeholder="usuario" autocomplete="username"
+          style="width:100%;font-size:13px;border:1px solid #CCC;border-radius:6px;padding:8px 10px"
+          onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Contraseña</label>
+        <input type="password" id="login-pass" placeholder="••••••••" autocomplete="current-password"
+          style="width:100%;font-size:13px;border:1px solid #CCC;border-radius:6px;padding:8px 10px"
+          onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div id="login-error" style="display:none;background:#FAE8E8;color:#C83232;border-radius:6px;padding:8px 10px;font-size:13px"></div>
+      <button class="btn btn-primary" onclick="doLogin()" style="padding:10px;font-size:14px;margin-top:4px">
+        Entrar
+      </button>
     </div>
   </div>
 </div>
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.4</span></p>
+    <p class="logo">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.5</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -415,7 +427,7 @@ const KR='KR',KP='KP',KH='KH',KC='KC';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbz8B7h5EidfMpRMlVrFTTDfAhpUfzqAi7UMzfXBFeC1hkg-QwftKNQMUzyfVKPeDkBk/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzF29BvFygv3tDi5isJQCs4DIEwNOte3QEans0Aq7BniJW420kx2xlnNXxeociDET1b/exec';
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos'};
 
 // In-memory cache (loaded once at login)
@@ -430,12 +442,11 @@ const sd=(k,v)=>{
   CACHE[k]=v;
   const sheet=SHEET_MAP[k];
   if(!sheet){console.warn('sd: no sheet for key',k);return;}
-  console.log('sd() firing POST →',sheet,'rows:',(Array.isArray(v)?v.length:1));
   fetch(SCRIPT_URL,{
     method:'POST',
     mode:'no-cors',
     body:JSON.stringify({action:'write',sheet,data:v})
-  }).then(r=>{console.log('✓ POST sent to Sheets:',sheet);})
+  })
     .catch(e=>console.error('✗ Sheets fetch error:',sheet,e));
 };
 
@@ -485,31 +496,48 @@ const CLOUDBEDS_RES=[
 
 function today(){return new Date().toISOString().split('T')[0]}
 
-function login(r){
-  CU=r;
+function doLogin(){
+  const usuario=document.getElementById('login-user').value.trim();
+  const password=document.getElementById('login-pass').value;
+  const errBox=document.getElementById('login-error');
+  if(!usuario||!password){errBox.textContent='Ingresa usuario y contraseña';errBox.style.display='block';return;}
+  errBox.style.display='none';
+  const btn=document.querySelector('#login-screen .btn-primary');
+  btn.textContent='Verificando...';btn.disabled=true;
+  fetch(SCRIPT_URL+'?action=login&usuario='+encodeURIComponent(usuario)+'&password='+encodeURIComponent(password))
+  .then(r=>r.json())
+  .then(res=>{
+    btn.textContent='Entrar';btn.disabled=false;
+    if(res.ok&&res.data&&res.data.success){
+      login(res.data.rol||'staff');
+    } else {
+      errBox.textContent=(res.data&&res.data.error)||'Usuario o contraseña incorrectos';
+      errBox.style.display='block';
+    }
+  }).catch(e=>{
+    btn.textContent='Entrar';btn.disabled=false;
+    errBox.textContent='Error de conexión. Intenta de nuevo.';
+    errBox.style.display='block';
+  });
+}
+
+function login(rol){
+  CU=rol;
   document.getElementById('login-screen').style.display='none';
-  // Show loading state
   document.getElementById('main-screen').style.display='block';
-  document.getElementById('ulabel').textContent=r==='admin'?'Admin':'Staff';
-  if(r!=='admin')document.getElementById('tab-admin').style.display='none';
+  document.getElementById('ulabel').textContent=rol==='admin'?'Admin':'Staff';
+  if(rol!=='admin')document.getElementById('tab-admin').style.display='none';
   showAlert('Cargando datos...','info');
   loadAllSheets().then(()=>{
-    // Initialize defaults if sheets are empty
     if(!gd(KP).length)sd(KP,DP);
     if(!gd(KH).length)sd(KH,DEFAULT_HABS);
-    // Only seed with demo data if sheet is completely empty
-    const saved=gd(KR,[]);
-    if(!saved.length){
-      // First time: load demo Cloudbeds reservations
-      sd(KR,[...CLOUDBEDS_RES]);
-    }
+    if(!gd(KR).length)sd(KR,[...CLOUDBEDS_RES]);
     document.getElementById('c-fecha').value=today();
     document.getElementById('r-antifecha').value=today();
     populateAll();renderDash();
     showAlert('Datos cargados correctamente','success');
-  }).catch(e=>{
-    console.error(e);
-    showAlert('Error conectando con Google Sheets. Trabajando sin conexión.','error');
+  }).catch(()=>{
+    showAlert('Error conectando con Google Sheets','error');
     if(!gd(KP).length)sd(KP,DP);
     if(!gd(KH).length)sd(KH,DEFAULT_HABS);
     document.getElementById('c-fecha').value=today();
@@ -517,6 +545,7 @@ function login(r){
     populateAll();renderDash();
   });
 }
+
 function logout(){CU=null;document.getElementById('main-screen').style.display='none';document.getElementById('login-screen').style.display='block'}
 
 function populateAll(){
