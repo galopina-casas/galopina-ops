@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -642,7 +642,7 @@ function calcAnticipoM(){
 
 function showNuevaRes(){
   const habs=gd(KH);
-  document.getElementById('r-hab').innerHTML=habs.map(h=>`<option value="${h.nombre}">${h.nombre} · ${fmt(h.precio)}/noche</option>`).join('');
+  document.getElementById('r-hab').innerHTML=habs.map(h=>`<option value="${h.nombre}">${h.nombre}</option>`).join('');
   document.getElementById('res-form-title').textContent='Nueva reserva manual';
   ['r-huesped','r-tarifanoche','r-ci','r-co','r-saldfecha'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('r-desc').value='0';document.getElementById('r-antipct').value='50';
@@ -1078,14 +1078,133 @@ function handleFile(input){
   };
   if(file.name.endsWith('.csv'))reader.readAsText(file);else reader.readAsBinaryString(file);
 }
-function processImport(rows,preview){
-  const nk=['guest name','nombre','guest','name'],rk=['room','habitación','habitacion','room name'],ik=['arrival','check-in','checkin'],ok=['departure','check-out','checkout'];
-  const fv=(row,keys)=>{const k=keys.find(k=>row[k]!==undefined&&row[k]!=='');return k?row[k]:''};
-  const imp=rows.filter(r=>fv(r,nk).length>1).map(r=>({id:'CB-IMP-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),nombre:fv(r,nk),pais:'',habitacion:fv(r,rk)||'Sin asignar',checkin:fv(r,ik)||'',checkout:fv(r,ok)||'',origen:fv(r,['source','origen','channel'])||'directo',estado:'confirmada',fuente:'cloudbeds',base:0,ish:0,iva:0,total:0,anticipo:0,antiPct:50,antiFecha:'',antiPago:'',saldo:0,saldFecha:'',saldPago:''}));
-  if(!imp.length){preview.innerHTML='<p style="color:#A32D2D">No se encontraron reservas válidas.</p>';return}
-  const existing=gd(KR),nuevas=imp.filter(r=>!existing.some(e=>e.nombre===r.nombre&&e.checkin===r.checkin));
-  preview.innerHTML=`<div style="background:#EAF3DE;border:0.5px solid #97C459;border-radius:6px;padding:9px 12px;margin-bottom:10px"><p style="font-size:12px;font-weight:600;color:#3B6D11">${imp.length} encontradas · ${nuevas.length} nuevas</p></div>${nuevas.slice(0,8).map(r=>`<div class="res-item"><div><p style="font-size:13px;font-weight:500">${r.nombre}</p><p style="font-size:11px;color:#888">${r.habitacion} · ${fmtDate(r.checkin)} → ${fmtDate(r.checkout)}</p></div><span class="badge b-cb">Cloudbeds</span></div>`).join('')}<div style="margin-top:10px"><button class="btn btn-primary" onclick="confirmImport(${JSON.stringify(nuevas).replace(/"/g,'&quot;')})">✓ Importar ${nuevas.length}</button></div>`;
+function processImport(rows, preview){
+  // Map Cloudbeds Spanish column headers to app fields
+  const parseDate=d=>{
+    if(!d)return '';
+    // DD/MM/YYYY -> YYYY-MM-DD
+    const m=String(d).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if(m)return m[3]+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');
+    return String(d).split('T')[0];
+  };
+  const mapOrigen=f=>{
+    if(!f)return 'directo';
+    const fl=f.toLowerCase();
+    if(fl.includes('booking'))return 'booking';
+    if(fl.includes('airbnb'))return 'airbnb';
+    if(fl.includes('expedia'))return 'expedia';
+    if(fl.includes('sitio web')||fl.includes('motor'))return 'directo';
+    return 'directo';
+  };
+  const mapEstado=s=>{
+    if(!s)return 'confirmada';
+    const sl=String(s).toLowerCase().trim();
+    if(sl.includes('checked out')||sl.includes('check out'))return 'checkout';
+    if(sl.includes('checked in')||sl.includes('check in')||sl.includes('in-house'))return 'checkin';
+    if(sl.includes('cancel'))return 'cancelado';
+    return 'confirmada';
+  };
+  const mapHab=nombre=>{
+    // Match to catalog rooms by keyword
+    const habs=gd(KH);
+    const n=(nombre||'').toUpperCase();
+    const match=habs.find(h=>n.includes(h.nombre.toUpperCase().replace('SUITE ',''))||h.nombre.toUpperCase().includes(n));
+    return match?match.nombre:(nombre||'Sin asignar');
+  };
+
+  const existing=gd(KR);
+  const existingIds=new Set(existing.map(r=>r.id));
+  const nuevas=[];
+  const errores=[];
+
+  rows.forEach((row,i)=>{
+    try{
+      // Support both lowercase (CSV) and original case (XLSX)
+      const get=keys=>{
+        for(const k of keys){
+          const v=row[k]??row[k.toLowerCase()]??row[k.toUpperCase()];
+          if(v!==undefined&&v!==''&&v!==null)return v;
+        }
+        return '';
+      };
+      const cbId=get(['Número de la reserva','numero de la reserva','reservation id']);
+      if(!cbId){errores.push(`Fila ${i+2}: sin número de reserva`);return;}
+      const id='CB-'+String(cbId).trim();
+      if(existingIds.has(id)){return;} // skip duplicates
+
+      const nombre=get(['Nombre','nombre','guest name']);
+      if(!nombre){errores.push(`Fila ${i+2}: sin nombre`);return;}
+
+      const habRaw=get(['Categoría de habitación','categoria de habitacion','room type','Número de habitación','numero de habitacion']);
+      const habitacion=mapHab(habRaw);
+
+      const ci=parseDate(get(['Fecha de llegada','fecha de llegada','arrival','check-in']));
+      const co=parseDate(get(['Salida','salida','departure','check-out']));
+      const noches=parseInt(get(['Noches','noches','nights']))||0;
+
+      const tarifaTotal=parseFloat(get(['Total de la habitación','total de la habitacion','room total']))||0;
+      const totalGeneral=parseFloat(get(['Total general','total general','grand total']))||0;
+      const deposito=parseFloat(get(['Depósito','deposito','deposit','Monto pagado','monto pagado']))||0;
+      const saldoPend=parseFloat(get(['Saldo pendiente','saldo pendiente','balance due']))||0;
+
+      // Fiscal breakdown: price already includes ISH+IVA
+      // base = tarifaTotal / 1.205, ish = base*0.045, iva = base*0.16
+      const base=Math.round(tarifaTotal/1.205*100)/100;
+      const ish=Math.round(base*0.045*100)/100;
+      const iva=Math.round(base*0.16*100)/100;
+
+      const origen=mapOrigen(get(['Fuente','fuente','source']));
+      const estado=mapEstado(get(['Estado ','estado ','Estado','estado','status']));
+      const pais=get(['País','pais','país','country'])||'';
+      const email=get(['Correo electrónico','correo electronico','email'])||'';
+      const tel=(get(['Teléfono','telefono','phone'])||'').trim();
+
+      nuevas.push({
+        id, cbId:String(cbId).trim(),
+        nombre:String(nombre).trim(),
+        email:String(email).trim(),
+        tel:String(tel).trim(),
+        pais:String(pais).trim(),
+        habitacion,
+        checkin:ci, checkout:co, noches,
+        origen, estado, fuente:'cloudbeds',
+        tarifaNoche:noches>0?Math.round(tarifaTotal/noches):tarifaTotal,
+        base, ish, iva,
+        total:tarifaTotal,
+        anticipo:deposito,
+        antiFecha:'', antiPago:'',
+        saldo:saldoPend,
+        saldFecha:'', saldPago:'',
+        descuento:0, pagos:[]
+      });
+    }catch(e){errores.push(`Fila ${i+2}: ${e.message}`);}
+  });
+
+  if(!nuevas.length&&!errores.length){
+    preview.innerHTML='<p style="color:#888">No se encontraron reservas nuevas (todas ya importadas).</p>';return;
+  }
+
+  let html=`<div style="margin-bottom:10px;font-size:13px">
+    <strong>${nuevas.length}</strong> reserva(s) nuevas encontradas.
+    ${errores.length?`<span style="color:#A32D2D"> ${errores.length} error(es).</span>`:''}
+  </div>`;
+
+  if(nuevas.length){
+    html+=`<div style="margin-bottom:10px">
+      ${nuevas.map(r=>`<div style="background:#F5F4F0;border-radius:6px;padding:8px 12px;margin-bottom:6px;font-size:13px">
+        <strong>${r.nombre}</strong> <span style="color:#888;font-size:11px">CB: ${r.cbId}</span><br>
+        <span class="tag">${r.habitacion}</span> ${r.checkin} → ${r.checkout} · ${r.noches} noches<br>
+        Total: <strong>${fmt(r.total)}</strong> · Anticipo: ${fmt(r.anticipo)} · Saldo: <span style="color:#C83232">${fmt(r.saldo)}</span>
+      </div>`).join('')}
+    </div>
+    <button class="btn btn-primary" onclick="confirmImport(${JSON.stringify(nuevas).replace(/"/g,'&quot;')})">
+      ✓ Importar ${nuevas.length} reserva(s)
+    </button>`;
+  }
+  if(errores.length) html+=`<p style="color:#A32D2D;font-size:12px;margin-top:8px">${errores.join('<br>')}</p>`;
+  preview.innerHTML=html;
 }
+
 function confirmImport(n){sd(KR,[...gd(KR),...n]);showTab('reservas');showAlert(n.length+' reservas importadas')}
 
 function showAlert(msg,type='success'){
