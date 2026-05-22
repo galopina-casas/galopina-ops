@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hacienda Operaciones v7</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f8f8f6;color:#111;padding:1rem}
+.app{max-width:780px;margin:0 auto;padding:1rem 0}
+.header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem}
+.logo{font-size:17px;font-weight:600}.logo em{color:#1D9E75;font-style:normal}
+.ver{font-size:10px;background:#f0f0ec;border:0.5px solid #e0e0da;border-radius:4px;padding:2px 7px;color:#999;margin-left:6px;vertical-align:middle}
+.ubadge{font-size:12px;background:#f5f5f3;border:0.5px solid #e0e0da;border-radius:6px;padding:4px 10px;color:#666;cursor:pointer}
+.tabs{display:flex;gap:2px;margin-bottom:1.2rem;border-bottom:0.5px solid #e0e0da;overflow-x:auto}
+.tab{font-size:13px;padding:7px 13px;border:none;background:none;color:#888;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;white-space:nowrap}
+.tab.active{color:#1D9E75;border-bottom-color:#1D9E75;font-weight:500}
+.sec{display:none}.sec.active{display:block}
+.card{background:#fff;border:0.5px solid #e0e0da;border-radius:10px;padding:.9rem 1.1rem;margin-bottom:.9rem}
+.ctitle{font-size:11px;font-weight:600;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.frow.full{grid-template-columns:1fr}.frow.three{grid-template-columns:1fr 1fr 1fr}.frow.four{grid-template-columns:1fr 1fr 1fr 1fr}
+label{font-size:11px;color:#888;display:block;margin-bottom:3px}
+input,select,textarea{width:100%;font-size:13px;border:0.5px solid #d5d5cf;border-radius:6px;padding:6px 8px;background:#fff;color:#111;outline:none}
+input:focus,select:focus{border-color:#1D9E75}
+input[readonly]{background:#f5f5f3;color:#555}
+.btn{padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;border:0.5px solid #d5d5cf;background:#fff;color:#111}
+.btn-primary{background:#1D9E75;color:#fff;border-color:#1D9E75;font-weight:500}
+.btn-danger{background:none;color:#E24B4A;border-color:#E24B4A}
+.btn-checkout{background:#185FA5;color:#fff;border-color:#185FA5;font-weight:500}
+.btn-sm{padding:4px 9px;font-size:12px}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+@media(max-width:600px){.metrics{grid-template-columns:1fr 1fr}.frow.four{grid-template-columns:1fr 1fr}}
+.metric{background:#f5f5f3;border-radius:8px;padding:10px 12px}
+.mlabel{font-size:11px;color:#888;margin-bottom:3px}.mval{font-size:19px;font-weight:600}
+.litem{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #e8e8e2;font-size:13px}
+.litem:last-child{border-bottom:none}
+.badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
+.b-efectivo{background:#EAF3DE;color:#3B6D11}.b-efectivo-nd{background:#C0DD97;color:#27500A}
+.b-transferencia{background:#E6F1FB;color:#185FA5}.b-debito{background:#B5D4F4;color:#0C447C}
+.b-mercadopago{background:#EEEDFE;color:#3C3489}.b-stripe{background:#FAEEDA;color:#854F0B}
+.b-pendiente,.b-tbd{background:#FCEBEB;color:#A32D2D}
+.b-cb{background:#E1F5EE;color:#085041}.b-manual{background:#F1EFE8;color:#5F5E5A}
+.b-hospedaje{background:#E6F1FB;color:#0C447C}.b-consumo{background:#EAF3DE;color:#27500A}
+.b-pagado{background:#EAF3DE;color:#27500A}
+.tag{font-size:10px;background:#fff;border:0.5px solid #d5d5cf;border-radius:4px;padding:2px 5px;color:#777}
+.empty{text-align:center;padding:1.5rem;color:#bbb;font-size:13px}
+.acts{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
+.alert{padding:9px 12px;border-radius:6px;font-size:12px;margin-bottom:.8rem;display:none}
+.alert.success{background:#EAF3DE;color:#3B6D11;border:0.5px solid #97C459}
+.alert.error{background:#FCEBEB;color:#A32D2D;border:0.5px solid #F09595}
+.tline{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
+.tline.grand{font-weight:600;font-size:15px;border-top:0.5px solid #e0e0da;padding-top:10px;margin-top:4px}
+.tline.sub{color:#888;font-size:12px}
+.sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:.9rem}
+.sh h2{font-size:15px;font-weight:600}
+.ac-wrap{position:relative}
+.ac-dd{position:absolute;top:100%;left:0;right:0;background:#fff;border:0.5px solid #d5d5cf;border-radius:6px;z-index:80;max-height:200px;overflow-y:auto;margin-top:2px;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+.ac-it{padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:0.5px solid #f0f0ec}
+.ac-it:last-child{border-bottom:none}.ac-it:hover{background:#f5f5f3}
+.ac-name{font-weight:500}.ac-sub{font-size:11px;color:#888;margin-top:1px}
+.res-card{background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:6px;padding:9px 12px;margin-top:7px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.rcf{font-size:11px;color:#085041}.rcf span{font-weight:600;display:block;font-size:12px;color:#04342C}
+.divider{display:flex;align-items:center;gap:8px;margin:9px 0;color:#bbb;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
+.divider::before,.divider::after{content:'';flex:1;height:0.5px;background:#e8e8e2}
+.pill{display:inline-flex;align-items:center;gap:5px;background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:20px;padding:3px 9px;font-size:11px;color:#085041;margin-top:5px}
+.pill strong{color:#04342C}.pill button{background:none;border:none;cursor:pointer;color:#0F6E56;font-size:14px;line-height:1;padding:0 0 0 2px}
+.lineas-hdr{display:grid;grid-template-columns:2fr 1fr 50px 70px 90px 28px;gap:5px;padding:3px 6px;font-size:10px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid #e0e0da;margin-bottom:3px}
+.linea-row{display:grid;grid-template-columns:2fr 1fr 50px 70px 90px 28px;gap:5px;align-items:center;padding:3px 4px;border-radius:4px}
+.linea-row:hover{background:#f5f5f3}
+.linea-row input,.linea-row select{font-size:12px;height:29px;padding:4px 6px}
+.dot-cb{width:6px;height:6px;border-radius:50%;background:#1D9E75;display:inline-block;margin-right:3px;vertical-align:middle}
+.dot-m{width:6px;height:6px;border-radius:50%;background:#888;display:inline-block;margin-right:3px;vertical-align:middle}
+.res-item{padding:9px 10px;border:0.5px solid #e0e0da;border-radius:6px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+.import-zone{border:1.5px dashed #d5d5cf;border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer}
+.import-zone:hover{border-color:#1D9E75}
+.colrow{border:0.5px solid #e0e0da;border-radius:6px;margin-bottom:6px;overflow:hidden}
+.colhdr{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;cursor:pointer;background:#fff}
+.colhdr:hover{background:#f8f8f6}
+.colbody{display:none;border-top:0.5px solid #e0e0da;padding:10px}
+.colbody.open{display:block}
+.cons-detail-hdr{display:grid;grid-template-columns:2fr 1fr 55px 65px 28px;gap:5px;font-size:10px;color:#888;font-weight:600;text-transform:uppercase;padding:3px 0;margin-bottom:3px;border-bottom:0.5px solid #e0e0da}
+.cons-detail-row{display:grid;grid-template-columns:2fr 1fr 55px 65px 28px;gap:5px;align-items:center;padding:3px 0}
+.cons-detail-row input{font-size:12px;height:27px;padding:3px 5px}
+.cat-section{margin-bottom:12px}
+.cat-lbl{font-size:10px;font-weight:600;color:#888;text-transform:uppercase;padding:3px 0;margin-bottom:2px;border-bottom:0.5px solid #e8e8e2}
+.prod-row{display:grid;align-items:center;padding:4px 3px;border-radius:4px;gap:5px}
+.prod-row:hover{background:#f5f5f3}
+.prod-row.view-mode{grid-template-columns:1fr auto 60px 30px 30px}
+.prod-row.edit-mode{grid-template-columns:1fr auto 75px 30px 30px}
+.prod-row input{font-size:12px;height:28px;padding:3px 6px}
+.ing-sum-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:1rem}
+@media(max-width:500px){.ing-sum-grid{grid-template-columns:1fr 1fr}}
+.ing-sum{background:#f5f5f3;border-radius:6px;padding:9px 10px}
+.ing-sum .lbl{font-size:10px;color:#888;margin-bottom:2px}.ing-sum .val{font-size:15px;font-weight:600}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:10px;padding:1.2rem;width:96%;max-width:580px;max-height:90vh;overflow-y:auto;overflow-x:visible;box-shadow:0 8px 32px rgba(0,0,0,.18)}
+.modal-title{font-size:15px;font-weight:600;margin-bottom:1rem;display:flex;justify-content:space-between;align-items:center}
+.pago-bloque{background:#f5f5f3;border:0.5px solid #e0e0da;border-radius:6px;padding:10px;margin-bottom:8px}
+.pago-bloque-title{font-size:11px;font-weight:600;color:#185FA5;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em}
+.saldo-badge{display:inline-block;background:#FCEBEB;color:#A32D2D;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:500}
+.pago-ok{background:#EAF3DE;color:#3B6D11;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:500;display:inline-block}
+input[type=number]{-moz-appearance:textfield}
+input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
+
+.co-dd-item{padding:9px 13px;cursor:pointer;font-size:13px;border-bottom:0.5px solid #EFEDE8;overflow:hidden}
+.co-dd-item:hover{background:#F8F7F4}
+.co-dd-item:last-child{border-bottom:none}
+</style>
+</head>
+<body>
+<div class="app">
+
+<div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:380px">
+  <div style="width:100%;max-width:300px;background:#fff;border:0.5px solid #e0e0da;border-radius:10px;padding:1.4rem">
+    <p style="font-size:17px;font-weight:600;margin-bottom:3px">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13</span></p>
+    <p style="font-size:12px;color:#888;margin-bottom:1.2rem">Selecciona tu perfil</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <button class="btn btn-primary" onclick="login('admin')">👑 Administrador</button>
+      <button class="btn" onclick="login('staff')">👤 Staff / Recepción</button>
+    </div>
+  </div>
+</div>
+
+<div id="main-screen" style="display:none">
+  <div class="header">
+    <p class="logo">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13</span></p>
+    <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
+  </div>
+  <div id="alert-box" class="alert"></div>
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
+    <button class="tab" onclick="showTab('reservas')">Reservas</button>
+    <button class="tab" onclick="showTab('consumos')">Consumos</button>
+    <button class="tab" onclick="showTab('ingresos')">Resumen Ingresos</button>
+    <button class="tab" id="tchk" style="display:none" onclick="showTab('checkout')">&#x1F3C1; Checkout</button>
+  <button class="tab" id="tab-admin" onclick="showTab('admin')">Catálogos</button>
+  </div>
+
+  <div class="sec active" id="sec-dashboard">
+    <div class="metrics" id="metrics-box"></div>
+    <div class="card"><p class="ctitle">Actividad reciente</p><div id="dash-rec"></div></div>
+  </div>
+
+  <div class="sec" id="sec-reservas">
+    <div class="sh"><h2>Reservas</h2>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="showTab('importar')">⬆ Importar</button>
+        <button class="btn btn-primary btn-sm" onclick="showNuevaRes()">+ Nueva</button>
+      </div>
+    </div>
+    <div style="font-size:11px;color:#888;margin-bottom:.8rem;display:flex;gap:10px">
+      <span><span class="dot-cb"></span>Cloudbeds</span><span><span class="dot-m"></span>Manual</span>
+    </div>
+    <div id="lista-res"></div>
+  </div>
+
+  <div class="sec" id="sec-importar">
+    <div class="sh"><h2>Importar Cloudbeds</h2><button class="btn btn-sm" onclick="showTab('reservas')">← Volver</button></div>
+    <div class="card">
+      <div class="import-zone" onclick="document.getElementById('file-input').click()">
+        <p style="font-size:24px">📂</p>
+        <p style="font-size:13px;color:#888;margin-top:6px">Haz clic o arrastra aquí · .csv o .xlsx</p>
+        <input type="file" id="file-input" accept=".csv,.xlsx" style="display:none" onchange="handleFile(this)">
+      </div>
+      <div id="import-preview" style="margin-top:.9rem"></div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-nueva-reserva">
+    <div class="sh"><h2 id="res-form-title">Nueva reserva</h2><button class="btn btn-sm" onclick="showTab('reservas')">← Volver</button></div>
+    <div class="card">
+      <p class="ctitle">Huésped y estancia</p>
+      <div class="frow"><div><label>Huésped</label><input type="text" id="r-huesped" placeholder="Nombre y apellido"></div><div><label>País</label><select id="r-pais"></select></div></div>
+      <div class="frow"><div><label>Habitación</label><select id="r-hab" onchange="calcTarifa()"></select></div><div><label>Origen</label><select id="r-origen"><option value="directo">Directo</option><option value="airbnb">Airbnb</option><option value="booking">Booking</option><option value="expedia">Expedia</option><option value="whatsapp">WhatsApp / Tel</option></select></div></div>
+      <div class="frow"><div><label>Check-in</label><input type="date" id="r-ci" oninput="calcTarifa()"></div><div><label>Check-out</label><input type="date" id="r-co" oninput="calcTarifa()"></div></div>
+      <div class="frow"><div><label>Estado</label><select id="r-estado"><option value="confirmada">Confirmada</option><option value="checkin">En casa</option><option value="checkout">Check-out</option></select></div><div></div></div>
+    </div>
+    <div class="card">
+      <p class="ctitle">Tarifa y descuento</p>
+      <div class="frow three">
+        <div><label>Tarifa/noche (base, sin imp.)</label><input type="number" id="r-tarifanoche" placeholder="0" oninput="calcTarifa()"></div>
+        <div><label>Noches</label><input type="text" id="r-noches" readonly></div>
+        <div><label>Descuento (%)</label><input type="number" id="r-desc" value="0" min="0" max="100" oninput="calcTarifa()"></div>
+      </div>
+      <div class="frow four">
+        <div><label>Base total</label><input type="text" id="r-base" readonly></div>
+        <div><label>ISH (4.5%)</label><input type="text" id="r-ish" readonly></div>
+        <div><label>IVA (16%)</label><input type="text" id="r-iva" readonly></div>
+        <div><label>Total estancia</label><input type="text" id="r-total" readonly style="font-weight:600;color:#1D9E75"></div>
+      </div>
+    </div>
+    <div class="card">
+      <p class="ctitle">Anticipo</p>
+      <div class="frow three">
+        <div><label>% Anticipo</label><input type="number" id="r-antipct" value="50" min="0" max="100" oninput="calcAnticipo()"></div>
+        <div><label>Monto anticipo</label><input type="number" id="r-antimonto" placeholder="0" oninput="calcAnticipoM()"></div>
+        <div><label>Saldo pendiente</label><input type="text" id="r-saldo" readonly style="color:#E24B4A;font-weight:600"></div>
+      </div>
+      <div class="frow three">
+        <div><label>Fecha pago anticipo</label><input type="date" id="r-antifecha"></div>
+        <div><label>Método anticipo</label><select id="r-antipago"><option value="">Sin anticipo</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">Débito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
+        <div></div>
+      </div>
+      <div class="frow">
+        <div><label>Fecha pago saldo</label><input type="date" id="r-saldfecha"></div>
+        <div><label>Método saldo (si ya pagó)</label><select id="r-saldpago"><option value="">Pendiente</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">Débito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
+      </div>
+    </div>
+    <div class="acts">
+      <button class="btn" onclick="showTab('reservas')">Cancelar</button>
+      <button class="btn btn-primary" id="btn-guardar-res" onclick="guardarRes()">Guardar reserva</button>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-consumos">
+    <div class="sh"><h2>Registrar consumo</h2></div>
+    <div class="card">
+      <p class="ctitle">Huésped</p>
+      <div class="ac-wrap">
+        <input type="text" id="ac-h" placeholder="Escribe nombre o apellido..." oninput="onAcH(this.value)" autocomplete="off" onblur="setTimeout(function(){var d=document.getElementById('co-dd');if(d)d.style.display='none'},200)">
+        <div class="ac-dd" id="ac-hdd" style="display:none"></div>
+      </div>
+      <div id="res-preview"></div>
+    </div>
+    <div class="card">
+      <p class="ctitle">Agregar producto</p>
+      <div class="divider">Buscar por nombre</div>
+      <div class="ac-wrap" style="margin-bottom:5px">
+        <input type="text" id="p-search" placeholder="Escribe o haz clic para ver catálogo..." oninput="onPSearch(this.value)" onfocus="onPFocus()" autocomplete="off" onblur="setTimeout(function(){var d=document.getElementById('co-dd');if(d)d.style.display='none'},200)">
+        <div class="ac-dd" id="p-dd" style="display:none"></div>
+      </div>
+      <div id="prod-pill-area"></div>
+      <div class="divider">O filtrar por categoría</div>
+      <div class="frow" style="margin-bottom:7px">
+        <div><label>Categoría</label><select id="sel-cat" onchange="onCatChange(this.value)"><option value="">— Categoría —</option></select></div>
+        <div><label>Producto</label><select id="sel-prod" disabled onchange="onProdSel(this.value)"><option value="">— Producto —</option></select></div>
+      </div>
+      <div class="frow four" style="margin-bottom:8px">
+        <div><label>Cantidad</label><input type="number" id="inp-qty" min="1" value="1" oninput="recalcPrev()"></div>
+        <div><label>Precio unit.</label><input type="number" id="inp-precio" placeholder="0" oninput="recalcPrev()"></div>
+        <div><label>Subtotal</label><input type="text" id="inp-sub" readonly></div>
+        <div><label>Método pago</label>
+          <select id="inp-pago">
+            <option value="tbd">TBD</option>
+            <option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option>
+            <option value="transferencia">Transferencia</option><option value="debito">Débito</option>
+            <option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="addLinea()">+ Agregar a la lista</button></div>
+    </div>
+    <div class="card" id="lineas-card" style="display:none">
+      <p class="ctitle">Lista de consumos</p>
+      <div class="lineas-hdr"><span>Producto</span><span>Categ.</span><span>Cant.</span><span>Precio</span><span>Pago</span><span></span></div>
+      <div id="lineas-list"></div>
+      <div style="background:#f5f5f3;border-radius:6px;padding:9px 12px;margin-top:9px">
+        <div class="tline sub"><span>Subtotal</span><span id="c-sub">$0</span></div>
+        <div class="tline sub"><span>IVA (16%)</span><span id="c-iva">$0</span></div>
+        <div class="tline grand"><span>Total</span><span id="c-total" style="color:#1D9E75">$0</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="frow"><div><label>Fecha de pago (referencia)</label><input type="date" id="c-fecha"></div><div></div></div>
+      <div class="frow full"><label>Nota</label><input type="text" id="c-nota" placeholder="Opcional"></div>
+      <div class="acts"><button class="btn btn-primary" onclick="guardarConsumo()">✓ Guardar consumo</button></div>
+    </div>
+    <div class="card"><p class="ctitle">Historial del mes</p><div id="historial"></div></div>
+  </div>
+
+  <div class="sec" id="sec-ingresos">
+    <div class="sh"><h2>Resumen Ingresos</h2></div>
+    <div class="card">
+      <div style="display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:1;min-width:110px"><label>Mes</label><select id="ing-mes" onchange="renderIngresos()"><option value="">Todos</option></select></div>
+        <div style="flex:2;min-width:130px"><label>Cliente</label><input type="text" id="ing-cli" placeholder="Buscar..." oninput="renderIngresos()"></div>
+        <div style="flex:1;min-width:90px"><label>Tipo</label><select id="ing-tipo" onchange="renderIngresos()"><option value="">Todos</option><option value="hospedaje">Hospedaje</option><option value="consumo">Consumos</option></select></div>
+        <button class="btn btn-sm" onclick="clearFiltros()">✕</button>
+      </div>
+    </div>
+    <div id="ing-summary" class="ing-sum-grid"></div>
+    <div id="ing-list"></div>
+  </div>
+
+  <div class="sec" id="sec-admin">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <p class="ctitle" style="margin-bottom:0">Catálogo de productos</p>
+        <span id="prod-count" style="font-size:11px;color:#888"></span>
+      </div>
+      <div style="display:flex;gap:7px;margin-bottom:10px">
+        <input type="text" id="admin-search" placeholder="Buscar..." oninput="renderAdmin()" style="flex:1">
+        <select id="admin-cat-filter" onchange="renderAdmin()" style="flex:1"><option value="">Todas las categorías</option></select>
+      </div>
+      <div id="admin-prods"></div>
+      <div style="margin-top:12px;border-top:0.5px solid #e8e8e2;padding-top:12px;display:flex;gap:7px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:2;min-width:110px"><label>Nombre</label><input type="text" id="p-nombre" placeholder="Nombre"></div>
+        <div style="flex:1;min-width:90px"><label>Categoría</label><select id="p-cat-sel"></select></div>
+        <div style="flex:1;min-width:65px"><label>Precio</label><input type="number" id="p-precio" placeholder="0"></div>
+        <button class="btn btn-primary btn-sm" onclick="addProd()">Agregar</button>
+      </div>
+    </div>
+    <div class="card">
+      <p class="ctitle">Habitaciones</p>
+      <div id="admin-habs"></div>
+      <div style="margin-top:10px;display:flex;gap:7px;align-items:flex-end">
+        <div style="flex:2"><label>Nombre</label><input type="text" id="h-nombre"></div>
+        <div style="flex:1"><label>Tarifa/noche</label><input type="number" id="h-precio" placeholder="0"></div>
+        <button class="btn btn-primary btn-sm" onclick="addHab()">Agregar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec" id="sec-checkout">
+    <div class="sh">
+      <div><h2 id="ck-ttl">Check-out</h2><p id="ck-sub" style="font-size:13px;color:#888"></p></div>
+      <button class="btn btn-sm" onclick="ckCancel()">&#x2190; Volver</button>
+    </div>
+    <div id="ck-hosp" class="card" style="display:none"><p class="ctitle">Saldo hospedaje pendiente</p><div id="ck-hosp-b"></div></div>
+    <div id="ck-tbd" class="card" style="display:none"><p class="ctitle">Consumos pendientes (TBD)</p><div id="ck-tbd-b"></div></div>
+    <div class="card">
+      <p class="ctitle">Agregar consumo extra</p>
+      <div class="divider">Buscar por nombre</div>
+      <div class="ac-wrap" style="margin-bottom:5px">
+        <input type="text" id="ck-s" placeholder="Escribe o haz clic para ver cat&#225;logo..."
+          oninput="ckSearch(this.value)" onfocus="ckFocus()"
+          onblur="setTimeout(function(){var d=document.getElementById('ck-dd');if(d)d.style.display='none'},200)"
+          autocomplete="off">
+        <div class="ac-dd" id="ck-dd"></div>
+      </div>
+      <div id="ck-pill"></div>
+      <div class="divider">O filtrar por categor&#237;a</div>
+      <div class="frow" style="margin-bottom:7px">
+        <div><label>Categor&#237;a</label><select id="ck-cat" onchange="ckCatChange(this.value)"><option value="">&#8212; Categor&#237;a &#8212;</option></select></div>
+        <div><label>Producto</label><select id="ck-prod" disabled onchange="ckProdSel(this.value)"><option value="">&#8212; Producto &#8212;</option></select></div>
+      </div>
+      <div class="frow four" style="margin-bottom:8px">
+        <div><label>Cantidad</label><input type="number" id="ck-qty" min="1" value="1" oninput="ckRecalc()"></div>
+        <div><label>Precio unit.</label><input type="number" id="ck-prc" placeholder="0" oninput="ckRecalc()"></div>
+        <div><label>Subtotal</label><input type="text" id="ck-sub-prev" readonly></div>
+        <div><label>M&#233;todo pago</label>
+          <select id="ck-met">
+            <option value="tbd">TBD</option>
+            <option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option>
+            <option value="transferencia">Transferencia</option><option value="debito">D&#233;bito</option>
+            <option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option>
+          </select>
+        </div>
+      </div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="ckAddExtra()">+ Agregar a la lista</button></div>
+    </div>
+    <div class="card" id="ck-lineas-card" style="display:none">
+      <p class="ctitle">Lista de consumos extra</p>
+      <div class="lineas-hdr"><span>Producto</span><span>Categor&#237;a</span><span style="text-align:center">Cant.</span><span style="text-align:right">Precio</span><span></span></div>
+      <div id="ck-extras"></div>
+    </div>
+    <div class="card"><p class="ctitle">Resumen</p><div id="ck-tots"></div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+        <button class="btn" onclick="ckCancel()">Cancelar</button>
+        <button class="btn btn-primary" style="background:#1860A5;border-color:#1860A5" onclick="ckConfirm()">&#x2713; Confirmar check-out</button>
+      </div>
+    </div>
+  </div
+</div>
+</div>
+
+<div class="modal-overlay" id="checkout-modal">
+  <div class="modal">
+    <div class="modal-title">
+      <span>🏁 Check-out: <span id="co-nombre"></span></span>
+      <button class="btn btn-sm" onclick="closeCheckout()">✕</button>
+    </div>
+    <div id="co-content"></div>
+
+    <!-- Agregar consumos extra al checkout -->
+    <div style="margin-top:14px;border-top:1px solid var(--border,#DDD9D0);padding-top:12px">
+      <p style="font-size:12px;font-weight:600;margin-bottom:8px;font-family:sans-serif;color:#444">+ Agregar consumo en el momento del checkout</p>
+      <div style="margin-bottom:6px">
+        <input type="text" id="co-txt" placeholder="Escribe para buscar producto..."
+          style="width:100%;font-size:13px;border:1px solid #CCC;border-radius:6px;padding:6px 8px;margin-bottom:5px"
+          oninput="coFilterSelect(this.value)"
+          autocomplete="off">
+        <select id="co-prod-select" size="5" onchange="coSelectFromList(this.value)"
+          style="width:100%;font-size:13px;border:1px solid #CCC;border-radius:6px;padding:2px;display:none">
+        </select>
+      </div>
+      <div id="co-pill" style="margin-bottom:6px"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:flex-end;margin-bottom:8px">
+        <div><label style="font-size:11px;color:#888;font-family:sans-serif">Cantidad</label><input type="number" id="co-extra-qty" value="1" min="1" style="height:30px;font-size:13px"></div>
+        <div><label style="font-size:11px;color:#888;font-family:sans-serif">Precio unit.</label><input type="number" id="co-extra-precio" placeholder="0" style="height:30px;font-size:13px"></div>
+        <div><label style="font-size:11px;color:#888;font-family:sans-serif">Método pago</label><select id="co-extra-pago" style="height:30px;font-size:12px"><option value="efectivo">Efectivo</option><option value="transferencia">Transferencia</option><option value="tarjeta">Débito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
+        <button class="btn btn-primary btn-sm" onclick="addCoExtra()" style="height:30px;white-space:nowrap">+ Agregar</button>
+      </div>
+      <div id="co-extra-list"></div>
+    </div>
+
+    <div class="acts" style="margin-top:1rem">
+      <button class="btn" onclick="closeCheckout()">Cancelar</button>
+      <button class="btn btn-checkout" onclick="confirmarCheckout()">✓ Confirmar Check-out</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const KR='hac_res7',KP='hac_prods7',KH='hac_habs7',KC='hac_cons7';
+let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
+
+const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxsxfcn3FN9NOsgXKqkTDQZcvS9PodajKhyWUDq6RMaY7uQNyjDy4zwS5CrOwvUTZhH/exec';
+const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos'};
+
+// In-memory cache (loaded once at login)
+const CACHE={KR:[],KP:[],KH:[],KC:[]};
+
+// Sync read from cache (same API as before — no code changes needed)
+const gd=(k,d=[])=>CACHE[k]&&CACHE[k].length?CACHE[k]:(d||[]);
+
+// Write: update cache + persist to Sheets async
+const sd=(k,v)=>{
+  CACHE[k]=v;
+  const sheet=SHEET_MAP[k];
+  if(!sheet)return;
+  fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'write',sheet,data:v})})
+    .catch(e=>console.error('Sheets write error:',e));
+};
+
+// Load all sheets into cache
+async function loadAllSheets(){
+  const keys=['KR','KP','KH','KC'];
+  await Promise.all(keys.map(async k=>{
+    try{
+      const res=await fetch(SCRIPT_URL+'?action=read&sheet='+SHEET_MAP[k]);
+      const json=await res.json();
+      if(json.ok&&Array.isArray(json.data)&&json.data.length)CACHE[k]=json.data;
+    }catch(e){console.error('Load error',k,e);}
+  }));
+}
+
+const CATS_RAW=['Bebidas alcohólicas','Bebidas','Snacks','Cenas','Boutique','Cama extra','Late checkout','Experiencia','Desayuno extra','Masaje','Comida exterior','Fotoshooting','Lavandería','Rembolso daño','Transporte','Day-Pass','Boda','Propina'];
+const CATS_KEY=['bebidas_alc','bebidas','snacks','cenas','boutique','cama_extra','late_checkout','experiencia','extra_breakfast','masaje','comida_ext','fotoshooting','lavanderia','rembolso','transporte','day_pass','boda','propina'];
+const CATS_LIBRE=new Set(['fotoshooting','lavanderia','rembolso','transporte','day_pass','boda','propina']);
+const catLabel=k=>{const i=CATS_KEY.indexOf(k);return i>=0?CATS_RAW[i]:k};
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const PAGO_MAP={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe',pendiente:'Pendiente',tbd:'TBD',''   :'Pendiente'};
+const pagoLabel=v=>PAGO_MAP[v]||v;
+const BADGE_MAP={efectivo:'b-efectivo','efectivo-nd':'b-efectivo-nd',transferencia:'b-transferencia',debito:'b-debito',mercadopago:'b-mercadopago',stripe:'b-stripe',pendiente:'b-pendiente',tbd:'b-tbd',''   :'b-pendiente'};
+const pagoBadge=v=>BADGE_MAP[v]||'b-pendiente';
+const PAISES=['México','Argentina','Brasil','Canadá','Chile','Colombia','España','Estados Unidos','Francia','Alemania','Italia','Japón','Reino Unido','Australia','Holanda','Bélgica','Suiza','Portugal','Suecia','Dinamarca','Noruega','Polonia','Rusia','China','India','Israel','Corea del Sur','Singapur','Nueva Zelanda','Otro'];
+
+const DP=[
+  {id:1,cat:'bebidas_alc',nombre:'Bailey',precio:130},{id:2,cat:'bebidas_alc',nombre:'Bta Capotondo',precio:1250},{id:3,cat:'bebidas_alc',nombre:'Bta Chablis',precio:1840},{id:4,cat:'bebidas_alc',nombre:'Bta Ensamble',precio:1550},{id:5,cat:'bebidas_alc',nombre:'Bta La Gde Metairie',precio:790},{id:6,cat:'bebidas_alc',nombre:'Bta Las Moras Malbec',precio:480},{id:7,cat:'bebidas_alc',nombre:'Bta Las Moras Sauv',precio:470},{id:8,cat:'bebidas_alc',nombre:'Bta Linvincible',precio:890},{id:9,cat:'bebidas_alc',nombre:'Bta Nítido',precio:1150},{id:10,cat:'bebidas_alc',nombre:'Bta Paradoja',precio:1200},{id:11,cat:'bebidas_alc',nombre:'Bta Piensos',precio:1080},{id:12,cat:'bebidas_alc',nombre:'Bta Reserva',precio:780},{id:13,cat:'bebidas_alc',nombre:'Bta Rosé Tangible',precio:1180},{id:14,cat:'bebidas_alc',nombre:'Cerveza',precio:55},{id:15,cat:'bebidas_alc',nombre:'Cerveza artesanal',precio:100},{id:16,cat:'bebidas_alc',nombre:'Cerveza artesanal Thodes',precio:110},{id:17,cat:'bebidas_alc',nombre:'Champagne',precio:2500},{id:18,cat:'bebidas_alc',nombre:'Cóctel cortesía',precio:0},{id:19,cat:'bebidas_alc',nombre:'Cóctel mezcal',precio:180},{id:20,cat:'bebidas_alc',nombre:'Cóctel ron',precio:160},{id:21,cat:'bebidas_alc',nombre:'Cóctel tequila',precio:210},{id:22,cat:'bebidas_alc',nombre:'Cóctel vodka',precio:170},{id:23,cat:'bebidas_alc',nombre:'Copa Las Moras Malbec',precio:170},{id:24,cat:'bebidas_alc',nombre:'Copa Las Moras Sauv',precio:160},{id:25,cat:'bebidas_alc',nombre:'Descorche',precio:470},{id:26,cat:'bebidas_alc',nombre:'Michelada',precio:80},{id:27,cat:'bebidas_alc',nombre:'Shot mezcal Jipi Espadín',precio:140},{id:28,cat:'bebidas_alc',nombre:'Shot mezcal Jipi Tobalá',precio:210},{id:29,cat:'bebidas_alc',nombre:'Shot ron',precio:100},{id:30,cat:'bebidas_alc',nombre:'Shot tequila',precio:160},{id:31,cat:'bebidas_alc',nombre:'Shot vodka',precio:140},{id:32,cat:'bebidas_alc',nombre:'Whisky',precio:250},
+  {id:33,cat:'bebidas',nombre:'Americano',precio:55},{id:34,cat:'bebidas',nombre:'Capuchino',precio:65},{id:35,cat:'bebidas',nombre:'Cola',precio:45},{id:36,cat:'bebidas',nombre:'Espresso',precio:55},{id:37,cat:'bebidas',nombre:'Jarra agua fresca',precio:50},{id:38,cat:'bebidas',nombre:'Jarra ice tea',precio:100},{id:39,cat:'bebidas',nombre:'Jugo de naranja',precio:60},{id:40,cat:'bebidas',nombre:'Moctel',precio:100},{id:41,cat:'bebidas',nombre:'Perrier',precio:75},{id:42,cat:'bebidas',nombre:'San Pellegrino',precio:70},{id:43,cat:'bebidas',nombre:'Tisana / té',precio:40},
+  {id:44,cat:'boutique',nombre:'Crema Laguna',precio:350},{id:45,cat:'boutique',nombre:'Hamaca',precio:1600},{id:46,cat:'boutique',nombre:'Hamaca franja',precio:2900},{id:47,cat:'boutique',nombre:'Jipi Espadín',precio:1350},{id:48,cat:'boutique',nombre:'Jipi Tobalá',precio:1500},{id:49,cat:'boutique',nombre:'Libro',precio:0},{id:50,cat:'boutique',nombre:'Miel bote',precio:280},{id:51,cat:'boutique',nombre:'Otro',precio:0},{id:52,cat:'boutique',nombre:'Ropa',precio:0},{id:53,cat:'boutique',nombre:'Salsa macha',precio:150},
+  {id:54,cat:'cama_extra',nombre:'Cama extra',precio:1000},{id:55,cat:'cenas',nombre:'Cena',precio:800},
+  {id:56,cat:'comida_ext',nombre:'Brunch',precio:900},{id:57,cat:'comida_ext',nombre:'Cena exterior',precio:1100},{id:58,cat:'comida_ext',nombre:'Comida campestre',precio:1600},
+  {id:59,cat:'experiencia',nombre:'Pilates',precio:650},{id:60,cat:'experiencia',nombre:'Renta snorkel',precio:100},{id:61,cat:'experiencia',nombre:'Tour buceo',precio:4500},{id:62,cat:'experiencia',nombre:'Tour snorkel',precio:2500},{id:63,cat:'experiencia',nombre:'Visita Plantel Matilde',precio:920},{id:64,cat:'experiencia',nombre:'Visita Sotuta',precio:1100},{id:65,cat:'experiencia',nombre:'Visita Sotuta con desayuno',precio:1500},
+  {id:66,cat:'extra_breakfast',nombre:'Desayuno extra',precio:200},{id:67,cat:'late_checkout',nombre:'Late checkout',precio:500},{id:68,cat:'masaje',nombre:'Masaje',precio:1500},
+  {id:69,cat:'snacks',nombre:'BLT',precio:230},{id:70,cat:'snacks',nombre:'Snack',precio:200},
+];
+const DEFAULT_HABS=[{id:1,nombre:'Suite Yuya',precio:4100},{id:2,nombre:'Suite Chel',precio:4100},{id:3,nombre:'Suite Toh',precio:4100},{id:4,nombre:'Suite Jabin',precio:4100},{id:5,nombre:'Suite Ciricote',precio:4500}];
+const CLOUDBEDS_RES=[
+  {id:'CB-2001',nombre:'Ana Martínez',pais:'México',habitacion:'Suite Yuya',checkin:'2026-05-01',checkout:'2026-05-04',origen:'directo',estado:'checkout',fuente:'cloudbeds',tarifaNoche:4100,noches:3,base:12300,descuento:0,ish:554,iva:1968,total:14822,anticipo:7411,antiPct:50,antiFecha:'2026-04-20',antiPago:'transferencia',saldo:7411,saldFecha:'2026-05-04',saldPago:'transferencia'},
+  {id:'CB-2002',nombre:'Pierre Dubois',pais:'Francia',habitacion:'Suite Chel',checkin:'2026-05-03',checkout:'2026-05-07',origen:'booking',estado:'checkout',fuente:'cloudbeds',tarifaNoche:4100,noches:4,base:16400,descuento:0,ish:738,iva:2624,total:19762,anticipo:9881,antiPct:50,antiFecha:'2026-04-25',antiPago:'stripe',saldo:9881,saldFecha:'2026-05-07',saldPago:'stripe'},
+  {id:'CB-2003',nombre:'Carlos Ramírez',pais:'México',habitacion:'Suite Toh',checkin:'2026-05-10',checkout:'2026-05-13',origen:'airbnb',estado:'checkout',fuente:'cloudbeds',tarifaNoche:4100,noches:3,base:12300,descuento:10,ish:499,iva:1771,total:13070,anticipo:6535,antiPct:50,antiFecha:'2026-05-05',antiPago:'mercadopago',saldo:6535,saldFecha:'2026-05-13',saldPago:'efectivo'},
+  {id:'CB-2004',nombre:'Sophie Lehmann',pais:'Alemania',habitacion:'Suite Jabin',checkin:'2026-05-15',checkout:'2026-05-19',origen:'directo',estado:'checkin',fuente:'cloudbeds',tarifaNoche:4100,noches:4,base:16400,descuento:0,ish:738,iva:2624,total:19762,anticipo:9881,antiPct:50,antiFecha:'2026-05-10',antiPago:'transferencia',saldo:9881,saldFecha:'',saldPago:''},
+  {id:'CB-2005',nombre:'Valentina Ramos',pais:'Argentina',habitacion:'Suite Ciricote',checkin:'2026-05-18',checkout:'2026-05-22',origen:'airbnb',estado:'checkin',fuente:'cloudbeds',tarifaNoche:4500,noches:4,base:18000,descuento:0,ish:810,iva:2880,total:21690,anticipo:10845,antiPct:50,antiFecha:'2026-05-12',antiPago:'stripe',saldo:10845,saldFecha:'',saldPago:''},
+  {id:'CB-2006',nombre:'Marco Herrera',pais:'México',habitacion:'Suite Yuya',checkin:'2026-05-20',checkout:'2026-05-24',origen:'whatsapp',estado:'checkin',fuente:'cloudbeds',tarifaNoche:4100,noches:4,base:16400,descuento:5,ish:700,iva:2485,total:19585,anticipo:9793,antiPct:50,antiFecha:'2026-05-15',antiPago:'efectivo',saldo:9792,saldFecha:'',saldPago:''},
+  {id:'CB-2007',nombre:'Emily Chen',pais:'Estados Unidos',habitacion:'Suite Chel',checkin:'2026-05-25',checkout:'2026-05-28',origen:'booking',estado:'confirmada',fuente:'cloudbeds',tarifaNoche:4100,noches:3,base:12300,descuento:0,ish:554,iva:1968,total:14822,anticipo:7411,antiPct:50,antiFecha:'2026-05-18',antiPago:'stripe',saldo:7411,saldFecha:'',saldPago:''},
+];
+
+function today(){return new Date().toISOString().split('T')[0]}
+
+function login(r){
+  CU=r;
+  document.getElementById('login-screen').style.display='none';
+  // Show loading state
+  document.getElementById('main-screen').style.display='block';
+  document.getElementById('ulabel').textContent=r==='admin'?'Admin':'Staff';
+  if(r!=='admin')document.getElementById('tab-admin').style.display='none';
+  showAlert('Cargando datos...','info');
+  loadAllSheets().then(()=>{
+    // Initialize defaults if sheets are empty
+    if(!gd(KP).length)sd(KP,DP);
+    if(!gd(KH).length)sd(KH,DEFAULT_HABS);
+    // Merge Cloudbeds reservations preserving manual ones
+    const saved=gd(KR,[]);
+    const manuales=saved.filter(x=>x.fuente!=='cloudbeds');
+    if(!saved.length){
+      sd(KR,[...CLOUDBEDS_RES,...manuales]);
+    }
+    document.getElementById('c-fecha').value=today();
+    document.getElementById('r-antifecha').value=today();
+    populateAll();renderDash();
+    showAlert('Datos cargados correctamente','success');
+  }).catch(e=>{
+    console.error(e);
+    showAlert('Error conectando con Google Sheets. Trabajando sin conexión.','error');
+    if(!gd(KP).length)sd(KP,DP);
+    if(!gd(KH).length)sd(KH,DEFAULT_HABS);
+    document.getElementById('c-fecha').value=today();
+    document.getElementById('r-antifecha').value=today();
+    populateAll();renderDash();
+  });
+}
+function logout(){CU=null;document.getElementById('main-screen').style.display='none';document.getElementById('login-screen').style.display='block'}
+
+function populateAll(){
+  document.getElementById('r-pais').innerHTML=PAISES.map(p=>`<option value="${p}">${p}</option>`).join('');
+  const opts=CATS_KEY.map((k,i)=>`<option value="${k}">${CATS_RAW[i]}</option>`).join('');
+  ['sel-cat','p-cat-sel','admin-cat-filter'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    if(id==='sel-cat')el.innerHTML='<option value="">— Categoría —</option>'+opts;
+    else if(id==='admin-cat-filter')el.innerHTML='<option value="">Todas las categorías</option>'+opts;
+    else el.innerHTML=opts;
+  });
+  populateIngMeses();
+}
+
+function populateIngMeses(){
+  const s=new Set();
+  gd(KR).forEach(r=>{if(r.antiFecha)s.add(r.antiFecha.slice(0,7));if(r.saldFecha)s.add(r.saldFecha.slice(0,7))});
+  gd(KC).forEach(c=>{if(c.fecha)s.add(c.fecha.slice(0,7))});
+  const sel=document.getElementById('ing-mes');if(!sel)return;
+  sel.innerHTML='<option value="">Todos</option>'+[...s].sort().reverse().map(m=>{const[y,mo]=m.split('-');return`<option value="${m}">${MESES[parseInt(mo)-1]} ${y}</option>`}).join('');
+}
+
+function showTab(t){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.sec').forEach(s=>s.classList.remove('active'));
+  const tb=document.querySelector(`[onclick="showTab('${t}')"]`);if(tb)tb.classList.add('active');
+  document.getElementById('sec-'+t).classList.add('active');
+  if(t==='dashboard')renderDash();
+  if(t==='reservas')renderRes();
+  if(t==='consumos'){resetC();renderHistorial()}
+  if(t==='ingresos'){populateIngMeses();renderIngresos()}
+  if(t==='admin')renderAdmin();
+}
+
+function renderDash(){
+  const cons=gd(KC),res=gd(KR),m=new Date().getMonth(),y=new Date().getFullYear();
+  const tm=cons.filter(c=>{const d=new Date(c.fecha||'');return d.getMonth()===m&&d.getFullYear()===y});
+  const totCons=tm.reduce((s,c)=>s+(c.total||0),0);
+  const pendHosp=res.filter(r=>!r.saldFecha&&(r.saldo||0)>0).reduce((s,r)=>s+(r.saldo||0),0);
+  const totAnti=res.filter(r=>{const d=new Date(r.antiFecha||'');return d.getMonth()===m&&d.getFullYear()===y&&r.antiPago}).reduce((s,r)=>s+(r.anticipo||0),0);
+  document.getElementById('metrics-box').innerHTML=`
+    <div class="metric"><p class="mlabel">Anticipos cobrados mes</p><p class="mval" style="color:#185FA5">${fmt(totAnti)}</p></div>
+    <div class="metric"><p class="mlabel">Consumos mes</p><p class="mval" style="color:#1D9E75">${fmt(totCons)}</p></div>
+    <div class="metric"><p class="mlabel">Saldos pendientes</p><p class="mval" style="color:#E24B4A">${fmt(pendHosp)}</p></div>
+    <div class="metric"><p class="mlabel">Reservas activas</p><p class="mval">${res.filter(r=>r.estado==='checkin').length}</p></div>`;
+  const rec=res.filter(r=>r.estado==='checkin').slice(0,5);
+  document.getElementById('dash-rec').innerHTML=rec.length?rec.map(r=>`<div class="litem"><div><p style="font-size:13px;font-weight:500">${r.nombre} <span class="tag">${r.habitacion}</span></p><p style="font-size:11px;color:#888">${r.checkin} → ${r.checkout}${(r.saldo||0)>0?' · <span style="color:#E24B4A">Saldo '+fmt(r.saldo)+'</span>':''}</p></div><button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')">🏁 Check-out</button></div>`).join(''):'<p class="empty">Sin huéspedes en casa</p>';
+}
+
+function calcTarifa(){
+  const habs=gd(KH);
+  const habNom=document.getElementById('r-hab').value;
+  const hab=habs.find(h=>h.nombre===habNom);
+  const tarifaNoche=parseFloat(document.getElementById('r-tarifanoche').value)||(hab?hab.precio:0);
+  if(hab&&!document.getElementById('r-tarifanoche').value)document.getElementById('r-tarifanoche').value=hab.precio;
+  const ci=document.getElementById('r-ci').value,co=document.getElementById('r-co').value;
+  let noches=0;
+  if(ci&&co){noches=Math.max(0,Math.round((new Date(co)-new Date(ci))/(1000*60*60*24)))}
+  document.getElementById('r-noches').value=noches;
+  const desc=parseFloat(document.getElementById('r-desc').value)||0;
+  const base=tarifaNoche*noches*(1-desc/100);
+  const ish=base*0.045,iva=base*0.16,total=base+ish+iva;
+  document.getElementById('r-base').value=fmt(base);
+  document.getElementById('r-ish').value=fmt(ish);
+  document.getElementById('r-iva').value=fmt(iva);
+  document.getElementById('r-total').value=fmt(total);
+  calcAnticipo();
+}
+function calcAnticipo(){
+  const totalStr=(document.getElementById('r-total').value||'0').replace(/[^0-9]/g,'');
+  const total=parseInt(totalStr)||0;
+  const pct=parseFloat(document.getElementById('r-antipct').value)||0;
+  const monto=Math.round(total*pct/100);
+  document.getElementById('r-antimonto').value=monto;
+  document.getElementById('r-saldo').value=fmt(total-monto);
+}
+function calcAnticipoM(){
+  const totalStr=(document.getElementById('r-total').value||'0').replace(/[^0-9]/g,'');
+  const total=parseInt(totalStr)||0;
+  const monto=parseFloat(document.getElementById('r-antimonto').value)||0;
+  if(total>0)document.getElementById('r-antipct').value=Math.round(monto/total*100);
+  document.getElementById('r-saldo').value=fmt(total-monto);
+}
+
+function showNuevaRes(){
+  const habs=gd(KH);
+  document.getElementById('r-hab').innerHTML=habs.map(h=>`<option value="${h.nombre}">${h.nombre} · ${fmt(h.precio)}/noche</option>`).join('');
+  document.getElementById('res-form-title').textContent='Nueva reserva manual';
+  ['r-huesped','r-tarifanoche','r-ci','r-co','r-saldfecha'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('r-desc').value='0';document.getElementById('r-antipct').value='50';
+  document.getElementById('r-antipago').value='';document.getElementById('r-saldpago').value='';
+  document.getElementById('r-antifecha').value=today();
+  calcTarifa();showTab('nueva-reserva');
+}
+
+function guardarRes(){
+  const h=document.getElementById('r-huesped').value.trim();if(!h){showAlert('Ingresa el nombre','error');return}
+  const tarifaNoche=parseFloat(document.getElementById('r-tarifanoche').value)||0;
+  const noches=parseInt(document.getElementById('r-noches').value)||0;
+  const desc=parseFloat(document.getElementById('r-desc').value)||0;
+  const base=tarifaNoche*noches*(1-desc/100);
+  const ish=base*0.045,iva=base*0.16,total=base+ish+iva;
+  const anti=parseFloat(document.getElementById('r-antimonto').value)||0;
+  const r={id:'M-'+Date.now(),nombre:h,pais:document.getElementById('r-pais').value,habitacion:document.getElementById('r-hab').value,checkin:document.getElementById('r-ci').value,checkout:document.getElementById('r-co').value,origen:document.getElementById('r-origen').value,estado:document.getElementById('r-estado').value,fuente:'manual',tarifaNoche,noches,base:Math.round(base),descuento:desc,ish:Math.round(ish),iva:Math.round(iva),total:Math.round(total),anticipo:anti,antiPct:parseFloat(document.getElementById('r-antipct').value)||0,antiFecha:document.getElementById('r-antifecha').value,antiPago:document.getElementById('r-antipago').value,saldo:Math.round(total-anti),saldFecha:document.getElementById('r-saldfecha').value,saldPago:document.getElementById('r-saldpago').value};
+  const res=gd(KR);res.push(r);sd(KR,res);showTab('reservas');showAlert('Reserva guardada');
+}
+
+function renderRes(){
+  const res=gd(KR),box=document.getElementById('lista-res');
+  if(!res.length){box.innerHTML='<p class="empty">Sin reservas.</p>';return}
+  const cb=res.filter(r=>r.fuente==='cloudbeds'),mn=res.filter(r=>r.fuente!=='cloudbeds');
+  let h='';
+  if(cb.length){h+=`<p style="font-size:10px;font-weight:600;color:#888;margin-bottom:7px;text-transform:uppercase"><span class="dot-cb"></span>Cloudbeds (${cb.length})</p>`;h+=cb.map(r=>resHtml(r,res.indexOf(r))).join('')}
+  if(mn.length){h+=`<p style="font-size:10px;font-weight:600;color:#888;margin:14px 0 7px;text-transform:uppercase"><span class="dot-m"></span>Manuales (${mn.length})</p>`;h+=mn.map(r=>resHtml(r,res.indexOf(r))).join('')}
+  box.innerHTML=h;
+}
+function resHtml(r,i){
+  const saldoPend=(r.saldo||0)>0&&!r.saldFecha;
+  const eb=r.estado==='checkin'?'b-efectivo':r.estado==='checkout'?'b-transferencia':'b-stripe';
+  return `<div class="res-item">
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px">
+        <span style="font-size:13px;font-weight:600">${r.nombre}</span>
+        ${r.pais?`<span class="tag">${r.pais}</span>`:''}
+        <span class="badge ${eb}">${r.estado}</span>
+        ${saldoPend?`<span class="saldo-badge">Saldo pend. ${fmt(r.saldo)}</span>`:`<span class="pago-ok">✓ Pagado</span>`}
+      </div>
+      <p style="font-size:11px;color:#888"><span class="tag">${r.habitacion}</span> ${r.checkin||'?'} → ${r.checkout||'?'} · ${r.noches||'?'} noches · Total: ${fmt(r.total||0)}</p>
+      <p style="font-size:11px;color:#888;margin-top:2px">Anticipo: ${fmt(r.anticipo||0)} (${r.antiPct||0}%) · ${pagoLabel(r.antiPago||'')} · ${r.antiFecha||'—'}</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+      ${saldoPend?`<button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')">🏁 Check-out</button>`:''}
+      ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delRes(${i})">🗑</button>`:''}
+    </div>
+  </div>`;
+}
+function delRes(i){const res=gd(KR);res.splice(i,1);sd(KR,res);renderRes()}
+
+function popCoSelect(){
+  var prods = gd(KP).slice().sort(function(a,b){return a.nombre.localeCompare(b.nombre)});
+  var sel = document.getElementById('co-prod-sel');
+  if(!sel) return;
+  sel.innerHTML = '<option value="">-- Selecciona producto del catálogo --</option>' +
+    prods.map(function(p){ return '<option value="'+p.id+'">'+p.nombre+' — '+cL(p.cat)+' — '+fmt(p.precio)+'</option>'; }).join('');
+}
+function coSelProd(id){
+  if(!id) return;
+  var p = gd(KP).find(function(x){return x.id==id});
+  if(!p) return;
+  coExtraProd = p;
+  document.getElementById('co-extra-precio').value = p.precio;
+}
+function onAcH(val){
+  selGuest=null;document.getElementById('res-preview').innerHTML='';
+  const dd=document.getElementById('ac-hdd');
+  if(val.length<2){dd.style.display='none';return}
+  const q=val.toLowerCase(),res=gd(KR);
+  const m=res.filter(r=>r.nombre.toLowerCase().includes(q)).slice(0,6);
+  if(!m.length){dd.style.display='none';return}
+  dd.innerHTML=m.map(r=>`<div class="ac-it" onclick='selH(${JSON.stringify(r).replace(/'/g,"&#39;")})'><span class="ac-name">${r.nombre}</span><span class="badge b-${r.fuente==='cloudbeds'?'cb':'manual'}" style="margin-left:5px">${r.fuente==='cloudbeds'?'CB':'Manual'}</span><p class="ac-sub">${r.habitacion} · ${r.checkin} → ${r.checkout}</p></div>`).join('');
+  dd.style.display='block';
+}
+function selH(r){
+  selGuest=r;document.getElementById('ac-h').value=r.nombre;document.getElementById('ac-hdd').style.display='none';
+  document.getElementById('res-preview').innerHTML=`<div class="res-card"><div class="rcf"><span>${r.habitacion}</span>Hab.</div><div class="rcf"><span>${r.checkin}</span>Check-in</div><div class="rcf"><span>${r.checkout}</span>Check-out</div>${r.pais?`<div class="rcf"><span>${r.pais}</span>País</div>`:''}<span class="badge b-${r.fuente==='cloudbeds'?'cb':'manual'}">${r.fuente==='cloudbeds'?'Cloudbeds':'Manual'}</span></div>`;
+}
+
+function onPSearch(val){
+  curProd=null;document.getElementById('prod-pill-area').innerHTML='';
+  const dd=document.getElementById('p-dd');if(!val){dd.style.display='none';return}
+  const m=gd(KP).filter(p=>p.nombre.toLowerCase().includes(val.toLowerCase())).slice(0,10);
+  if(!m.length){dd.style.display='none';return}
+  dd.innerHTML=m.map(p=>`<div class="ac-it" onclick="setProd(${p.id})"><span class="ac-name">${p.nombre}</span><p class="ac-sub">${catLabel(p.cat)} · ${fmt(p.precio)}</p></div>`).join('');
+  dd.style.display='block';
+}
+function onPFocus(){
+  if(document.getElementById('p-search').value)return;
+  const dd=document.getElementById('p-dd');
+  dd.innerHTML=gd(KP).slice(0,20).map(p=>`<div class="ac-it" onclick="setProd(${p.id})"><span class="ac-name">${p.nombre}</span><p class="ac-sub">${catLabel(p.cat)} · ${fmt(p.precio)}</p></div>`).join('');
+  dd.style.display='block';
+}
+function setProd(id){
+  const p=gd(KP).find(x=>x.id===id);if(!p)return;
+  curProd=p;document.getElementById('p-search').value=p.nombre;document.getElementById('p-dd').style.display='none';
+  document.getElementById('inp-precio').value=p.precio;document.getElementById('sel-cat').value=p.cat;
+  populateProdSel(p.cat,p.id);
+  document.getElementById('prod-pill-area').innerHTML=`<div class="pill">✓ <strong>${p.nombre}</strong> ${catLabel(p.cat)} · ${fmt(p.precio)}<button onclick="clearProd()">×</button></div>`;
+  recalcPrev();
+}
+function clearProd(){
+  curProd=null;document.getElementById('p-search').value='';document.getElementById('prod-pill-area').innerHTML='';
+  document.getElementById('inp-precio').value='';document.getElementById('inp-sub').value='';
+  document.getElementById('sel-cat').value='';document.getElementById('sel-prod').innerHTML='<option value="">— Producto —</option>';document.getElementById('sel-prod').disabled=true;
+}
+function onCatChange(cat){
+  curProd=null;document.getElementById('prod-pill-area').innerHTML='';document.getElementById('p-search').value='';document.getElementById('inp-precio').value='';
+  if(!cat){document.getElementById('sel-prod').innerHTML='<option value="">— Producto —</option>';document.getElementById('sel-prod').disabled=true;return}
+  if(CATS_LIBRE.has(cat)){document.getElementById('sel-prod').innerHTML='<option value="">Sin catálogo</option>';document.getElementById('sel-prod').disabled=true;return}
+  populateProdSel(cat,null);
+}
+function populateProdSel(cat,selId){
+  const prods=gd(KP).filter(p=>p.cat===cat);
+  const sel=document.getElementById('sel-prod');
+  sel.innerHTML='<option value="">— Producto —</option>'+prods.map(p=>`<option value="${p.id}" ${p.id===selId?'selected':''}>${p.nombre} · ${fmt(p.precio)}</option>`).join('');
+  sel.disabled=false;
+}
+function onProdSel(val){if(!val)return;const p=gd(KP).find(x=>x.id==val);if(p)setProd(p.id)}
+function recalcPrev(){
+  const q=parseInt(document.getElementById('inp-qty').value)||1,pr=parseFloat(document.getElementById('inp-precio').value)||0;
+  document.getElementById('inp-sub').value=fmt(q*pr);
+}
+function addLinea(){
+  const nombre=document.getElementById('p-search').value.trim()||(document.getElementById('sel-cat').value?catLabel(document.getElementById('sel-cat').value):'');
+  if(!nombre){showAlert('Selecciona un producto','error');return}
+  const cat=curProd?curProd.cat:(document.getElementById('sel-cat').value||'');
+  const qty=parseInt(document.getElementById('inp-qty').value)||1;
+  const precio=parseFloat(document.getElementById('inp-precio').value)||0;
+  const pago=document.getElementById('inp-pago').value;
+  lineas.push({id:Date.now()+Math.random(),cat,nombre:curProd?curProd.nombre:nombre,cantidad:qty,precio,pago});
+  clearProd();document.getElementById('inp-qty').value=1;document.getElementById('inp-pago').value='tbd';
+  renderLineas();
+}
+function renderLineas(){
+  const card=document.getElementById('lineas-card');
+  if(!lineas.length){card.style.display='none';updateTotals();return}
+  card.style.display='block';
+  document.getElementById('lineas-list').innerHTML=lineas.map(l=>`
+    <div class="linea-row">
+      <span style="font-size:12px;font-weight:500">${l.nombre}</span>
+      <span style="font-size:11px;color:#888">${catLabel(l.cat)}</span>
+      <input type="number" min="1" value="${l.cantidad}" onchange="updL(${l.id},'cantidad',this.value)" style="text-align:center">
+      <input type="number" value="${l.precio}" onchange="updL(${l.id},'precio',this.value)" style="text-align:right">
+      <select onchange="updL(${l.id},'pago',this.value)" style="font-size:11px">
+        ${['tbd','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'].map(v=>`<option value="${v}" ${v===l.pago?'selected':''}>${pagoLabel(v)}</option>`).join('')}
+      </select>
+      <button class="btn btn-sm btn-danger" onclick="delLinea(${l.id})">🗑</button>
+    </div>`).join('');
+  updateTotals();
+}
+function updL(id,f,v){const l=lineas.find(x=>x.id===id);if(!l)return;l[f]=f==='cantidad'?parseInt(v)||1:f==='precio'?parseFloat(v)||0:v;renderLineas()}
+function delLinea(id){lineas=lineas.filter(x=>x.id!==id);renderLineas()}
+function updateTotals(){
+  const sub=lineas.reduce((s,l)=>s+(l.precio*l.cantidad),0);
+  document.getElementById('c-sub').textContent=fmt(sub);
+  document.getElementById('c-iva').textContent=fmt(sub-sub/1.16);
+  document.getElementById('c-total').textContent=fmt(sub);
+}
+function guardarConsumo(){
+  const nombre=document.getElementById('ac-h').value.trim();
+  if(!nombre){showAlert('Indica el huésped','error');return}
+  if(!lineas.length){showAlert('Agrega al menos un producto','error');return}
+  const sub=lineas.reduce((s,l)=>s+(l.precio*l.cantidad),0);
+  const c={id:Date.now(),reservaId:selGuest?selGuest.id:null,huesped:nombre,habitacion:selGuest?selGuest.habitacion:'',fecha:document.getElementById('c-fecha').value,items:lineas.map(l=>({id:Date.now()+Math.random(),cat:l.cat,nombre:l.nombre,cantidad:l.cantidad,precio:l.precio,pago:l.pago})),subtotal:Math.round(sub/1.16*100)/100,iva:Math.round((sub-sub/1.16)*100)/100,total:sub,nota:document.getElementById('c-nota').value};
+  const cons=gd(KC);cons.push(c);sd(KC,cons);
+  resetC();renderHistorial();renderDash();showAlert('Consumo registrado');
+}
+function resetC(){
+  selGuest=null;lineas=[];curProd=null;
+  document.getElementById('ac-h').value='';document.getElementById('ac-hdd').style.display='none';document.getElementById('res-preview').innerHTML='';
+  clearProd();document.getElementById('inp-qty').value=1;document.getElementById('c-nota').value='';
+  document.getElementById('lineas-card').style.display='none';renderLineas();
+}
+
+function renderHistorial(){
+  const cons=gd(KC),m=new Date().getMonth(),y=new Date().getFullYear();
+  const tm=cons.filter(c=>{const d=new Date(c.fecha||'');return d.getMonth()===m&&d.getFullYear()===y}).reverse();
+  const box=document.getElementById('historial');
+  if(!tm.length){box.innerHTML='<p class="empty">Sin consumos este mes</p>';return}
+  box.innerHTML=tm.map(c=>`
+    <div class="colrow">
+      <div class="colhdr" onclick="toggleCol('chb-${c.id}','chv-${c.id}')">
+        <div style="display:flex;align-items:center;gap:7px;min-width:0">
+          <span id="chv-${c.id}" style="font-size:11px;color:#bbb;transition:transform .15s">▼</span>
+          <div><p style="font-size:13px;font-weight:500">${c.huesped}${c.habitacion?` <span class="tag">${c.habitacion}</span>`:''}</p><p style="font-size:11px;color:#888">${c.fecha||'—'} · ${c.items.length} item(s)${c.nota?' · '+c.nota:''}</p></div>
+        </div>
+        <span style="font-size:13px;font-weight:600">${fmt(c.total)}</span>
+      </div>
+      <div class="colbody" id="chb-${c.id}">
+        <div class="cons-detail-hdr"><span>Producto</span><span>Cat.</span><span>Cant.</span><span>Precio</span><span></span></div>
+        <div id="chd-${c.id}"></div>
+        <div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1"><label style="font-size:10px">Nota</label><input type="text" id="cnota-${c.id}" value="${c.nota||''}" style="font-size:12px;height:28px"></div>
+          <div style="display:flex;gap:5px">
+            <button class="btn btn-sm btn-primary" onclick="saveCH(${c.id})">✓</button>
+            ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delCon(${c.id})">🗑</button>`:''}
+          </div>
+        </div>
+        <div id="ctotals-${c.id}" style="margin-top:8px"></div>
+      </div>
+    </div>`).join('');
+  tm.forEach(c=>renderCI(c.id));
+}
+function toggleCol(bId,cId){const b=document.getElementById(bId),ch=document.getElementById(cId);const open=b.classList.toggle('open');if(ch)ch.style.transform=open?'rotate(180deg)':''}
+function renderCI(cid){
+  const c=gd(KC).find(x=>x.id===cid);if(!c)return;
+  const box=document.getElementById('chd-'+cid);if(!box)return;
+  box.innerHTML=c.items.map(it=>`
+    <div class="cons-detail-row">
+      <input type="text" value="${it.nombre}" onchange="updCI(${cid},${it.id},'nombre',this.value)" style="font-size:12px">
+      <span style="font-size:10px;color:#888">${catLabel(it.cat)}</span>
+      <input type="number" min="1" value="${it.cantidad}" onchange="updCI(${cid},${it.id},'cantidad',this.value)" style="text-align:center;font-size:12px">
+      <input type="number" value="${it.precio}" onchange="updCI(${cid},${it.id},'precio',this.value)" style="text-align:right;font-size:12px">
+      <button class="btn btn-sm btn-danger" onclick="delCI(${cid},${it.id})">🗑</button>
+    </div>`).join('');
+  const sub=c.items.reduce((s,i)=>s+(i.precio*i.cantidad),0);
+  const tb=document.getElementById('ctotals-'+cid);
+  if(tb)tb.innerHTML=`<div style="background:#f5f5f3;border-radius:5px;padding:7px 10px"><div class="tline sub"><span>Subtotal</span><span>${fmt(sub)}</span></div><div class="tline sub"><span>IVA (incluido)</span><span>${fmt(sub-sub/1.16)}</span></div><div class="tline grand"><span>Total</span><span style="color:#1D9E75">${fmt(sub)}</span></div></div>`;
+}
+function updCI(cid,iid,f,v){
+  const cons=gd(KC),c=cons.find(x=>x.id===cid);if(!c)return;
+  const it=c.items.find(x=>x.id===iid);if(!it)return;
+  it[f]=f==='nombre'?v:(f==='cantidad'?parseInt(v)||1:parseFloat(v)||0);
+  const sub=c.items.reduce((s,i)=>s+(i.precio*i.cantidad),0);c.subtotal=Math.round(sub/1.16*100)/100;c.iva=Math.round((sub-sub/1.16)*100)/100;c.total=sub;
+  sd(KC,cons);renderCI(cid);
+}
+function delCI(cid,iid){
+  const cons=gd(KC),c=cons.find(x=>x.id===cid);if(!c)return;
+  c.items=c.items.filter(x=>x.id!==iid);
+  const sub=c.items.reduce((s,i)=>s+(i.precio*i.cantidad),0);c.subtotal=Math.round(sub/1.16*100)/100;c.iva=Math.round((sub-sub/1.16)*100)/100;c.total=sub;
+  sd(KC,cons);if(!c.items.length){sd(KC,gd(KC).filter(x=>x.id!==cid));renderHistorial();renderDash()}else renderCI(cid);
+}
+function saveCH(cid){
+  const cons=gd(KC),c=cons.find(x=>x.id===cid);if(!c)return;
+  c.nota=document.getElementById('cnota-'+cid).value;sd(KC,cons);renderHistorial();showAlert('Guardado');
+}
+function delCon(cid){sd(KC,gd(KC).filter(x=>x.id!==cid));renderHistorial();renderDash();showAlert('Eliminado')}
+
+function buildIngresos(){
+  const res=gd(KR),cons=gd(KC),rows=[];
+  res.forEach(r=>{
+    // Anticipo
+    if((r.anticipo||0)>0)
+      rows.push({id:'RA-'+r.id,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+        fecha:r.antiFecha,monto:r.anticipo,pago:r.antiPago,
+        base:r.base,ish:r.ish,iva:r.iva,descuento:r.descuento,label:'Anticipo hospedaje',noches:r.noches});
+    // Saldo pendiente (not yet paid)
+    if((r.saldo||0)>0 && !r.saldFecha)
+      rows.push({id:'RSP-'+r.id,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+        fecha:'',monto:r.saldo,pago:'pendiente',label:'Saldo pendiente'});
+    // Saldo paid via manual entry (saldFecha set, saldo still>0 means partially paid edge case)
+    if((r.saldo||0)>0 && r.saldFecha)
+      rows.push({id:'RS-'+r.id,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+        fecha:r.saldFecha,monto:r.saldo,pago:r.saldPago,label:'Saldo hospedaje'});
+    // Saldo paid via checkout (r.pagos entries tagged tipo:'saldo')
+    (r.pagos||[]).filter(p=>p.tipo==='saldo').forEach((p,i)=>{
+      rows.push({id:'RP-'+r.id+'-'+i,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+        fecha:p.fecha,monto:p.monto,pago:p.pago,label:'Saldo hospedaje'});
+    });
+  });
+  cons.forEach(c=>rows.push({id:'C-'+c.id,tipo:'consumo',huesped:c.huesped,habitacion:c.habitacion,
+    fecha:c.fecha,monto:c.total,
+    pago:c.items&&c.items.length&&c.items.every(i=>i.pago===c.items[0].pago)?c.items[0].pago:'mixto',
+    items:c.items,nota:c.nota,label:'Consumos'}));
+  return rows.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+}
+
+function renderIngresos(){
+  const mes=document.getElementById('ing-mes').value;
+  const cli=(document.getElementById('ing-cli').value||'').toLowerCase();
+  const tipo=document.getElementById('ing-tipo').value;
+  let rows=buildIngresos();
+  if(mes)rows=rows.filter(r=>r.fecha&&r.fecha.startsWith(mes));
+  if(cli)rows=rows.filter(r=>r.huesped.toLowerCase().includes(cli));
+  if(tipo)rows=rows.filter(r=>r.tipo===tipo);
+
+  const cobrado=rows.filter(r=>r.pago&&r.pago!=='pendiente'&&r.pago!=='tbd'&&r.pago!=='').reduce((s,r)=>s+r.monto,0);
+  const totH=rows.filter(r=>r.tipo==='hospedaje'&&r.pago&&r.pago!=='pendiente').reduce((s,r)=>s+r.monto,0);
+  const totC=rows.filter(r=>r.tipo==='consumo').reduce((s,r)=>s+r.monto,0);
+  const pend=rows.filter(r=>r.pago==='pendiente'||r.pago==='tbd'||!r.pago).reduce((s,r)=>s+r.monto,0);
+
+  document.getElementById('ing-summary').innerHTML=`
+    <div class="ing-sum"><p class="lbl">Total cobrado</p><p class="val">${fmt(cobrado)}</p></div>
+    <div class="ing-sum"><p class="lbl">Hospedaje</p><p class="val" style="color:#185FA5">${fmt(totH)}</p></div>
+    <div class="ing-sum"><p class="lbl">Consumos</p><p class="val" style="color:#1D9E75">${fmt(totC)}</p></div>
+    <div class="ing-sum"><p class="lbl">Pendiente cobro</p><p class="val" style="color:#E24B4A">${fmt(pend)}</p></div>`;
+
+  // Group rows by guest
+  const byGuest={};
+  rows.forEach(r=>{if(!byGuest[r.huesped])byGuest[r.huesped]=[];byGuest[r.huesped].push(r);});
+  const box=document.getElementById('ing-list');
+  if(!Object.keys(byGuest).length){box.innerHTML='<p class="empty">Sin ingresos</p>';return;}
+
+  // For header info, get reservation data per guest
+  const resMap={};
+  gd(KR).forEach(r=>resMap[r.nombre]=r);
+
+  ING_CACHE=byGuest;
+  box.innerHTML=Object.entries(byGuest).map(([nombre,items])=>{
+    const tot=items.reduce((s,i)=>s+i.monto,0);
+    const pendCount=items.filter(i=>!i.pago||i.pago==='pendiente'||i.pago==='tbd').length;
+    const gKey=nombre.replace(/[^a-zA-Z0-9]/g,'_');
+    const res=resMap[nombre];
+
+    // Header subtitle: habitacion · checkin → checkout · Saldo
+    const subInfo=res
+      ? `${res.habitacion} &nbsp;·&nbsp; ${res.checkin} &rarr; ${res.checkout}&nbsp;&nbsp;<span style="color:${(res.saldo||0)>0?'#E24B4A':'#1D9E75'};font-weight:600">Saldo: ${fmt(res.saldo||0)}</span>`
+      : '';
+
+    // Split items: hospedaje first, then consumos
+    const hospItems=items.filter(i=>i.tipo==='hospedaje');
+    const consItems=items.filter(i=>i.tipo==='consumo');
+
+    // Render hospedaje rows
+    const hospHtml=hospItems.map(it=>`
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:6px 0;border-bottom:0.5px solid #f0f0ec;gap:8px">
+        <div style="flex:1">
+          <p style="font-size:12px;font-weight:600;color:#1860A5">${it.label}</p>
+          ${it.base?`<p style="font-size:11px;color:#888">Base: ${fmt(it.base)}${it.noches?' ('+it.noches+' noches)':''}${it.descuento?' · Dto: '+it.descuento+'%':''} · ISH: ${fmt(it.ish||0)} · IVA: ${fmt(it.iva||0)}</p>`:''}
+          ${it.fecha?`<p style="font-size:11px;color:#bbb">Fecha de pago: ${it.fecha}</p>`:''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+          <span style="font-size:13px;font-weight:600">${fmt(it.monto)}</span>
+          <span class="badge ${pagoBadge(it.pago)}">${pagoLabel(it.pago||'')}</span>
+        </div>
+      </div>`).join('');
+
+    // Render consumo rows — one product per line
+    const consHtml=consItems.map(it=>{
+      const itemLines=(it.items||[]).map(ci=>`
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:0.5px solid #f5f5f3;font-size:12px">
+          <div style="flex:1">
+            <span style="font-weight:500">${ci.nombre}${ci.cantidad>1?' x'+ci.cantidad:''}</span>
+            ${ci.fechaPago&&ci.fechaPago!=='tbd'?`<span style="color:#bbb;margin-left:8px">Fecha de pago: ${ci.fechaPago}</span>`:''}
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
+            <span class="badge ${pagoBadge(ci.pago)}">${pagoLabel(ci.pago||'')}</span>
+            <span style="font-weight:600;min-width:60px;text-align:right">${fmt(ci.precio*ci.cantidad)}</span>
+          </div>
+        </div>`).join('');
+      return`<div style="padding:6px 0;border-bottom:0.5px solid #f0f0ec">
+        <p style="font-size:11px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.04em;margin-bottom:4px">Consumos${it.nota?' · '+it.nota:''}</p>
+        ${itemLines}
+        <div style="display:flex;justify-content:flex-end;margin-top:4px">
+          <span style="font-size:13px;font-weight:600">${fmt(it.monto)}</span>
+        </div>
+      </div>`;
+    }).join('');
+
+    const detalle=(hospHtml||consHtml)
+      ? (hospItems.length?`<div style="margin-bottom:2px">${hospHtml}</div>`:'')
+        +(consItems.length?`<div>${consHtml}</div>`:'')
+      : '<p style="font-size:12px;color:#bbb;padding:8px 0">Sin detalle</p>';
+
+    return`<div class="colrow">
+      <div class="colhdr" onclick="toggleCol('ib-${gKey}','ic-${gKey}')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="ic-${gKey}" style="font-size:11px;color:#bbb;transition:transform .15s">▼</span>
+          <div>
+            <p style="font-size:13px;font-weight:600">${nombre}</p>
+            <p style="font-size:11px;color:#888;margin-top:1px">${subInfo}</p>
+            <p style="font-size:11px;color:#888">${items.length} movimiento(s)${pendCount?' · <span style="color:#E24B4A">'+pendCount+' pend.</span>':''}</p>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:14px;font-weight:700">${fmt(tot)}</span>
+          <button onclick="event.stopPropagation();openIngModal('${gKey}')" style="background:#F0EDE8;border:1px solid #DDD;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px" title="Ver detalle">&#x1F441;</button>
+        </div>
+      </div>
+      <div class="colbody" id="ib-${gKey}">${detalle}</div>
+    </div>`;
+  }).join('');
+}
+
+
+function clearFiltros(){
+  document.getElementById('ing-mes').value='';document.getElementById('ing-cli').value='';document.getElementById('ing-tipo').value='';renderIngresos();
+}
+
+function renderAdmin(){
+  const q=(document.getElementById('admin-search').value||'').toLowerCase();
+  const cf=document.getElementById('admin-cat-filter').value;
+  let prods=gd(KP);
+  if(q)prods=prods.filter(p=>p.nombre.toLowerCase().includes(q)||catLabel(p.cat).toLowerCase().includes(q));
+  if(cf)prods=prods.filter(p=>p.cat===cf);
+  prods.sort((a,b)=>a.nombre.localeCompare(b.nombre,'es'));
+  document.getElementById('prod-count').textContent=prods.length+' producto(s)';
+  const byCat={};prods.forEach(p=>{if(!byCat[p.cat])byCat[p.cat]=[];byCat[p.cat].push(p)});
+  document.getElementById('admin-prods').innerHTML=Object.keys(byCat).sort((a,b)=>catLabel(a).localeCompare(catLabel(b),'es')).map(cat=>`<div class="cat-section"><p class="cat-lbl">${catLabel(cat)} (${byCat[cat].length})</p>${byCat[cat].map(p=>prodRowHtml(p)).join('')}</div>`).join('')||'<p class="empty">Sin resultados</p>';
+  const habs=gd(KH);
+  document.getElementById('admin-habs').innerHTML=habs.map((h,i)=>`<div class="litem"><span style="font-size:13px">${h.nombre}</span><div style="display:flex;gap:6px;align-items:center"><span style="font-size:12px;font-weight:500">${fmt(h.precio)}/noche</span>${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delHab(${i})">🗑</button>`:''}</div></div>`).join('')||'<p class="empty">Sin habitaciones</p>';
+}
+function prodRowHtml(p){
+  if(editingProdId===p.id)return`<div class="prod-row edit-mode"><input type="text" id="ep-n-${p.id}" value="${p.nombre}"><span style="font-size:10px;color:#888">${catLabel(p.cat)}</span><input type="number" id="ep-p-${p.id}" value="${p.precio}" style="text-align:right"><button class="btn btn-sm btn-primary" onclick="savePE(${p.id})">✓</button><button class="btn btn-sm" onclick="cancelEdit()">✕</button></div>`;
+  return`<div class="prod-row view-mode"><span style="font-size:13px">${p.nombre}</span><span style="font-size:10px;color:#888">${catLabel(p.cat)}</span><span style="font-size:12px;font-weight:500;text-align:right">${fmt(p.precio)}</span><button class="btn btn-sm" onclick="startEdit(${p.id})">✏</button>${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delProd(${p.id})">🗑</button>`:''}</div>`;
+}
+function startEdit(id){editingProdId=id;renderAdmin()}
+function cancelEdit(){editingProdId=null;renderAdmin()}
+function savePE(id){
+  const n=document.getElementById('ep-n-'+id).value.trim(),p=parseFloat(document.getElementById('ep-p-'+id).value)||0;
+  if(!n){showAlert('Nombre vacío','error');return}
+  const prods=gd(KP),prod=prods.find(x=>x.id===id);if(prod){prod.nombre=n;prod.precio=p;sd(KP,prods)}
+  editingProdId=null;renderAdmin();showAlert('Actualizado');
+}
+function delProd(id){sd(KP,gd(KP).filter(x=>x.id!==id));renderAdmin()}
+function addProd(){
+  const n=document.getElementById('p-nombre').value.trim(),c=document.getElementById('p-cat-sel').value,p=parseFloat(document.getElementById('p-precio').value)||0;
+  if(!n){showAlert('Escribe el nombre','error');return}
+  const prods=gd(KP);prods.push({id:Date.now(),cat:c,nombre:n,precio:p});sd(KP,prods);
+  document.getElementById('p-nombre').value='';document.getElementById('p-precio').value='';renderAdmin();showAlert('Agregado');
+}
+function addHab(){
+  const n=document.getElementById('h-nombre').value.trim(),p=parseFloat(document.getElementById('h-precio').value)||0;
+  if(!n||!p){showAlert('Completa nombre y tarifa','error');return}
+  const h=gd(KH);h.push({id:Date.now(),nombre:n,precio:p});sd(KH,h);
+  document.getElementById('h-nombre').value='';document.getElementById('h-precio').value='';renderAdmin();showAlert('Agregado');
+}
+function delHab(i){const h=gd(KH);h.splice(i,1);sd(KH,h);renderAdmin()}
+
+function handleFile(input){
+  const file=input.files[0];if(!file)return;
+  const preview=document.getElementById('import-preview');preview.innerHTML='<p>Procesando...</p>';
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      let rows=[];
+      if(file.name.endsWith('.csv')){const lines=e.target.result.split('\n').filter(l=>l.trim());const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,'').toLowerCase());rows=lines.slice(1).map(line=>{const vals=line.split(',').map(v=>v.trim().replace(/"/g,''));const o={};headers.forEach((h,i)=>o[h]=vals[i]||'');return o})}
+      else{const wb=XLSX.read(e.target.result,{type:'binary'});const ws=wb.Sheets[wb.SheetNames[0]];rows=XLSX.utils.sheet_to_json(ws,{defval:''}).map(r=>{const o={};Object.keys(r).forEach(k=>o[k.toLowerCase().trim()]=String(r[k]));return o})}
+      processImport(rows,preview);
+    }catch(err){preview.innerHTML=`<p style="color:#A32D2D">Error: ${err.message}</p>`}
+  };
+  if(file.name.endsWith('.csv'))reader.readAsText(file);else reader.readAsBinaryString(file);
+}
+function processImport(rows,preview){
+  const nk=['guest name','nombre','guest','name'],rk=['room','habitación','habitacion','room name'],ik=['arrival','check-in','checkin'],ok=['departure','check-out','checkout'];
+  const fv=(row,keys)=>{const k=keys.find(k=>row[k]!==undefined&&row[k]!=='');return k?row[k]:''};
+  const imp=rows.filter(r=>fv(r,nk).length>1).map(r=>({id:'CB-IMP-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),nombre:fv(r,nk),pais:'',habitacion:fv(r,rk)||'Sin asignar',checkin:fv(r,ik)||'',checkout:fv(r,ok)||'',origen:fv(r,['source','origen','channel'])||'directo',estado:'confirmada',fuente:'cloudbeds',base:0,ish:0,iva:0,total:0,anticipo:0,antiPct:50,antiFecha:'',antiPago:'',saldo:0,saldFecha:'',saldPago:''}));
+  if(!imp.length){preview.innerHTML='<p style="color:#A32D2D">No se encontraron reservas válidas.</p>';return}
+  const existing=gd(KR),nuevas=imp.filter(r=>!existing.some(e=>e.nombre===r.nombre&&e.checkin===r.checkin));
+  preview.innerHTML=`<div style="background:#EAF3DE;border:0.5px solid #97C459;border-radius:6px;padding:9px 12px;margin-bottom:10px"><p style="font-size:12px;font-weight:600;color:#3B6D11">${imp.length} encontradas · ${nuevas.length} nuevas</p></div>${nuevas.slice(0,8).map(r=>`<div class="res-item"><div><p style="font-size:13px;font-weight:500">${r.nombre}</p><p style="font-size:11px;color:#888">${r.habitacion} · ${r.checkin} → ${r.checkout}</p></div><span class="badge b-cb">Cloudbeds</span></div>`).join('')}<div style="margin-top:10px"><button class="btn btn-primary" onclick="confirmImport(${JSON.stringify(nuevas).replace(/"/g,'&quot;')})">✓ Importar ${nuevas.length}</button></div>`;
+}
+function confirmImport(n){sd(KR,[...gd(KR),...n]);showTab('reservas');showAlert(n.length+' reservas importadas')}
+
+function showAlert(msg,type='success'){
+  const b=document.getElementById('alert-box');b.textContent=msg;b.className='alert '+type;b.style.display='block';
+  setTimeout(()=>b.style.display='none',3500);
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.ac-wrap'))document.querySelectorAll('.ac-dd').forEach(d=>d.style.display='none');
+});
+// ── CHECKOUT SECTION ──
+var CK_ID=null, CK_EX=[], CK_P=null;
+
+function ckPopCats(){
+  const opts=CATS_KEY.map((k,i)=>`<option value="${k}">${CATS_RAW[i]}</option>`).join('');
+  const s=document.getElementById('ck-cat');
+  if(s) s.innerHTML='<option value="">&#8212; Categor&iacute;a &#8212;</option>'+opts;
+  const sp=document.getElementById('ck-prod');
+  if(sp){sp.innerHTML='<option value="">&#8212; Producto &#8212;</option>';sp.disabled=true;}
+}
+function ckOpen(rid){
+  CK_ID=rid; CK_EX=[]; CK_P=null;
+  const r=gd(KR).find(x=>x.id==rid||x.id===rid);
+  if(!r)return;
+  document.getElementById('ck-ttl').textContent='Check-out: '+r.nombre;
+  document.getElementById('ck-sub').textContent=r.habitacion+' · '+r.checkin+' → '+r.checkout;
+  document.getElementById('tchk').style.display='';
+  ckPopCats();
+  ckRenderHosp(r);
+  ckRenderTBD(rid);
+  ckClear();
+  document.getElementById('ck-extras').innerHTML='';
+  const lc=document.getElementById('ck-lineas-card');if(lc)lc.style.display='none';
+  document.getElementById('ck-qty').value=1;
+  document.getElementById('ck-prc').value='';
+  document.getElementById('ck-sub-prev').value='';
+  ckTotals();
+  showTab('checkout');
+}
+function ckCancel(){document.getElementById('tchk').style.display='none';showTab('reservas');}
+function ckRenderHosp(r){
+  const s=parseFloat(r.saldo)||0;
+  const card=document.getElementById('ck-hosp');
+  if(s<=0){card.style.display='none';return;}
+  card.style.display='block';
+  document.getElementById('ck-hosp-b').innerHTML=
+    `<div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px">
+      <span>${r.habitacion} · ${r.checkin} → ${r.checkout}</span>
+      <strong style="color:#C83232">${fmt(s)}</strong></div>
+    <div class="frow"><div><label>Método</label>${ckSel('ck-hp','transferencia')}</div>
+    <div><label>Fecha</label><input type="date" id="ck-hf" value="${today()}" style="height:32px"></div></div>`;
+}
+function ckRenderTBD(rid){
+  const card=document.getElementById('ck-tbd');
+  const items=[];
+  gd(KC).filter(c=>c.reservaId===rid).forEach(c=>(c.items||[]).forEach(it=>{if(it.pago==='tbd')items.push(it);}));
+  if(!items.length){card.style.display='none';return;}
+  card.style.display='block';
+  document.getElementById('ck-tbd-b').innerHTML=items.map(it=>`
+    <div style="background:#F5F4F0;border-radius:6px;padding:8px 10px;margin-bottom:6px">
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px">
+        <strong>${it.nombre}${it.cantidad>1?' x'+it.cantidad:''}</strong>
+        <strong style="color:#C83232">${fmt(it.precio*it.cantidad)}</strong>
+      </div>
+      <div class="frow"><div><label style="font-size:11px">Método</label>${ckSel('ck-tp-'+it.id,'efectivo')}</div>
+      <div><label style="font-size:11px">Fecha</label><input type="date" id="ck-tf-${it.id}" value="${today()}" style="height:28px;font-size:12px"></div></div>
+    </div>`).join('');
+}
+function ckSel(id,val){
+  const opts=[['efectivo','Efectivo'],['efectivo-nd','Efectivo ND'],['transferencia','Transferencia'],
+              ['debito','Débito'],['mercadopago','Mercado Pago'],['stripe','Stripe']];
+  return `<select id="${id}" style="width:100%;font-size:13px;height:32px">`
+    +opts.map(o=>`<option value="${o[0]}"${o[0]===val?' selected':''}>${o[1]}</option>`).join('')+'</select>';
+}
+
+// ── Product search (mirrors consumos exactly) ──
+function ckSearch(val){
+  const dd=document.getElementById('ck-dd');
+  if(!val){dd.style.display='none';return;}
+  const m=gd(KP).filter(p=>p.nombre.toLowerCase().includes(val.toLowerCase())).slice(0,10);
+  if(!m.length){dd.style.display='none';return;}
+  dd.innerHTML=m.map(p=>`<div class="ac-it" onclick="ckPick(${p.id})"><span class="ac-name">${p.nombre}</span><p class="ac-sub">${catLabel(p.cat)} · ${fmt(p.precio)}</p></div>`).join('');
+  dd.style.display='block';
+}
+function ckFocus(){
+  const val=document.getElementById('ck-s').value;
+  if(val){ckSearch(val);return;}
+  const dd=document.getElementById('ck-dd');
+  dd.innerHTML=gd(KP).slice(0,20).map(p=>`<div class="ac-it" onclick="ckPick(${p.id})"><span class="ac-name">${p.nombre}</span><p class="ac-sub">${catLabel(p.cat)} · ${fmt(p.precio)}</p></div>`).join('');
+  dd.style.display='block';
+}
+function ckPick(id){
+  const p=gd(KP).find(x=>x.id===id||x.id==id);if(!p)return;
+  CK_P=p;
+  document.getElementById('ck-s').value=p.nombre;
+  document.getElementById('ck-dd').style.display='none';
+  document.getElementById('ck-prc').value=p.precio;
+  document.getElementById('ck-cat').value=p.cat;
+  ckPopProds(p.cat, p.id);
+  document.getElementById('ck-pill').innerHTML=`<div class="prod-sel-pill" style="display:inline-flex;align-items:center;gap:7px;background:#E4F5EE;border:1px solid #8FD4B8;border-radius:20px;padding:4px 12px;font-size:12px;color:#0D6E51;margin-bottom:6px"><strong>${p.nombre}</strong><span style="color:#888">${catLabel(p.cat)}</span><span>·</span><span>${fmt(p.precio)}</span><button onclick="ckClear()" style="background:none;border:none;cursor:pointer;font-size:15px;color:#1D9E75;line-height:1">×</button></div>`;
+  ckRecalc();
+}
+function ckCatChange(cat){
+  CK_P=null;
+  document.getElementById('ck-s').value='';
+  document.getElementById('ck-pill').innerHTML='';
+  document.getElementById('ck-prc').value='';
+  document.getElementById('ck-sub-prev').value='';
+  if(!cat){document.getElementById('ck-prod').innerHTML='<option value="">&#8212; Producto &#8212;</option>';document.getElementById('ck-prod').disabled=true;return;}
+  ckPopProds(cat, null);
+}
+function ckPopProds(cat, selId){
+  const prods=gd(KP).filter(p=>p.cat===cat);
+  const sel=document.getElementById('ck-prod');
+  sel.innerHTML='<option value="">&#8212; Producto &#8212;</option>'+prods.map(p=>`<option value="${p.id}"${p.id==selId?' selected':''}>${p.nombre} · ${fmt(p.precio)}</option>`).join('');
+  sel.disabled=false;
+}
+function ckProdSel(val){
+  if(!val)return;
+  const p=gd(KP).find(x=>x.id==val);if(!p)return;
+  ckPick(p.id);
+}
+function ckRecalc(){
+  const q=parseInt(document.getElementById('ck-qty').value)||1;
+  const pr=parseFloat(document.getElementById('ck-prc').value)||0;
+  document.getElementById('ck-sub-prev').value=fmt(q*pr);
+}
+function ckClear(){
+  CK_P=null;
+  ['ck-s','ck-pill'].forEach(id=>{const e=document.getElementById(id);if(e)e.value!==undefined?e.value='':e.innerHTML='';});
+  const dd=document.getElementById('ck-dd');if(dd)dd.style.display='none';
+  document.getElementById('ck-prc').value='';
+  document.getElementById('ck-sub-prev').value='';
+  document.getElementById('ck-cat').value='';
+  const sp=document.getElementById('ck-prod');if(sp){sp.innerHTML='<option value="">&#8212; Producto &#8212;</option>';sp.disabled=true;}
+}
+function ckAddExtra(){
+  const nombre=CK_P?CK_P.nombre:document.getElementById('ck-s').value.trim();
+  if(!nombre){showAlert('Selecciona un producto','error');return;}
+  const qty=parseInt(document.getElementById('ck-qty').value)||1;
+  const precio=parseFloat(document.getElementById('ck-prc').value)||0;
+  CK_EX.push({id:Date.now(),nombre,cat:CK_P?CK_P.cat:'',cantidad:qty,precio,pago:document.getElementById('ck-met').value});
+  ckClear();
+  document.getElementById('ck-qty').value=1;
+  ckRenderExtras();
+  ckTotals();
+}
+function ckRemove(id){CK_EX=CK_EX.filter(e=>e.id!==id);ckRenderExtras();ckTotals();}
+function ckUpdExtra(id,field,val){
+  const e=CK_EX.find(x=>x.id===id);if(!e)return;
+  e[field]=field==='cantidad'?parseInt(val)||1:parseFloat(val)||0;
+  ckRenderExtras();ckTotals();
+}
+function ckRenderExtras(){
+  const card=document.getElementById('ck-lineas-card');
+  if(!CK_EX.length){if(card)card.style.display='none';return;}
+  if(card)card.style.display='block';
+  document.getElementById('ck-extras').innerHTML=CK_EX.map(e=>`
+    <div class="linea-row">
+      <span style="font-size:13px;font-weight:600">${e.nombre}</span>
+      <span style="font-size:12px;color:#888">${catLabel(e.cat)}</span>
+      <input type="number" min="1" value="${e.cantidad}" onchange="ckUpdExtra(${e.id},'cantidad',this.value)" style="text-align:center">
+      <input type="number" value="${e.precio}" onchange="ckUpdExtra(${e.id},'precio',this.value)" style="text-align:right">
+      <button class="btn btn-sm btn-danger" onclick="ckRemove(${e.id})">&#x1F5D1;</button>
+    </div>
+    <div style="font-size:11px;color:#888;padding:0 3px 5px;display:flex;gap:6px">
+      <span class="badge b-${e.pago}">${pagoLabel(e.pago)}</span>
+    </div>`).join('');
+}
+function ckTotals(){
+  if(!CK_ID)return;
+  const r=gd(KR).find(x=>x.id==CK_ID||x.id===CK_ID);if(!r)return;
+  const sH=parseFloat(r.saldo)||0;
+  const tTBD=gd(KC).filter(c=>c.reservaId===CK_ID).reduce((s,c)=>(c.items||[]).filter(it=>it.pago==='tbd').reduce((a,it)=>a+it.precio*it.cantidad,s),0);
+  const tEx=CK_EX.reduce((s,e)=>s+e.precio*e.cantidad,0);
+  let html='';
+  if(sH>0) html+=`<div class="tline"><span style="color:#888">Saldo hospedaje</span><span>${fmt(sH)}</span></div>`;
+  if(tTBD>0) html+=`<div class="tline"><span style="color:#888">Consumos TBD</span><span>${fmt(tTBD)}</span></div>`;
+  if(tEx>0) html+=`<div class="tline"><span style="color:#888">Extras</span><span>${fmt(tEx)}</span></div>`;
+  html+=`<div class="tline gd"><span>Total a cobrar</span><span style="color:#1860A5">${fmt(sH+tTBD+tEx)}</span></div>`;
+  document.getElementById('ck-tots').innerHTML=html;
+}
+function ckConfirm(){
+  const res=gd(KR),r=res.find(x=>x.id==CK_ID||x.id===CK_ID);if(!r)return;
+  const cons=gd(KC),hoy=today();
+  if((r.saldo||0)>0){
+    const ps=document.getElementById('ck-hp'),fp=document.getElementById('ck-hf');
+    const saldoPago=ps?ps.value:'efectivo';
+    const saldoFecha=fp?fp.value:hoy;
+    r.pagos=r.pagos||[];r.pagos.push({tipo:'saldo',monto:r.saldo,pago:saldoPago,fecha:saldoFecha});
+    r.saldFecha=saldoFecha;
+    r.saldPago=saldoPago;
+    r.saldo=0;
+  }
+  cons.forEach(c=>{
+    if(c.reservaId!==CK_ID)return;
+    (c.items||[]).forEach(it=>{
+      if(it.pago!=='tbd')return;
+      const ps=document.getElementById('ck-tp-'+it.id),fp=document.getElementById('ck-tf-'+it.id);
+      it.pago=ps?ps.value:'efectivo';it.fechaPago=fp?fp.value:hoy;
+    });
+    // recalc consumo totals
+    const sub=((c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0));
+    c.subtotal=Math.round(sub/1.16*100)/100;
+    c.iva=Math.round((sub-sub/1.16)*100)/100;
+    c.total=sub;
+  });
+  if(CK_EX.length){
+    const sub=CK_EX.reduce((s,e)=>s+e.precio*e.cantidad,0);
+    cons.push({id:Date.now(),reservaId:CK_ID,huesped:r.nombre,habitacion:r.habitacion,
+      items:CK_EX.map(e=>({id:Date.now()+Math.random(),cat:e.cat,nombre:e.nombre,cantidad:e.cantidad,precio:e.precio,pago:e.pago,fechaPago:hoy})),
+      subtotal:Math.round(sub/1.16*100)/100,iva:Math.round((sub-sub/1.16)*100)/100,total:sub,nota:'Extras checkout'});
+  }
+  r.estado='checkout';sd(KR,res);sd(KC,cons);
+  ckCancel();renderDash();showAlert('Check-out completado para '+r.nombre);
+}
+
+function closeIngModal(){
+  document.getElementById('ing-modal-overlay').style.display='none';
+}
+function openIngModal(gKey){
+  const nombre=Object.keys(ING_CACHE).find(n=>n.replace(/[^a-zA-Z0-9]/g,'_')===gKey);
+  if(!nombre)return;
+  const items=ING_CACHE[nombre];
+  const res=gd(KR).find(r=>r.nombre===nombre);
+
+  document.getElementById('ing-modal-title').textContent=nombre;
+  document.getElementById('ing-modal-sub').textContent=res
+    ? res.habitacion+' · '+res.checkin+' → '+res.checkout
+    : '';
+
+  const hospItems=items.filter(i=>i.tipo==='hospedaje');
+  const consItems=items.filter(i=>i.tipo==='consumo');
+
+  const thStyle='font-size:10px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:2px solid #EEE';
+  const thL='font-size:10px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;text-align:left;border-bottom:2px solid #EEE';
+  const td='padding:6px 8px;font-size:12px;text-align:right;border-bottom:0.5px solid #F0EDE8;vertical-align:top';
+  const tdL='padding:6px 8px;font-size:12px;text-align:left;border-bottom:0.5px solid #F0EDE8;vertical-align:top';
+  const tdTot='padding:7px 8px;font-size:13px;font-weight:700;text-align:right;border-top:2px solid #EEE;background:#F5F4F0';
+  const tdTotL='padding:7px 8px;font-size:13px;font-weight:700;text-align:left;border-top:2px solid #EEE;background:#F5F4F0';
+
+  let html='';
+
+  // ── HOSPEDAJE TABLE ──
+  if(hospItems.length){
+    html+=`<p style="font-size:11px;font-weight:700;color:#1860A5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Hospedaje</p>
+    <div style="overflow-x:auto;margin-bottom:1.2rem">
+    <table style="width:100%;border-collapse:collapse;font-family:sans-serif">
+      <thead><tr>
+        <th style="${thL}">Concepto</th>
+        <th style="${thStyle}">Base</th>
+        <th style="${thStyle}">ISH</th>
+        <th style="${thStyle}">IVA</th>
+        <th style="${thStyle}">Total</th>
+        <th style="${thStyle}">M&eacute;todo</th>
+        <th style="${thStyle}">Fecha pago</th>
+      </tr></thead>
+      <tbody>`;
+
+    // Calculate total hospedaje fiscal breakdown first
+    // Total = base_neta * (1 + 0.045 + 0.16) = base_neta * 1.205
+    // So base_neta = total / 1.205
+    const totalHosp = hospItems.reduce((s,i)=>s+(i.pago!=='pendiente'?i.monto:0), 0);
+    const pendHosp  = hospItems.reduce((s,i)=>s+(i.pago==='pendiente'||i.pago==='tbd'?i.monto:0), 0);
+    const grandHosp = totalHosp + pendHosp;
+
+    // Use reservation fiscal data if available, otherwise reverse-calculate
+    const rr = gd(KR).find(r=>r.nombre===nombre);
+    let bnTotal=0, ishTotal=0, ivaTotal=0;
+    if(rr && rr.base){
+      const desc=parseFloat(rr.descuento)||0;
+      bnTotal = (parseFloat(rr.base)||0)*(1-desc/100);
+      ishTotal = bnTotal*0.045;
+      ivaTotal = bnTotal*0.16;
+    } else {
+      // reverse from grand total: total = bn*(1+0.045+0.16)
+      bnTotal  = grandHosp/1.205;
+      ishTotal = bnTotal*0.045;
+      ivaTotal = bnTotal*0.16;
+    }
+
+    // Each payment row gets proportional share of fiscal breakdown
+    let hospSubtotal=0;
+    hospItems.forEach(it=>{
+      const monto=it.monto||0;
+      const ratio = grandHosp>0 ? monto/grandHosp : 0;
+      const base  = Math.round(bnTotal*ratio*100)/100;
+      const ish   = Math.round(ishTotal*ratio*100)/100;
+      const iva   = Math.round(ivaTotal*ratio*100)/100;
+      if(it.pago!=='pendiente'&&it.pago!=='tbd') hospSubtotal+=monto;
+      const isPend=it.pago==='pendiente'||it.pago==='tbd';
+      html+=`<tr>
+        <td style="${tdL}${isPend?';color:#E24B4A':''}">
+          <strong>${it.label}</strong>
+          ${grandHosp>0?`<br><span style="font-size:10px;color:#AAA">${Math.round(it.monto/grandHosp*100)}% del total</span>`:''}
+          ${(it.descuento||0)>0?`<br><span style="font-size:10px;color:#888">Dto ${it.descuento}%</span>`:''}
+        </td>
+        <td style="${td}${isPend?';color:#E24B4A':''}">${fmt(base)}</td>
+        <td style="${td}${isPend?';color:#E24B4A':''}">${fmt(ish)}</td>
+        <td style="${td}${isPend?';color:#E24B4A':''}">${fmt(iva)}</td>
+        <td style="${td};font-weight:600${isPend?';color:#E24B4A':''}">${fmt(monto)}</td>
+        <td style="${td}"><span class="badge ${pagoBadge(it.pago)}">${pagoLabel(it.pago||'')}</span></td>
+        <td style="${td}">${it.fecha||'<span style=\"color:#AAA\">&mdash;</span>'}</td>
+      </tr>`;
+    });
+
+    // Total hospedaje row
+    html+=`<tr>
+      <td style="${tdTotL}" colspan="4">Total hospedaje${pendHosp>0?` <span style="font-size:11px;color:#E24B4A">(incl. ${fmt(pendHosp)} pend.)</span>`:''}
+        <br><span style="font-size:10px;color:#888;font-weight:400">Base: ${fmt(bnTotal)} · ISH: ${fmt(ishTotal)} · IVA: ${fmt(ivaTotal)}</span>
+      </td>
+      <td style="${tdTot}">${fmt(grandHosp)}</td>
+      <td style="${tdTot}" colspan="2"></td>
+    </tr></tbody></table></div>`;
+  }
+
+  // ── CONSUMOS TABLE ──
+  if(consItems.length){
+    html+=`<p style="font-size:11px;font-weight:700;color:#1D9E75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Consumos</p>
+    <div style="overflow-x:auto;margin-bottom:1.2rem">
+    <table style="width:100%;border-collapse:collapse;font-family:sans-serif">
+      <thead><tr>
+        <th style="${thL}">Producto</th>
+        <th style="${thStyle}">Cant.</th>
+        <th style="${thStyle}">Base</th>
+        <th style="${thStyle}">IVA</th>
+        <th style="${thStyle}">Total</th>
+        <th style="${thStyle}">M&eacute;todo</th>
+        <th style="${thStyle}">Fecha pago</th>
+      </tr></thead>
+      <tbody>`;
+
+    let consTot=0;
+    consItems.forEach(group=>{
+      (group.items||[]).forEach(ci=>{
+        const tot=ci.precio*ci.cantidad;
+        const base=Math.round(tot/1.16*100)/100;
+        const iva=Math.round((tot-base)*100)/100;
+        consTot+=tot;
+        html+=`<tr>
+          <td style="${tdL}"><strong>${ci.nombre}</strong><br><span style="font-size:10px;color:#AAA">${catLabel(ci.cat)}</span></td>
+          <td style="${td}">${ci.cantidad}</td>
+          <td style="${td}">${fmt(base)}</td>
+          <td style="${td}">${fmt(iva)}</td>
+          <td style="${td};font-weight:600">${fmt(tot)}</td>
+          <td style="${td}"><span class="badge ${pagoBadge(ci.pago)}">${pagoLabel(ci.pago||'')}</span></td>
+          <td style="${td}">${ci.fechaPago&&ci.fechaPago!=='tbd'?ci.fechaPago:'<span style="color:#AAA">&mdash;</span>'}</td>
+        </tr>`;
+      });
+    });
+
+    html+=`<tr>
+      <td style="${tdTotL}" colspan="4">Subtotal consumos</td>
+      <td style="${tdTot}">${fmt(consTot)}</td>
+      <td style="${tdTot}" colspan="2"></td>
+    </tr></tbody></table></div>`;
+  }
+
+  // ── GRAND TOTAL ──
+  const grandTot=items.filter(i=>i.pago!=='pendiente'&&i.pago!=='tbd').reduce((s,i)=>s+i.monto,0);
+  const pend=items.filter(i=>i.pago==='pendiente'||i.pago==='tbd').reduce((s,i)=>s+i.monto,0);
+  html+=`<div style="background:#F5F4F0;border-radius:8px;padding:10px 14px">
+    ${pend>0?`<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:#E24B4A"><span>Pendiente de cobro</span><span style="font-weight:600">${fmt(pend)}</span></div>`:''}
+    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:6px 0;${pend>0?'border-top:1px solid #DDD;margin-top:4px':''}">
+      <span>Total cobrado</span><span style="color:#1860A5">${fmt(grandTot)}</span>
+    </div>
+  </div>`;
+
+  document.getElementById('ing-modal-body').innerHTML=html;
+  document.getElementById('ing-modal-overlay').style.display='flex';
+}
+
+
+</script>
+<div id="co-dd" style="position:fixed;background:#FFF;border:1px solid #CCC;border-radius:8px;z-index:99999;max-height:220px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,.2);display:none;min-width:260px"></div>
+
+<!-- INGRESO DETALLE MODAL -->
+<div id="ing-modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeIngModal()">
+  <div style="background:#FFF;border-radius:10px;padding:1.4rem;width:94%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #EEE;padding-bottom:10px">
+      <div>
+        <h3 id="ing-modal-title" style="font-size:16px;font-weight:700"></h3>
+        <p id="ing-modal-sub" style="font-size:12px;color:#888;margin-top:2px"></p>
+      </div>
+      <button onclick="closeIngModal()" style="background:none;border:none;cursor:pointer;font-size:20px;color:#AAA">&times;</button>
+    </div>
+    <div id="ing-modal-body"></div>
+  </div>
+</div>
+</body>
+</html>
