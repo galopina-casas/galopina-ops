@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.2</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.3</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.2</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.3</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1147,17 +1147,21 @@ function processImport(rows, preview){
       const deposito=parseFloat(get(['Depósito','deposito','deposit','Monto pagado','monto pagado']))||0;
       const saldoPend=parseFloat(get(['Saldo pendiente','saldo pendiente','balance due']))||0;
 
-      // Fiscal breakdown: price already includes ISH+IVA
-      // base = tarifaTotal / 1.205, ish = base*0.045, iva = base*0.16
-      const base=Math.round(tarifaTotal/1.205*100)/100;
+      // Total de la habitación = BASE sin impuestos
+      const base=tarifaTotal;
       const ish=Math.round(base*0.045*100)/100;
       const iva=Math.round(base*0.16*100)/100;
+      const totalConImpuestos=Math.round(base*1.205*100)/100;
 
       const origen=mapOrigen(get(['Fuente','fuente','source']));
       const estado=mapEstado(get(['Estado ','estado ','Estado','estado','status']));
       const pais=get(['País','pais','país','country'])||'';
       const email=get(['Correo electrónico','correo electronico','email'])||'';
       const tel=(get(['Teléfono','telefono','phone'])||'').trim();
+
+      // Detect consumo extra (cena) if totalGeneral > tarifaTotal*1.205 + $1
+      const diffCena=Math.round(((totalGeneral||0)-totalConImpuestos)*100)/100;
+      const tieneCena=diffCena>1;
 
       nuevas.push({
         id, cbId:String(cbId).trim(),
@@ -1170,12 +1174,13 @@ function processImport(rows, preview){
         origen, estado, fuente:'cloudbeds',
         tarifaNoche:noches>0?Math.round(tarifaTotal/noches):tarifaTotal,
         base, ish, iva,
-        total:tarifaTotal,
+        total:totalConImpuestos,
         anticipo:deposito,
         antiFecha:'', antiPago:'',
         saldo:saldoPend,
         saldFecha:'', saldPago:'',
-        descuento:0, pagos:[]
+        descuento:0, pagos:[],
+        consumoCena:tieneCena?diffCena:0
       });
     }catch(e){errores.push(`Fila ${i+2}: ${e.message}`);}
   });
@@ -1195,6 +1200,7 @@ function processImport(rows, preview){
         <strong>${r.nombre}</strong> <span style="color:#888;font-size:11px">CB: ${r.cbId}</span><br>
         <span class="tag">${r.habitacion}</span> ${r.checkin} → ${r.checkout} · ${r.noches} noches<br>
         Total: <strong>${fmt(r.total)}</strong> · Anticipo: ${fmt(r.anticipo)} · Saldo: <span style="color:#C83232">${fmt(r.saldo)}</span>
+        ${r.consumoCena>0?`<br><span style="color:#1D9E75;font-size:11px">+ Cena: ${fmt(r.consumoCena)}</span>`:''}
       </div>`).join('')}
     </div>
     <button class="btn btn-primary" onclick="confirmImport(${JSON.stringify(nuevas).replace(/"/g,'&quot;')})">
@@ -1205,7 +1211,43 @@ function processImport(rows, preview){
   preview.innerHTML=html;
 }
 
-function confirmImport(n){sd(KR,[...gd(KR),...n]);showTab('reservas');showAlert(n.length+' reservas importadas')}
+function confirmImport(nuevas){
+  const res=gd(KR);
+  const cons=gd(KC);
+  const hoy=today();
+  nuevas.forEach(r=>{
+    const cena=r.consumoCena||0;
+    delete r.consumoCena;
+    res.push(r);
+    // Create consumo "Cena" if there is extra amount
+    if(cena>0){
+      const precioUnit=Math.round(cena/1.16*100)/100; // cena price includes IVA
+      cons.push({
+        id:'CB-CENA-'+r.id+'-'+Date.now(),
+        reservaId:r.id,
+        huesped:r.nombre,
+        habitacion:r.habitacion,
+        items:[{
+          id:'item-'+Date.now(),
+          cat:'cenas',
+          nombre:'Cena',
+          cantidad:1,
+          precio:precioUnit,
+          pago:'tbd',
+          fechaPago:''
+        }],
+        subtotal:Math.round(precioUnit*100)/100,
+        iva:Math.round(precioUnit*0.16*100)/100,
+        total:cena,
+        nota:'Importado desde Cloudbeds'
+      });
+    }
+  });
+  sd(KR,res);
+  sd(KC,cons);
+  showTab('reservas');
+  showAlert(nuevas.length+' reserva(s) importadas correctamente','success');
+}
 
 function showAlert(msg,type='success'){
   const b=document.getElementById('alert-box');b.textContent=msg;b.className='alert '+type;b.style.display='block';
