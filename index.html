@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.9</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.9</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -501,15 +501,7 @@ const DP=[
   {id:69,cat:'snacks',nombre:'BLT',precio:230},{id:70,cat:'snacks',nombre:'Snack',precio:200},
 ];
 const DEFAULT_HABS=[{id:1,nombre:'Suite Yuya',precio:4100},{id:2,nombre:'Suite Chel',precio:4100},{id:3,nombre:'Suite Toh',precio:4100},{id:4,nombre:'Suite Jabin',precio:4100},{id:5,nombre:'Suite Ciricote',precio:4500}];
-const CLOUDBEDS_RES=[
-  {id:'CB-2001',nombre:'Ana Martínez',pais:'México',habitacion:'Suite Yuya',checkin:'2026-05-01',checkout:'2026-05-04',origen:'directo',estado:'checkout',fuente:'cloudbeds',tarifaNoche:4100,noches:3,base:12300,descuento:0,ish:554,iva:1968,total:14822,anticipo:7411,antiPct:50,antiFecha:'2026-04-20',antiPago:'transferencia',saldo:7411,saldFecha:'2026-05-04',saldPago:'transferencia'},
-  {id:'CB-2002',nombre:'Pierre Dubois',pais:'Francia',habitacion:'Suite Chel',checkin:'2026-05-03',checkout:'2026-05-07',origen:'booking',estado:'checkout',fuente:'cloudbeds',tarifaNoche:4100,noches:4,base:16400,descuento:0,ish:738,iva:2624,total:19762,anticipo:9881,antiPct:50,antiFecha:'2026-04-25',antiPago:'stripe',saldo:9881,saldFecha:'2026-05-07',saldPago:'stripe'},
-  {id:'CB-2003',nombre:'Carlos Ramírez',pais:'México',habitacion:'Suite Toh',checkin:'2026-05-10',checkout:'2026-05-13',origen:'airbnb',estado:'checkout',fuente:'cloudbeds',tarifaNoche:4100,noches:3,base:12300,descuento:10,ish:499,iva:1771,total:13070,anticipo:6535,antiPct:50,antiFecha:'2026-05-05',antiPago:'mercadopago',saldo:6535,saldFecha:'2026-05-13',saldPago:'efectivo'},
-  {id:'CB-2004',nombre:'Sophie Lehmann',pais:'Alemania',habitacion:'Suite Jabin',checkin:'2026-05-15',checkout:'2026-05-19',origen:'directo',estado:'checkin',fuente:'cloudbeds',tarifaNoche:4100,noches:4,base:16400,descuento:0,ish:738,iva:2624,total:19762,anticipo:9881,antiPct:50,antiFecha:'2026-05-10',antiPago:'transferencia',saldo:9881,saldFecha:'',saldPago:''},
-  {id:'CB-2005',nombre:'Valentina Ramos',pais:'Argentina',habitacion:'Suite Ciricote',checkin:'2026-05-18',checkout:'2026-05-22',origen:'airbnb',estado:'checkin',fuente:'cloudbeds',tarifaNoche:4500,noches:4,base:18000,descuento:0,ish:810,iva:2880,total:21690,anticipo:10845,antiPct:50,antiFecha:'2026-05-12',antiPago:'stripe',saldo:10845,saldFecha:'',saldPago:''},
-  {id:'CB-2006',nombre:'Marco Herrera',pais:'México',habitacion:'Suite Yuya',checkin:'2026-05-20',checkout:'2026-05-24',origen:'whatsapp',estado:'checkin',fuente:'cloudbeds',tarifaNoche:4100,noches:4,base:16400,descuento:5,ish:700,iva:2485,total:19585,anticipo:9793,antiPct:50,antiFecha:'2026-05-15',antiPago:'efectivo',saldo:9792,saldFecha:'',saldPago:''},
-  {id:'CB-2007',nombre:'Emily Chen',pais:'Estados Unidos',habitacion:'Suite Chel',checkin:'2026-05-25',checkout:'2026-05-28',origen:'booking',estado:'confirmada',fuente:'cloudbeds',tarifaNoche:4100,noches:3,base:12300,descuento:0,ish:554,iva:1968,total:14822,anticipo:7411,antiPct:50,antiFecha:'2026-05-18',antiPago:'stripe',saldo:7411,saldFecha:'',saldPago:''},
-];
+const CLOUDBEDS_RES=[];
 
 function today(){return new Date().toISOString().split('T')[0]}
 
