@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:380px">
   <div style="width:100%;max-width:300px;background:#fff;border:0.5px solid #e0e0da;border-radius:10px;padding:1.4rem">
-    <p style="font-size:17px;font-weight:600;margin-bottom:3px">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.1</span></p>
+    <p style="font-size:17px;font-weight:600;margin-bottom:3px">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.2</span></p>
     <p style="font-size:12px;color:#888;margin-bottom:1.2rem">Selecciona tu perfil</p>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-primary" onclick="login('admin')">👑 Administrador</button>
@@ -125,7 +125,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.1</span></p>
+    <p class="logo">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -425,12 +425,19 @@ const CACHE={KR:[],KP:[],KH:[],KC:[]};
 const gd=(k,d=[])=>CACHE[k]&&CACHE[k].length?CACHE[k]:(d||[]);
 
 // Write: update cache + persist to Sheets async
+// Write: update cache + persist to Sheets async
 const sd=(k,v)=>{
   CACHE[k]=v;
   const sheet=SHEET_MAP[k];
   if(!sheet)return;
-  fetch(SCRIPT_URL,{method:'POST',body:JSON.stringify({action:'write',sheet,data:v})})
-    .catch(e=>console.error('Sheets write error:',e));
+  // Use no-cors so browser doesn't block cross-origin POST
+  // Apps Script accepts plain text body with JSON content
+  fetch(SCRIPT_URL,{
+    method:'POST',
+    mode:'no-cors',
+    body:JSON.stringify({action:'write',sheet,data:v})
+  }).then(()=>console.log('✓ Guardado en Sheets:',sheet))
+    .catch(e=>console.error('✗ Error Sheets:',sheet,e));
 };
 
 // Load all sheets into cache
