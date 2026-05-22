@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Hacienda Operaciones v7</title>
+<title>Galopina Ops v7</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f8f8f6;color:#111;padding:1rem}
@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.6</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.7</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.6</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.7</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -421,6 +421,24 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 
 >
+  <div class="sec" id="sec-cierre">
+    <div class="sh"><h2>Cierre Mensual</h2></div>
+    <div class="card">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div><label>Mes</label><select id="cm-mes" onchange="renderCierre()" style="height:32px;font-size:13px"></select></div>
+        <div><label>A&ntilde;o</label><select id="cm-anio" onchange="renderCierre()" style="height:32px;font-size:13px"></select></div>
+        <button class="btn btn-primary" onclick="exportarCierreExcel()" style="height:32px">&#x2193; Exportar Excel para contador</button>
+      </div>
+    </div>
+    <div class="card"><p class="ctitle">Ingresos cobrados en el mes</p><div id="cm-resumen"></div></div>
+    <div class="card"><p class="ctitle">Desglose fiscal (para CFDI global)</p><div id="cm-fiscal"></div></div>
+    <div class="card">
+      <p class="ctitle">Reconciliaci&#243;n bancaria</p>
+      <p style="font-size:12px;color:#888;margin-bottom:10px">Ingresa el monto de tu estado de cuenta por m&#233;todo para comparar.</p>
+      <div id="cm-recon"></div>
+    </div>
+  </div>
+
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
