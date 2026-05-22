@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:380px">
   <div style="width:100%;max-width:300px;background:#fff;border:0.5px solid #e0e0da;border-radius:10px;padding:1.4rem">
-    <p style="font-size:17px;font-weight:600;margin-bottom:3px">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.3</span></p>
+    <p style="font-size:17px;font-weight:600;margin-bottom:3px">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.4</span></p>
     <p style="font-size:12px;color:#888;margin-bottom:1.2rem">Selecciona tu perfil</p>
     <div style="display:flex;flex-direction:column;gap:8px">
       <button class="btn btn-primary" onclick="login('admin')">👑 Administrador</button>
@@ -125,7 +125,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.3</span></p>
+    <p class="logo">Hacienda <em style="color:#1D9E75;font-style:normal">Operaciones</em> <span class="ver">v13.4</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -411,7 +411,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
-const KR='hac_res7',KP='hac_prods7',KH='hac_habs7',KC='hac_cons7';
+const KR='KR',KP='KP',KH='KH',KC='KC';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
