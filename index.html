@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+const fmtDate=v=>{if(!v)return'';const s=String(v);return s.includes('T')?s.split('T')[0]:s;};
+function sanitizeDates(arr){return arr.map(r=>{const o={};Object.keys(r).forEach(k=>{const v=r[k];o[k]=(typeof v==='string'&&v.length>10&&v[10]==='T')?v.split('T')[0]:v;});return o;});}<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
@@ -114,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.7</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.8</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.7</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v13.8</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -415,19 +416,14 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <button class="btn btn-checkout" onclick="confirmarCheckout()">✓ Confirmar Check-out</button>
     </div>
   </div>
-</div>
 
-
-
-
->
   <div class="sec" id="sec-cierre">
     <div class="sh"><h2>Cierre Mensual</h2></div>
     <div class="card">
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div><label>Mes</label><select id="cm-mes" onchange="renderCierre()" style="height:32px;font-size:13px"></select></div>
         <div><label>A&ntilde;o</label><select id="cm-anio" onchange="renderCierre()" style="height:32px;font-size:13px"></select></div>
-        <button class="btn btn-primary" onclick="exportarCierreExcel()" style="height:32px">&#x2193; Exportar Excel para contador</button>
+        <button class="btn btn-primary" onclick="exportarCierreExcel()" style="height:32px">&#x2193; Exportar Excel</button>
       </div>
     </div>
     <div class="card"><p class="ctitle">Ingresos cobrados en el mes</p><div id="cm-resumen"></div></div>
@@ -438,7 +434,12 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div id="cm-recon"></div>
     </div>
   </div>
+</div>
 
+
+
+
+>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script>
@@ -476,7 +477,7 @@ async function loadAllSheets(){
     try{
       const res=await fetch(SCRIPT_URL+'?action=read&sheet='+SHEET_MAP[k]);
       const json=await res.json();
-      if(json.ok&&Array.isArray(json.data)&&json.data.length)CACHE[k]=json.data;
+      if(json.ok&&Array.isArray(json.data)&&json.data.length)CACHE[k]=sanitizeDates(json.data);
     }catch(e){console.error('Load error',k,e);}
   }));
 }
@@ -612,7 +613,7 @@ function renderDash(){
     <div class="metric"><p class="mlabel">Saldos pendientes</p><p class="mval" style="color:#E24B4A">${fmt(pendHosp)}</p></div>
     <div class="metric"><p class="mlabel">Reservas activas</p><p class="mval">${res.filter(r=>r.estado==='checkin').length}</p></div>`;
   const rec=res.filter(r=>r.estado==='checkin').slice(0,5);
-  document.getElementById('dash-rec').innerHTML=rec.length?rec.map(r=>`<div class="litem"><div><p style="font-size:13px;font-weight:500">${r.nombre} <span class="tag">${r.habitacion}</span></p><p style="font-size:11px;color:#888">${r.checkin} → ${r.checkout}${(r.saldo||0)>0?' · <span style="color:#E24B4A">Saldo '+fmt(r.saldo)+'</span>':''}</p></div><button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')">🏁 Check-out</button></div>`).join(''):'<p class="empty">Sin huéspedes en casa</p>';
+  document.getElementById('dash-rec').innerHTML=rec.length?rec.map(r=>`<div class="litem"><div><p style="font-size:13px;font-weight:500">${r.nombre} <span class="tag">${r.habitacion}</span></p><p style="font-size:11px;color:#888">${fmtDate(r.checkin)} → ${fmtDate(r.checkout)}${(r.saldo||0)>0?' · <span style="color:#E24B4A">Saldo '+fmt(r.saldo)+'</span>':''}</p></div><button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')">🏁 Check-out</button></div>`).join(''):'<p class="empty">Sin huéspedes en casa</p>';
 }
 
 function calcTarifa(){
@@ -725,12 +726,12 @@ function onAcH(val){
   const q=val.toLowerCase(),res=gd(KR);
   const m=res.filter(r=>r.nombre.toLowerCase().includes(q)).slice(0,6);
   if(!m.length){dd.style.display='none';return}
-  dd.innerHTML=m.map(r=>`<div class="ac-it" onclick='selH(${JSON.stringify(r).replace(/'/g,"&#39;")})'><span class="ac-name">${r.nombre}</span><span class="badge b-${r.fuente==='cloudbeds'?'cb':'manual'}" style="margin-left:5px">${r.fuente==='cloudbeds'?'CB':'Manual'}</span><p class="ac-sub">${r.habitacion} · ${r.checkin} → ${r.checkout}</p></div>`).join('');
+  dd.innerHTML=m.map(r=>`<div class="ac-it" onclick='selH(${JSON.stringify(r).replace(/'/g,"&#39;")})'><span class="ac-name">${r.nombre}</span><span class="badge b-${r.fuente==='cloudbeds'?'cb':'manual'}" style="margin-left:5px">${r.fuente==='cloudbeds'?'CB':'Manual'}</span><p class="ac-sub">${r.habitacion} · ${fmtDate(r.checkin)} → ${fmtDate(r.checkout)}</p></div>`).join('');
   dd.style.display='block';
 }
 function selH(r){
   selGuest=r;document.getElementById('ac-h').value=r.nombre;document.getElementById('ac-hdd').style.display='none';
-  document.getElementById('res-preview').innerHTML=`<div class="res-card"><div class="rcf"><span>${r.habitacion}</span>Hab.</div><div class="rcf"><span>${r.checkin}</span>Check-in</div><div class="rcf"><span>${r.checkout}</span>Check-out</div>${r.pais?`<div class="rcf"><span>${r.pais}</span>País</div>`:''}<span class="badge b-${r.fuente==='cloudbeds'?'cb':'manual'}">${r.fuente==='cloudbeds'?'Cloudbeds':'Manual'}</span></div>`;
+  document.getElementById('res-preview').innerHTML=`<div class="res-card"><div class="rcf"><span>${r.habitacion}</span>Hab.</div><div class="rcf"><span>${fmtDate(r.checkin)}</span>Check-in</div><div class="rcf"><span>${fmtDate(r.checkout)}</span>Check-out</div>${r.pais?`<div class="rcf"><span>${r.pais}</span>País</div>`:''}<span class="badge b-${r.fuente==='cloudbeds'?'cb':'manual'}">${r.fuente==='cloudbeds'?'Cloudbeds':'Manual'}</span></div>`;
 }
 
 function onPSearch(val){
@@ -974,7 +975,7 @@ function renderIngresos(){
         <div style="flex:1">
           <p style="font-size:12px;font-weight:600;color:#1860A5">${it.label}</p>
           ${it.base?`<p style="font-size:11px;color:#888">Base: ${fmt(it.base)}${it.noches?' ('+it.noches+' noches)':''}${it.descuento?' · Dto: '+it.descuento+'%':''} · ISH: ${fmt(it.ish||0)} · IVA: ${fmt(it.iva||0)}</p>`:''}
-          ${it.fecha?`<p style="font-size:11px;color:#bbb">Fecha de pago: ${it.fecha}</p>`:''}
+          ${it.fecha?`<p style="font-size:11px;color:#bbb">Fecha de pago: ${fmtDate(it.fecha)}</p>`:''}
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">
           <span style="font-size:13px;font-weight:600">${fmt(it.monto)}</span>
@@ -988,7 +989,7 @@ function renderIngresos(){
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:0.5px solid #f5f5f3;font-size:12px">
           <div style="flex:1">
             <span style="font-weight:500">${ci.nombre}${ci.cantidad>1?' x'+ci.cantidad:''}</span>
-            ${ci.fechaPago&&ci.fechaPago!=='tbd'?`<span style="color:#bbb;margin-left:8px">Fecha de pago: ${ci.fechaPago}</span>`:''}
+            ${ci.fechaPago&&ci.fechaPago!=='tbd'?`<span style="color:#bbb;margin-left:8px">Fecha de pago: ${fmtDate(ci.fechaPago)}</span>`:''}
           </div>
           <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
             <span class="badge ${pagoBadge(ci.pago)}">${pagoLabel(ci.pago||'')}</span>
@@ -1094,7 +1095,7 @@ function processImport(rows,preview){
   const imp=rows.filter(r=>fv(r,nk).length>1).map(r=>({id:'CB-IMP-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),nombre:fv(r,nk),pais:'',habitacion:fv(r,rk)||'Sin asignar',checkin:fv(r,ik)||'',checkout:fv(r,ok)||'',origen:fv(r,['source','origen','channel'])||'directo',estado:'confirmada',fuente:'cloudbeds',base:0,ish:0,iva:0,total:0,anticipo:0,antiPct:50,antiFecha:'',antiPago:'',saldo:0,saldFecha:'',saldPago:''}));
   if(!imp.length){preview.innerHTML='<p style="color:#A32D2D">No se encontraron reservas válidas.</p>';return}
   const existing=gd(KR),nuevas=imp.filter(r=>!existing.some(e=>e.nombre===r.nombre&&e.checkin===r.checkin));
-  preview.innerHTML=`<div style="background:#EAF3DE;border:0.5px solid #97C459;border-radius:6px;padding:9px 12px;margin-bottom:10px"><p style="font-size:12px;font-weight:600;color:#3B6D11">${imp.length} encontradas · ${nuevas.length} nuevas</p></div>${nuevas.slice(0,8).map(r=>`<div class="res-item"><div><p style="font-size:13px;font-weight:500">${r.nombre}</p><p style="font-size:11px;color:#888">${r.habitacion} · ${r.checkin} → ${r.checkout}</p></div><span class="badge b-cb">Cloudbeds</span></div>`).join('')}<div style="margin-top:10px"><button class="btn btn-primary" onclick="confirmImport(${JSON.stringify(nuevas).replace(/"/g,'&quot;')})">✓ Importar ${nuevas.length}</button></div>`;
+  preview.innerHTML=`<div style="background:#EAF3DE;border:0.5px solid #97C459;border-radius:6px;padding:9px 12px;margin-bottom:10px"><p style="font-size:12px;font-weight:600;color:#3B6D11">${imp.length} encontradas · ${nuevas.length} nuevas</p></div>${nuevas.slice(0,8).map(r=>`<div class="res-item"><div><p style="font-size:13px;font-weight:500">${r.nombre}</p><p style="font-size:11px;color:#888">${r.habitacion} · ${fmtDate(r.checkin)} → ${fmtDate(r.checkout)}</p></div><span class="badge b-cb">Cloudbeds</span></div>`).join('')}<div style="margin-top:10px"><button class="btn btn-primary" onclick="confirmImport(${JSON.stringify(nuevas).replace(/"/g,'&quot;')})">✓ Importar ${nuevas.length}</button></div>`;
 }
 function confirmImport(n){sd(KR,[...gd(KR),...n]);showTab('reservas');showAlert(n.length+' reservas importadas')}
 
@@ -1120,7 +1121,7 @@ function ckOpen(rid){
   const r=gd(KR).find(x=>x.id==rid||x.id===rid);
   if(!r)return;
   document.getElementById('ck-ttl').textContent='Check-out: '+r.nombre;
-  document.getElementById('ck-sub').textContent=r.habitacion+' · '+r.checkin+' → '+r.checkout;
+  document.getElementById('ck-sub').textContent=r.habitacion+' · '+fmtDate(r.checkin)+' → '+r.checkout;
   document.getElementById('tchk').style.display='';
   ckPopCats();
   ckRenderHosp(r);
@@ -1142,7 +1143,7 @@ function ckRenderHosp(r){
   card.style.display='block';
   document.getElementById('ck-hosp-b').innerHTML=
     `<div style="display:flex;justify-content:space-between;margin-bottom:10px;font-size:13px">
-      <span>${r.habitacion} · ${r.checkin} → ${r.checkout}</span>
+      <span>${r.habitacion} · ${fmtDate(r.checkin)} → ${fmtDate(r.checkout)}</span>
       <strong style="color:#C83232">${fmt(s)}</strong></div>
     <div class="frow"><div><label>Método</label>${ckSel('ck-hp','transferencia')}</div>
     <div><label>Fecha</label><input type="date" id="ck-hf" value="${today()}" style="height:32px"></div></div>`;
