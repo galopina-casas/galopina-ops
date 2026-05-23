@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v20.9</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v20.9</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2297,12 +2297,12 @@ function openIngModal(gKey){
           <td style="${td};border-top:0.5px solid #9FE1CB" colspan="2"></td>
         </tr>`:''}
         <tr>
-          <td style="${tdL};font-weight:500;border-top:1.5px solid #CCC;border-bottom:none;padding-top:10px">TOTAL</td>
+          <td style="padding:10px 8px;text-align:left;font-weight:700;font-size:13px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">TOTAL</td>
           <td style="${td};border-top:1.5px solid #CCC;border-bottom:none;padding-top:10px"></td>
-          <td style="${td};color:#AAA;border-top:1.5px solid #CCC;border-bottom:none;padding-top:10px">${fmt(sumHBase+sumCBase)}</td>
-          <td style="${td};color:#AAA;border-top:1.5px solid #CCC;border-bottom:none;padding-top:10px">${fmt(sumHIsh)}</td>
-          <td style="${td};color:#AAA;border-top:1.5px solid #CCC;border-bottom:none;padding-top:10px">${fmt(sumHIva+sumCIva)}</td>
-          <td style="${td};font-weight:700;border-top:1.5px solid #CCC;border-bottom:none;padding-top:10px">${fmt(grandTot)}</td>
+          <td style="padding:10px 8px;text-align:right;font-size:12px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(sumHBase+sumCBase)}</td>
+          <td style="padding:10px 8px;text-align:right;font-size:12px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(sumHIsh)}</td>
+          <td style="padding:10px 8px;text-align:right;font-size:12px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(sumHIva+sumCIva)}</td>
+          <td style="padding:10px 8px;text-align:right;font-size:13px;font-weight:700;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(grandTot)}</td>
           <td style="${td};border-top:1.5px solid #CCC;border-bottom:none;padding-top:10px" colspan="2">${pend>0?`<span style="font-size:11px;color:#E24B4A">+${fmt(pend)} pend.</span>`:''}</td>
         </tr>
       </tbody>
