@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.5</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.6</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.5</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.6</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -907,7 +907,18 @@ function editRes(id){
     el('r-saldfecha').value=fmtDate(r.saldFecha)||'';
   }
 
-  calcTarifa();
+  // For Cloudbeds reservations, skip calcTarifa and use original CB fiscal values
+  if(r.fuente==='cloudbeds'&&r.total){
+    const el2=id=>document.getElementById(id);
+    const fmt2=v=>'$'+Math.round(v).toLocaleString('en');
+    el2('r-base')&&(el2('r-base').value=fmt2(r.base||0));
+    el2('r-ish')&&(el2('r-ish').value=fmt2(r.ish||0));
+    el2('r-iva')&&(el2('r-iva').value=fmt2(r.iva||0));
+    el2('r-total')&&(el2('r-total').value=fmt2(r.total||0));
+    el2('r-noches')&&(el2('r-noches').value=r.noches||0);
+  } else {
+    calcTarifa();
+  }
   // Restore original anticipo/saldo values AFTER calcTarifa (which resets to 50%)
   {
     const rHasAnti=(r.anticipo||0)>0;
@@ -943,18 +954,30 @@ function guardarRes(){
 
   const noches=parseInt(document.getElementById('r-noches').value)||0;
   const desc=parseFloat(document.getElementById('r-desc').value)||0;
+  const editId=window._editResId;
+  const editingCB=editId&&(gd(KR).find(x=>x.id===editId)?.fuente==='cloudbeds');
 
-  const habs=gd(KH);
-  let totalConImp=0;
-  habRows.forEach(row=>{
-    const hab=habs.find(h=>h.nombre===row.nombre);
-    totalConImp+=(hab?hab.precio:0)*noches;
-  });
-  totalConImp=Math.round(totalConImp*(1-desc/100)*100)/100;
-  const base=Math.round(totalConImp/1.205*100)/100;
-  const ish=Math.round(base*0.045*100)/100;
-  const iva=Math.round(base*0.16*100)/100;
-  const total=Math.round((base+ish+iva)*100)/100;
+  let base,ish,iva,total;
+  if(editingCB){
+    // Preserve Cloudbeds fiscal values — read from readonly display fields
+    const cleanN=v=>parseFloat(String(v).replace(/[$,]/g,''))||0;
+    total=cleanN(document.getElementById('r-total').value);
+    base=cleanN(document.getElementById('r-base').value);
+    ish=cleanN(document.getElementById('r-ish').value);
+    iva=cleanN(document.getElementById('r-iva').value);
+  } else {
+    const habs=gd(KH);
+    let totalConImp=0;
+    habRows.forEach(row=>{
+      const hab=habs.find(h=>h.nombre===row.nombre);
+      totalConImp+=(hab?hab.precio:0)*noches;
+    });
+    totalConImp=Math.round(totalConImp*(1-desc/100)*100)/100;
+    base=Math.round(totalConImp/1.205*100)/100;
+    ish=Math.round(base*0.045*100)/100;
+    iva=Math.round(base*0.16*100)/100;
+    total=Math.round((base+ish+iva)*100)/100;
+  }
 
   const hasAnticipo=document.getElementById('chk-anticipo').checked;
   const cleanNum=v=>parseFloat(String(v).replace(/[$,\s]/g,''))||0;
@@ -969,7 +992,6 @@ function guardarRes(){
   const habitacion=habRows.map(r=>r.nombre).join(' + ');
 
   const res=gd(KR);
-  const editId=window._editResId;
 
   if(editId){
     // Edit mode: update existing
