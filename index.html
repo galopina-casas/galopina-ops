@@ -59,7 +59,7 @@ input[readonly]{background:#f5f5f3;color:#555}
 .ac-it{padding:8px 10px;cursor:pointer;font-size:13px;border-bottom:0.5px solid #f0f0ec}
 .ac-it:last-child{border-bottom:none}.ac-it:hover{background:#f5f5f3}
 .ac-name{font-weight:500}.ac-sub{font-size:11px;color:#888;margin-top:1px}
-.res-card{background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:6px;padding:9px 12px;margin-top:7px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.res-card{background:#FFF;border:0.5px solid #E0DDD8;border-radius:6px;padding:9px 12px;margin-top:7px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
 .rcf{font-size:11px;color:#085041}.rcf span{font-weight:600;display:block;font-size:12px;color:#04342C}
 .divider{display:flex;align-items:center;gap:8px;margin:9px 0;color:#bbb;font-size:10px;text-transform:uppercase;letter-spacing:.05em}
 .divider::before,.divider::after{content:'';flex:1;height:0.5px;background:#e8e8e2}
@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1031,7 +1031,7 @@ function resHtml(r,i){
         (r.saldo||0)>0?`<p style="font-size:11px;color:#E24B4A;margin-top:2px">Saldo pendiente: ${fmt(r.saldo)}</p>`:
         ''}
     </div>
-    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;min-width:90px">
       ${saldoPend?`<button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')">🏁 Check-out</button>`:''}
       <button class="btn btn-sm" onclick="editRes('${r.id}')">✏️ Editar</button>
       ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delRes(${i})">🗑</button>`:''}
@@ -1070,12 +1070,22 @@ function selH(r){
 }
 
 function onPSearch(val){
-  curProd=null;document.getElementById('prod-pill-area').innerHTML='';
-  const dd=document.getElementById('p-dd');if(!val){dd.style.display='none';return}
-  const m=gd(KP).filter(p=>p.nombre.toLowerCase().includes(val.toLowerCase())).slice(0,10);
-  if(!m.length){dd.style.display='none';return}
-  dd.innerHTML=m.map(p=>`<div class="ac-it" onclick="setProd(${p.id})"><span class="ac-name">${p.nombre}</span><p class="ac-sub">${catLabel(p.cat)} · ${fmt(p.precio)}</p></div>`).join('');
-  dd.style.display='block';
+  curProd=null;
+  const sugg=document.getElementById('p-sugg');
+  if(!val){if(sugg)sugg.innerHTML='';return;}
+  const cat=document.getElementById('sel-cat');
+  const catVal=cat?cat.value:'';
+  let prods=gd(KP).filter(p=>p.nombre.toLowerCase().includes(val.toLowerCase()));
+  if(catVal)prods=prods.filter(p=>p.cat===catVal);
+  if(sugg)sugg.innerHTML=prods.slice(0,6).map(p=>`<span class="tag" style="cursor:pointer;margin:2px" onclick="selProdById('${p.id}')">${p.nombre} <small style='color:#AAA'>${fmt(p.precio)}</small></span>`).join('');
+}
+function selProdById(id){
+  const p=gd(KP).find(x=>String(x.id)===String(id));
+  if(!p)return;
+  curProd=p;
+  ['p-search','p-sel'].forEach(eid=>{const el=document.getElementById(eid);if(el)el.value=p.nombre;});
+  const pr=document.getElementById('co-precio');if(pr)pr.value=p.precio;
+  const sugg=document.getElementById('p-sugg');if(sugg)sugg.innerHTML='';
 }
 function onPFocus(){
   if(document.getElementById('p-search').value)return;
@@ -1092,15 +1102,17 @@ function setProd(id){
   recalcPrev();
 }
 function clearProd(){
-  curProd=null;document.getElementById('p-search').value='';document.getElementById('prod-pill-area').innerHTML='';
-  document.getElementById('inp-precio').value='';document.getElementById('inp-sub').value='';
-  document.getElementById('sel-cat').value='';document.getElementById('sel-prod').innerHTML='<option value="">— Producto —</option>';document.getElementById('sel-prod').disabled=true;
+  curProd=null;
+  ['p-search','p-sel','co-precio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const sugg=document.getElementById('p-sugg');if(sugg)sugg.innerHTML='';
+  const qty=document.getElementById('co-qty');if(qty)qty.value=1;
 }
-function onCatChange(cat){
-  curProd=null;document.getElementById('prod-pill-area').innerHTML='';document.getElementById('p-search').value='';document.getElementById('inp-precio').value='';
-  if(!cat){document.getElementById('sel-prod').innerHTML='<option value="">— Producto —</option>';document.getElementById('sel-prod').disabled=true;return}
-  if(CATS_LIBRE.has(cat)){document.getElementById('sel-prod').innerHTML='<option value="">Sin catálogo</option>';document.getElementById('sel-prod').disabled=true;return}
-  populateProdSel(cat,null);
+function onCatChange(){
+  const cat=document.getElementById('sel-cat').value;
+  const sugg=document.getElementById('p-sugg');
+  if(!cat){if(sugg)sugg.innerHTML='';return;}
+  const prods=gd(KP).filter(p=>p.cat===cat).slice(0,8);
+  if(sugg)sugg.innerHTML=prods.map(p=>`<span class="tag" style="cursor:pointer;margin:2px" onclick="selProdById('${p.id}')">${p.nombre} <small style='color:#AAA'>${fmt(p.precio)}</small></span>`).join('');
 }
 function populateProdSel(cat,selId){
   const prods=gd(KP).filter(p=>p.cat===cat);
