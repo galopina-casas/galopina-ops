@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.4</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.5</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.4</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.5</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1128,20 +1128,21 @@ function addLinea(){
 }
 
 function renderLineas(){
-  const box=document.getElementById('lineas-list');
-  if(!box)return;
-  const pagoOpts=['tbd','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'];
-  box.innerHTML=lineas.map((l,i)=>{
-    const opts=pagoOpts.map(v=>`<option value="${v}"${v===l.pago?' selected':''}>${pagoLabel(v)}</option>`).join('');
-    return `<div class="linea-row" style="grid-template-columns:2fr 1fr 50px 70px 110px 32px">
-      <span style="font-size:13px;font-weight:600">${l.nombre}</span>
-      <span style="font-size:12px;color:#888">${catLabel(l.cat)}</span>
-      <input type="number" min="1" value="${l.cantidad}" onchange="lineas[${i}].cantidad=parseInt(this.value)||1;renderLineas()" style="text-align:center;height:29px">
-      <input type="number" value="${l.precio}" onchange="lineas[${i}].precio=parseFloat(this.value)||0;renderLineas()" style="text-align:right;height:29px">
-      <select onchange="lineas[${i}].pago=this.value;renderLineas()" style="font-size:12px;height:29px">${opts}</select>
-      <button class="btn btn-sm btn-danger" onclick="lineas.splice(${i},1);renderLineas()">&#x2715;</button>
-    </div>`;
-  }).join('');
+  const card=document.getElementById('lineas-card');
+  if(!lineas.length){card.style.display='none';updateTotals();return}
+  card.style.display='block';
+  document.getElementById('lineas-list').innerHTML=lineas.map(l=>`
+    <div class="linea-row">
+      <span style="font-size:12px;font-weight:500">${l.nombre}</span>
+      <span style="font-size:11px;color:#888">${catLabel(l.cat)}</span>
+      <input type="number" min="1" value="${l.cantidad}" onchange="updL(${l.id},'cantidad',this.value)" style="text-align:center">
+      <input type="number" value="${l.precio}" onchange="updL(${l.id},'precio',this.value)" style="text-align:right">
+      <select onchange="updL(${l.id},'pago',this.value)" style="font-size:11px">
+        ${['tbd','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'].map(v=>`<option value="${v}" ${v===l.pago?'selected':''}>${pagoLabel(v)}</option>`).join('')}
+      </select>
+      <button class="btn btn-sm btn-danger" onclick="delLinea(${l.id})">🗑</button>
+    </div>`).join('');
+  updateTotals();
 }
 
 function updL(id,f,v){const l=lineas.find(x=>x.id===id);if(!l)return;l[f]=f==='cantidad'?parseInt(v)||1:f==='precio'?parseFloat(v)||0:v;renderLineas()}
