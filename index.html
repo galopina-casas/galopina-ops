@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.3</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.4</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.3</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.4</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -766,6 +766,7 @@ function showNuevaRes(){
   habRows=[];
   renderHabRows();
   addHabRow(); // start with one row
+  window._editResId=null;
   document.getElementById('res-form-title').textContent='Nueva reserva manual';
   ['r-huesped','r-email','r-tel','r-ci','r-co','r-saldfecha','r-antimonto'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
@@ -803,6 +804,68 @@ function onSaldPagoChange(){
     fechaEl.value='';
   }
 }
+
+function editRes(id){
+  const res=gd(KR);
+  const r=res.find(x=>x.id===id);
+  if(!r)return;
+
+  // Set edit mode flag
+  window._editResId=id;
+
+  // Populate habs
+  const habs=gd(KH);
+  habRows=[];
+  habRowId=0;
+  // Parse habitacion field (may be "Suite Yuya + Suite Jabin")
+  const habNames=(r.habitacion||'').split('+').map(s=>s.trim()).filter(Boolean);
+  habNames.forEach(nombre=>{
+    habRows.push({id:++habRowId,nombre});
+  });
+  if(!habRows.length) habRows.push({id:++habRowId,nombre:habs.length?habs[0].nombre:''});
+  renderHabRows();
+
+  document.getElementById('res-form-title').textContent='Editar reserva';
+  document.getElementById('btn-guardar-res').textContent='Guardar cambios';
+
+  // Huésped
+  const el=id=>document.getElementById(id);
+  el('r-huesped').value=r.nombre||'';
+  el('r-email').value=r.email||'';
+  el('r-tel').value=r.tel||'';
+  if(el('r-pais')) el('r-pais').value=r.pais||'';
+
+  // Estancia
+  el('r-ci').value=fmtDate(r.checkin)||'';
+  el('r-co').value=fmtDate(r.checkout)||'';
+  el('r-origen').value=r.origen||'directo';
+  el('r-estado').value=r.estado||'confirmada';
+  el('r-desc').value=r.descuento||0;
+
+  // Pagos — Anticipo
+  const hasAnti=(r.anticipo||0)>0;
+  el('chk-anticipo').checked=hasAnti;
+  el('anticipo-fields').style.display=hasAnti?'block':'none';
+  if(hasAnti){
+    el('r-antipct').value=r.antiPct||50;
+    el('r-antimonto').value=r.anticipo||0;
+    el('r-antipago').value=r.antiPago||'';
+    el('r-antifecha').value=fmtDate(r.antiFecha)||'';
+  }
+
+  // Pagos — Saldo
+  el('saldo-section').style.display='block';
+  const hasSaldo=!!(r.saldPago);
+  el('chk-saldo').checked=hasSaldo;
+  el('saldo-fields').style.display=hasSaldo?'block':'none';
+  if(hasSaldo){
+    el('r-saldpago').value=r.saldPago||'';
+    el('r-saldfecha').value=fmtDate(r.saldFecha)||'';
+  }
+
+  calcTarifa();
+  showTab('nueva-reserva');
+}
 function guardarRes(){
   const nombre=document.getElementById('r-huesped').value.trim();
   if(!nombre){showAlert('Ingresa el nombre del huésped','error');return;}
@@ -814,7 +877,6 @@ function guardarRes(){
   const noches=parseInt(document.getElementById('r-noches').value)||0;
   const desc=parseFloat(document.getElementById('r-desc').value)||0;
 
-  // Calculate totals from hab catalog prices (include taxes)
   const habs=gd(KH);
   let totalConImp=0;
   habRows.forEach(row=>{
@@ -836,31 +898,54 @@ function guardarRes(){
   const saldFecha=hasSaldo?document.getElementById('r-saldfecha').value:'';
   const saldPago=hasSaldo?document.getElementById('r-saldpago').value:'';
   const saldo=Math.round((total-anti)*100)/100;
-
   const habitacion=habRows.map(r=>r.nombre).join(' + ');
 
-  const r={
-    id:'M-'+Date.now(),
-    nombre,
-    email:document.getElementById('r-email').value,
-    tel:document.getElementById('r-tel').value,
-    pais:document.getElementById('r-pais').value,
-    habitacion,
-    checkin:ci, checkout:co, noches,
-    origen:document.getElementById('r-origen').value,
-    estado:document.getElementById('r-estado').value,
-    fuente:'manual',
-    base:Math.round(base), ish:Math.round(ish), iva:Math.round(iva),
-    total:Math.round(total),
-    descuento:desc,
-    anticipo:anti, antiPct:total>0?Math.round(anti/total*100):0,
-    antiFecha, antiPago,
-    saldo, saldFecha, saldPago,
-    pagos:[]
-  };
-  const res=gd(KR);res.push(r);sd(KR,res);
-  showTab('reservas');
-  showAlert('Reserva guardada correctamente','success');
+  const res=gd(KR);
+  const editId=window._editResId;
+
+  if(editId){
+    // Edit mode: update existing
+    const idx=res.findIndex(x=>x.id===editId);
+    if(idx>-1){
+      res[idx]={...res[idx],
+        nombre, email:document.getElementById('r-email').value,
+        tel:document.getElementById('r-tel').value,
+        pais:document.getElementById('r-pais').value,
+        habitacion, checkin:ci, checkout:co, noches,
+        origen:document.getElementById('r-origen').value,
+        estado:document.getElementById('r-estado').value,
+        base:Math.round(base), ish:Math.round(ish), iva:Math.round(iva),
+        total:Math.round(total), descuento:desc,
+        anticipo:anti, antiPct:total>0?Math.round(anti/total*100):0,
+        antiFecha, antiPago, saldo, saldFecha, saldPago
+      };
+    }
+    window._editResId=null;
+    document.getElementById('btn-guardar-res').textContent='Guardar reserva';
+    sd(KR,res);
+    showTab('reservas');
+    showAlert('Reserva actualizada correctamente','success');
+  } else {
+    // New reservation
+    const r={
+      id:'M-'+Date.now(),
+      nombre, email:document.getElementById('r-email').value,
+      tel:document.getElementById('r-tel').value,
+      pais:document.getElementById('r-pais').value,
+      habitacion, checkin:ci, checkout:co, noches,
+      origen:document.getElementById('r-origen').value,
+      estado:document.getElementById('r-estado').value,
+      fuente:'manual',
+      base:Math.round(base), ish:Math.round(ish), iva:Math.round(iva),
+      total:Math.round(total), descuento:desc,
+      anticipo:anti, antiPct:total>0?Math.round(anti/total*100):0,
+      antiFecha, antiPago, saldo, saldFecha, saldPago, pagos:[]
+    };
+    res.push(r);
+    sd(KR,res);
+    showTab('reservas');
+    showAlert('Reserva guardada correctamente','success');
+  }
 }
 
 function renderRes(){
@@ -908,6 +993,7 @@ function resHtml(r,i){
     </div>
     <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
       ${saldoPend?`<button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')">🏁 Check-out</button>`:''}
+      <button class="btn btn-sm" onclick="editRes('${r.id}')">✏️ Editar</button>
       ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delRes(${i})">🗑</button>`:''}
     </div>
   </div>`;
