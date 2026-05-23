@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.4</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.5</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.4</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v14.5</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -182,45 +182,82 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </div>
 
   <div class="sec" id="sec-nueva-reserva">
-    <div class="sh"><h2 id="res-form-title">Nueva reserva</h2><button class="btn btn-sm" onclick="showTab('reservas')">← Volver</button></div>
+    <div class="sh"><h2 id="res-form-title">Nueva reserva</h2><button class="btn btn-sm" onclick="showTab('reservas')">&#x2190; Volver</button></div>
+
+    <!-- Huésped -->
     <div class="card">
-      <p class="ctitle">Huésped y estancia</p>
-      <div class="frow"><div><label>Huésped</label><input type="text" id="r-huesped" placeholder="Nombre y apellido"></div><div><label>País</label><select id="r-pais"></select></div></div>
-      <div class="frow"><div><label>Habitación</label><select id="r-hab" onchange="calcTarifa()"></select></div><div><label>Origen</label><select id="r-origen"><option value="directo">Directo</option><option value="airbnb">Airbnb</option><option value="booking">Booking</option><option value="expedia">Expedia</option><option value="whatsapp">WhatsApp / Tel</option></select></div></div>
-      <div class="frow"><div><label>Check-in</label><input type="date" id="r-ci" oninput="calcTarifa()"></div><div><label>Check-out</label><input type="date" id="r-co" oninput="calcTarifa()"></div></div>
-      <div class="frow"><div><label>Estado</label><select id="r-estado"><option value="confirmada">Confirmada</option><option value="checkin">En casa</option><option value="checkout">Check-out</option></select></div><div></div></div>
+      <p class="ctitle">Hu&eacute;sped</p>
+      <div class="frow"><div><label>Nombre y apellido</label><input type="text" id="r-huesped" placeholder="Nombre completo"></div><div><label>Pa&iacute;s</label><select id="r-pais"></select></div></div>
+      <div class="frow"><div><label>Email</label><input type="text" id="r-email" placeholder="email@..."></div><div><label>Tel&eacute;fono</label><input type="text" id="r-tel" placeholder="+52..."></div></div>
     </div>
+
+    <!-- Estancia -->
     <div class="card">
-      <p class="ctitle">Tarifa y descuento</p>
-      <div class="frow three">
-        <div><label>Tarifa/noche (base, sin imp.)</label><input type="number" id="r-tarifanoche" placeholder="0" oninput="calcTarifa()"></div>
+      <p class="ctitle">Estancia</p>
+      <div class="frow"><div><label>Check-in</label><input type="date" id="r-ci" oninput="calcTarifa()"></div><div><label>Check-out</label><input type="date" id="r-co" oninput="calcTarifa()"></div></div>
+      <div class="frow"><div><label>Origen</label><select id="r-origen"><option value="directo">Directo</option><option value="airbnb">Airbnb</option><option value="booking">Booking</option><option value="expedia">Expedia</option><option value="whatsapp">WhatsApp / Tel</option></select></div><div><label>Estado</label><select id="r-estado"><option value="confirmada">Confirmada</option><option value="checkin">En casa</option><option value="checkout">Check-out</option></select></div></div>
+
+      <!-- Habitaciones -->
+      <div style="margin-top:10px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <label style="margin-bottom:0">Habitaciones</label>
+          <button class="btn btn-sm" onclick="addHabRow()" type="button">+ Agregar habitaci&oacute;n</button>
+        </div>
+        <div id="r-habs-list"></div>
+      </div>
+      <div class="frow" style="margin-top:8px">
         <div><label>Noches</label><input type="text" id="r-noches" readonly></div>
         <div><label>Descuento (%)</label><input type="number" id="r-desc" value="0" min="0" max="100" oninput="calcTarifa()"></div>
       </div>
+    </div>
+
+    <!-- Tarifa -->
+    <div class="card">
+      <p class="ctitle">Desglose fiscal</p>
       <div class="frow four">
         <div><label>Base total</label><input type="text" id="r-base" readonly></div>
         <div><label>ISH (4.5%)</label><input type="text" id="r-ish" readonly></div>
         <div><label>IVA (16%)</label><input type="text" id="r-iva" readonly></div>
-        <div><label>Total estancia</label><input type="text" id="r-total" readonly style="font-weight:600;color:#1D9E75"></div>
+        <div><label style="font-weight:700">Total estancia</label><input type="text" id="r-total" readonly style="font-weight:700;color:#1D9E75"></div>
       </div>
     </div>
+
+    <!-- Pagos -->
     <div class="card">
-      <p class="ctitle">Anticipo</p>
-      <div class="frow three">
-        <div><label>% Anticipo</label><input type="number" id="r-antipct" value="50" min="0" max="100" oninput="calcAnticipo()"></div>
-        <div><label>Monto anticipo</label><input type="number" id="r-antimonto" placeholder="0" oninput="calcAnticipoM()"></div>
-        <div><label>Saldo pendiente</label><input type="text" id="r-saldo" readonly style="color:#E24B4A;font-weight:600"></div>
+      <p class="ctitle">Pagos</p>
+
+      <!-- Anticipo -->
+      <div style="border:1px solid #E0DDD8;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0;font-weight:600">
+          <input type="checkbox" id="chk-anticipo" onchange="toggleAnticipo()"> Anticipo
+        </label>
+        <div id="anticipo-fields" style="display:none;margin-top:10px">
+          <div class="frow three">
+            <div><label>% Anticipo</label><input type="number" id="r-antipct" value="50" min="1" max="100" oninput="calcAnticipo()"></div>
+            <div><label>Monto anticipo</label><input type="number" id="r-antimonto" placeholder="0" oninput="calcAnticipoM()"></div>
+            <div><label>Saldo pendiente</label><input type="text" id="r-saldo" readonly style="color:#E24B4A;font-weight:600"></div>
+          </div>
+          <div class="frow">
+            <div><label>Fecha pago anticipo</label><input type="date" id="r-antifecha"></div>
+            <div><label>M&eacute;todo anticipo</label><select id="r-antipago"><option value="">Sin especificar</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">D&eacute;bito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
+          </div>
+        </div>
       </div>
-      <div class="frow three">
-        <div><label>Fecha pago anticipo</label><input type="date" id="r-antifecha"></div>
-        <div><label>Método anticipo</label><select id="r-antipago"><option value="">Sin anticipo</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">Débito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
-        <div></div>
-      </div>
-      <div class="frow">
-        <div><label>Fecha pago saldo</label><input type="date" id="r-saldfecha"></div>
-        <div><label>Método saldo (si ya pagó)</label><select id="r-saldpago"><option value="">Pendiente</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">Débito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
+
+      <!-- Saldo -->
+      <div id="saldo-section" style="border:1px solid #E0DDD8;border-radius:8px;padding:10px 12px;display:none">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0;font-weight:600">
+          <input type="checkbox" id="chk-saldo" onchange="toggleSaldo()"> Saldo cobrado
+        </label>
+        <div id="saldo-fields" style="display:none;margin-top:10px">
+          <div class="frow">
+            <div><label>Fecha pago saldo</label><input type="date" id="r-saldfecha"></div>
+            <div><label>M&eacute;todo saldo</label><select id="r-saldpago"><option value="">Sin especificar</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">D&eacute;bito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
+          </div>
+        </div>
       </div>
     </div>
+
     <div class="acts">
       <button class="btn" onclick="showTab('reservas')">Cancelar</button>
       <button class="btn btn-primary" id="btn-guardar-res" onclick="guardarRes()">Guardar reserva</button>
@@ -605,33 +642,110 @@ function renderDash(){
   document.getElementById('dash-rec').innerHTML=rec.length?rec.map(r=>`<div class="litem"><div><p style="font-size:13px;font-weight:500">${r.nombre} <span class="tag">${r.habitacion}</span></p><p style="font-size:11px;color:#888">${fmtDate(r.checkin)} → ${fmtDate(r.checkout)}${(r.saldo||0)>0?' · <span style="color:#E24B4A">Saldo '+fmt(r.saldo)+'</span>':''}</p></div><button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')">🏁 Check-out</button></div>`).join(''):'<p class="empty">Sin huéspedes en casa</p>';
 }
 
-function calcTarifa(){
+
+// ── NUEVA RESERVA: multiple habitaciones ──
+var habRows=[];
+var habRowId=0;
+function addHabRow(){
   const habs=gd(KH);
-  const habNom=document.getElementById('r-hab').value;
-  const hab=habs.find(h=>h.nombre===habNom);
-  const tarifaNoche=parseFloat(document.getElementById('r-tarifanoche').value)||(hab?hab.precio:0);
-  if(hab&&!document.getElementById('r-tarifanoche').value)document.getElementById('r-tarifanoche').value=hab.precio;
-  const ci=document.getElementById('r-ci').value,co=document.getElementById('r-co').value;
+  const id=++habRowId;
+  habRows.push({id,nombre:habs.length?habs[0].nombre:''});
+  renderHabRows();
+}
+function removeHabRow(id){
+  habRows=habRows.filter(r=>r.id!==id);
+  renderHabRows();
+  calcTarifa();
+}
+function setHabRow(id,nombre){
+  const row=habRows.find(r=>r.id===id);
+  if(row){row.nombre=nombre;calcTarifa();}
+}
+function renderHabRows(){
+  const habs=gd(KH);
+  const opts=habs.map(h=>`<option value="${h.nombre}">${h.nombre}</option>`).join('');
+  const box=document.getElementById('r-habs-list');
+  if(!box)return;
+  box.innerHTML=habRows.map(row=>`
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">
+      <select onchange="setHabRow(${row.id},this.value)" style="flex:1;font-size:13px;height:32px">
+        ${opts.replace(`value="${row.nombre}"`,`value="${row.nombre}" selected`)}
+      </select>
+      ${habRows.length>1?`<button class="btn btn-sm" onclick="removeHabRow(${row.id})" type="button" style="color:#C83232;flex-shrink:0">&#x2715;</button>`:''}
+    </div>`).join('');
+}
+function calcTarifa(){
+  const ci=document.getElementById('r-ci').value;
+  const co=document.getElementById('r-co').value;
   let noches=0;
-  if(ci&&co){noches=Math.max(0,Math.round((new Date(co)-new Date(ci))/(1000*60*60*24)))}
+  if(ci&&co) noches=Math.max(0,Math.round((new Date(co)-new Date(ci))/(1000*60*60*24)));
   document.getElementById('r-noches').value=noches;
+
+  // Sum tarifa across all hab rows
+  // Each hab has precio already including ISH+IVA (from catalog)
+  // Base = precio/1.205 per night
+  let totalConImp=0;
+  habRows.forEach(row=>{
+    const habs=gd(KH);
+    const hab=habs.find(h=>h.nombre===row.nombre);
+    const precioNoche=hab?hab.precio:0; // precio includes ISH+IVA
+    totalConImp+=precioNoche*noches;
+  });
+
   const desc=parseFloat(document.getElementById('r-desc').value)||0;
-  const base=tarifaNoche*noches*(1-desc/100);
-  const ish=base*0.045,iva=base*0.16,total=base+ish+iva;
+  const totalDesc=totalConImp*(1-desc/100);
+  // Reverse-calculate base from total with taxes
+  const base=Math.round(totalDesc/1.205*100)/100;
+  const ish=Math.round(base*0.045*100)/100;
+  const iva=Math.round(base*0.16*100)/100;
+  const total=Math.round((base+ish+iva)*100)/100;
+
   document.getElementById('r-base').value=fmt(base);
   document.getElementById('r-ish').value=fmt(ish);
   document.getElementById('r-iva').value=fmt(iva);
   document.getElementById('r-total').value=fmt(total);
   calcAnticipo();
 }
+
 function calcAnticipo(){
-  const totalStr=(document.getElementById('r-total').value||'0').replace(/[^0-9]/g,'');
-  const total=parseInt(totalStr)||0;
+  const totalEl=document.getElementById('r-total');
+  const total=parseFloat((totalEl.value||'0').replace(/[$,]/g,''))||0;
   const pct=parseFloat(document.getElementById('r-antipct').value)||0;
-  const monto=Math.round(total*pct/100);
-  document.getElementById('r-antimonto').value=monto;
-  document.getElementById('r-saldo').value=fmt(total-monto);
+  const anti=Math.round(total*pct/100*100)/100;
+  document.getElementById('r-antimonto').value=anti||'';
+  document.getElementById('r-saldo').value=fmt(total-anti);
+  // Show saldo section if anticipo < 100%
+  const saldoSection=document.getElementById('saldo-section');
+  if(saldoSection) saldoSection.style.display=(pct<100&&document.getElementById('chk-anticipo').checked)?'block':'none';
+  if(pct>=100&&document.getElementById('chk-saldo')){
+    document.getElementById('chk-saldo').checked=false;
+    document.getElementById('saldo-fields').style.display='none';
+  }
 }
+function calcAnticipoM(){
+  const totalEl=document.getElementById('r-total');
+  const total=parseFloat((totalEl.value||'0').replace(/[$,]/g,''))||0;
+  const anti=parseFloat(document.getElementById('r-antimonto').value)||0;
+  if(total>0) document.getElementById('r-antipct').value=Math.round(anti/total*100);
+  document.getElementById('r-saldo').value=fmt(total-anti);
+  calcAnticipo();
+}
+function toggleAnticipo(){
+  const checked=document.getElementById('chk-anticipo').checked;
+  document.getElementById('anticipo-fields').style.display=checked?'block':'none';
+  if(!checked){
+    document.getElementById('saldo-section').style.display='none';
+    document.getElementById('chk-saldo').checked=false;
+    document.getElementById('saldo-fields').style.display='none';
+  } else {
+    calcAnticipo();
+  }
+}
+function toggleSaldo(){
+  const checked=document.getElementById('chk-saldo').checked;
+  document.getElementById('saldo-fields').style.display=checked?'block':'none';
+}
+
 function calcAnticipoM(){
   const totalStr=(document.getElementById('r-total').value||'0').replace(/[^0-9]/g,'');
   const total=parseInt(totalStr)||0;
@@ -641,26 +755,86 @@ function calcAnticipoM(){
 }
 
 function showNuevaRes(){
-  const habs=gd(KH);
-  document.getElementById('r-hab').innerHTML=habs.map(h=>`<option value="${h.nombre}">${h.nombre}</option>`).join('');
+  // Populate habitaciones dropdown
+  habRows=[];
+  renderHabRows();
+  addHabRow(); // start with one row
   document.getElementById('res-form-title').textContent='Nueva reserva manual';
-  ['r-huesped','r-tarifanoche','r-ci','r-co','r-saldfecha'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('r-desc').value='0';document.getElementById('r-antipct').value='50';
-  document.getElementById('r-antipago').value='';document.getElementById('r-saldpago').value='';
+  ['r-huesped','r-email','r-tel','r-ci','r-co','r-saldfecha','r-antimonto'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  document.getElementById('r-desc').value='0';
+  document.getElementById('r-antipct').value='50';
+  document.getElementById('r-antipago').value='';
+  document.getElementById('r-saldpago').value='';
+  document.getElementById('chk-anticipo').checked=false;
+  document.getElementById('chk-saldo').checked=false;
+  document.getElementById('anticipo-fields').style.display='none';
+  document.getElementById('saldo-fields').style.display='none';
+  document.getElementById('saldo-section').style.display='none';
   document.getElementById('r-antifecha').value=today();
-  calcTarifa();showTab('nueva-reserva');
+  calcTarifa();
+  showTab('nueva-reserva');
 }
 
 function guardarRes(){
-  const h=document.getElementById('r-huesped').value.trim();if(!h){showAlert('Ingresa el nombre','error');return}
-  const tarifaNoche=parseFloat(document.getElementById('r-tarifanoche').value)||0;
+  const nombre=document.getElementById('r-huesped').value.trim();
+  if(!nombre){showAlert('Ingresa el nombre del huésped','error');return;}
+  if(!habRows.length){showAlert('Agrega al menos una habitación','error');return;}
+  const ci=document.getElementById('r-ci').value;
+  const co=document.getElementById('r-co').value;
+  if(!ci||!co){showAlert('Ingresa fechas de check-in y check-out','error');return;}
+
   const noches=parseInt(document.getElementById('r-noches').value)||0;
   const desc=parseFloat(document.getElementById('r-desc').value)||0;
-  const base=tarifaNoche*noches*(1-desc/100);
-  const ish=base*0.045,iva=base*0.16,total=base+ish+iva;
-  const anti=parseFloat(document.getElementById('r-antimonto').value)||0;
-  const r={id:'M-'+Date.now(),nombre:h,pais:document.getElementById('r-pais').value,habitacion:document.getElementById('r-hab').value,checkin:document.getElementById('r-ci').value,checkout:document.getElementById('r-co').value,origen:document.getElementById('r-origen').value,estado:document.getElementById('r-estado').value,fuente:'manual',tarifaNoche,noches,base:Math.round(base),descuento:desc,ish:Math.round(ish),iva:Math.round(iva),total:Math.round(total),anticipo:anti,antiPct:parseFloat(document.getElementById('r-antipct').value)||0,antiFecha:document.getElementById('r-antifecha').value,antiPago:document.getElementById('r-antipago').value,saldo:Math.round(total-anti),saldFecha:document.getElementById('r-saldfecha').value,saldPago:document.getElementById('r-saldpago').value};
-  const res=gd(KR);res.push(r);sd(KR,res);showTab('reservas');showAlert('Reserva guardada');
+
+  // Calculate totals from hab catalog prices (include taxes)
+  const habs=gd(KH);
+  let totalConImp=0;
+  habRows.forEach(row=>{
+    const hab=habs.find(h=>h.nombre===row.nombre);
+    totalConImp+=(hab?hab.precio:0)*noches;
+  });
+  totalConImp=Math.round(totalConImp*(1-desc/100)*100)/100;
+  const base=Math.round(totalConImp/1.205*100)/100;
+  const ish=Math.round(base*0.045*100)/100;
+  const iva=Math.round(base*0.16*100)/100;
+  const total=Math.round((base+ish+iva)*100)/100;
+
+  const hasAnticipo=document.getElementById('chk-anticipo').checked;
+  const anti=hasAnticipo?(parseFloat(document.getElementById('r-antimonto').value)||0):0;
+  const antiFecha=hasAnticipo?document.getElementById('r-antifecha').value:'';
+  const antiPago=hasAnticipo?document.getElementById('r-antipago').value:'';
+
+  const hasSaldo=document.getElementById('chk-saldo').checked;
+  const saldFecha=hasSaldo?document.getElementById('r-saldfecha').value:'';
+  const saldPago=hasSaldo?document.getElementById('r-saldpago').value:'';
+  const saldo=Math.round((total-anti)*100)/100;
+
+  const habitacion=habRows.map(r=>r.nombre).join(' + ');
+
+  const r={
+    id:'M-'+Date.now(),
+    nombre,
+    email:document.getElementById('r-email').value,
+    tel:document.getElementById('r-tel').value,
+    pais:document.getElementById('r-pais').value,
+    habitacion,
+    checkin:ci, checkout:co, noches,
+    origen:document.getElementById('r-origen').value,
+    estado:document.getElementById('r-estado').value,
+    fuente:'manual',
+    base:Math.round(base), ish:Math.round(ish), iva:Math.round(iva),
+    total:Math.round(total),
+    descuento:desc,
+    anticipo:anti, antiPct:total>0?Math.round(anti/total*100):0,
+    antiFecha, antiPago,
+    saldo, saldFecha, saldPago,
+    pagos:[]
+  };
+  const res=gd(KR);res.push(r);sd(KR,res);
+  showTab('reservas');
+  showAlert('Reserva guardada correctamente','success');
 }
 
 function renderRes(){
