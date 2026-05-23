@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.7</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.7</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1089,6 +1089,8 @@ function resHtml(r,i){
         <span style="font-size:13px;font-weight:600">${r.nombre}</span>
       </div>
       <p style="font-size:11px;color:#888"><span class="tag">${r.habitacion}</span> ${r.checkin||'?'} → ${r.checkout||'?'} · ${r.noches||'?'} noches · Total: ${fmt(r.total||0)}</p>
+      ${r.cbWarning==='incoherente'?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Pagos incoherentes en Cloudbeds — verificar</p>`:''}
+      ${r.cbWarning==='sin-pago-info'&&(r.anticipo||0)>0&&(!r.antiFecha||!r.antiPago)?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Sin fecha/método de anticipo — completar</p>`:''}
       ${(r.anticipo||0)>0?`<p style="font-size:11px;color:#888;margin-top:2px">Anticipo: ${fmt(r.anticipo||0)} (${r.antiPct||0}%) · ${pagoLabel(r.antiPago||'')}${r.antiFecha?' · '+fmtDate(r.antiFecha):''}</p>`:''}
       ${(r.saldo||0)>0&&r.saldPago?`<p style="font-size:11px;color:#888;margin-top:2px">Saldo: ${fmt(r.saldo)} (${r.total>0?Math.round(r.saldo/r.total*100):0}%) · ${pagoLabel(r.saldPago)}${r.saldFecha?' · '+fmtDate(r.saldFecha):''}</p>`:
         (r.saldo||0)>0?`<p style="font-size:11px;color:#E24B4A;margin-top:2px">Saldo pendiente: ${fmt(r.saldo)}</p>`:
@@ -1714,6 +1716,8 @@ function renderIngresos(){
           <div style="flex:1;min-width:0">
             <p style="font-size:13px;font-weight:600;margin:0 0 2px">${nombre}</p>
             <p style="font-size:11px;color:#888;margin:0">${subInfo}${nochesTxt}</p>
+            ${resData&&resData.cbWarning==='incoherente'?`<p style="font-size:11px;color:#B8860B;margin:2px 0 0">⚠️ Pagos incoherentes en Cloudbeds</p>`:''}
+            ${resData&&resData.cbWarning==='sin-pago-info'&&resData.anticipo>0&&(!resData.antiFecha||!resData.antiPago)?`<p style="font-size:11px;color:#B8860B;margin:2px 0 0">⚠️ Sin fecha/método de anticipo</p>`:''}
           </div>
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
@@ -1864,6 +1868,13 @@ function processImport(rows, preview){
       const deposito=parseFloat(get(['Depósito','deposito','deposit','Monto pagado','monto pagado']))||0;
       const saldoPend=parseFloat(get(['Saldo pendiente','saldo pendiente','balance due']))||0;
 
+      // Validation flags
+      const near=(a,b)=>Math.abs(a-b)<=(Math.max(a,b)*0.01+1);
+      const isTriple=deposito>0&&saldoPend>0&&near(deposito,saldoPend)&&near(deposito,totalConImpuestos);
+      const missingPayInfo=deposito>0&&!isTriple; // has anticipo but no date/method from Cloudbeds
+      const anticoFinal=isTriple?0:deposito;
+      const saldoFinal=isTriple?0:saldoPend;
+
       // Total de la habitación = BASE sin impuestos
       const base=tarifaTotal;
       const ish=Math.round(base*0.045*100)/100;
@@ -1893,11 +1904,12 @@ function processImport(rows, preview){
         tarifaNoche:noches>0?Math.round(tarifaTotal/noches):tarifaTotal,
         base, ish, iva,
         total:totalConImpuestos,
-        anticipo:deposito,
+        anticipo:anticoFinal,
         antiFecha:'', antiPago:'',
-        saldo:saldoPend,
+        saldo:saldoFinal,
         saldFecha:'', saldPago:'',
         descuento:0, pagos:[],
+        cbWarning:isTriple?'incoherente':missingPayInfo?'sin-pago-info':'',
         consumoCena:tieneCena?diffCena:0
       });
     }catch(e){errores.push(`Fila ${i+2}: ${e.message}`);}
@@ -1918,6 +1930,8 @@ function processImport(rows, preview){
         <strong>${r.nombre}</strong> <span style="color:#888;font-size:11px">CB: ${r.cbId}</span><br>
         <span class="tag">${r.habitacion}</span> ${r.checkin} → ${r.checkout} · ${r.noches} noches<br>
         Total: <strong>${fmt(r.total)}</strong> · Anticipo: ${fmt(r.anticipo)} · Saldo: <span style="color:#C83232">${fmt(r.saldo)}</span>
+        ${r.cbWarning==='incoherente'?'<br><span style="color:#B8860B;font-size:11px">⚠️ Anticipo=Saldo=Total en Cloudbeds — pagos no importados, verificar</span>':''}
+        ${r.cbWarning==='sin-pago-info'&&r.anticipo>0?'<br><span style="color:#B8860B;font-size:11px">⚠️ Sin fecha/método de pago — completar después</span>':''}
         ${r.consumoCena>0?`<br><span style="color:#1D9E75;font-size:11px">+ Cena: ${fmt(r.consumoCena)}</span>`:''}
       </div>`).join('')}
     </div>
