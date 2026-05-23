@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.4</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.5</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.4</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.5</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1888,6 +1888,7 @@ function processImport(rows, preview){
   const existingIds=new Set(existing.map(r=>r.id));
   const nuevas=[];
   const errores=[];
+  const skipped=[];
 
   rows.forEach((row,i)=>{
     try{
@@ -1900,12 +1901,12 @@ function processImport(rows, preview){
         return '';
       };
       const cbId=get(['Número de la reserva','numero de la reserva','reservation id']);
-      if(!cbId){errores.push(`Fila ${i+2}: sin número de reserva`);return;}
+      if(!cbId){skipped.push({fila:i+2,nombre:get(['Nombre','nombre'])||'?',razon:'Sin número de reserva'});return;}
       const id='CB-'+String(cbId).trim();
-      if(existingIds.has(id)){return;} // skip duplicates
+      if(existingIds.has(id)){skipped.push({fila:i+2,nombre:String(nombre||'?').trim(),razon:'Ya importada (duplicado)',cbId:String(cbId).trim()});return;}
 
       const nombre=get(['Nombre','nombre','guest name']);
-      if(!nombre){errores.push(`Fila ${i+2}: sin nombre`);return;}
+      if(!nombre){skipped.push({fila:i+2,nombre:'?',razon:'Sin nombre de huésped'});return;}
 
       const habRaw=get(['Categoría de habitación','categoria de habitacion','room type','Número de habitación','numero de habitacion']);
       const habitacion=mapHab(habRaw);
@@ -1966,14 +1967,23 @@ function processImport(rows, preview){
     }catch(e){errores.push(`Fila ${i+2}: ${e.message}`);}
   });
 
-  if(!nuevas.length&&!errores.length){
-    preview.innerHTML='<p style="color:#888">No se encontraron reservas nuevas (todas ya importadas).</p>';return;
+  if(!nuevas.length&&!errores.length&&!skipped.length){
+    preview.innerHTML='<p style="color:#888">No se encontraron reservas nuevas.</p>';return;
   }
 
   let html=`<div style="margin-bottom:10px;font-size:13px">
-    <strong>${nuevas.length}</strong> reserva(s) nuevas encontradas.
-    ${errores.length?`<span style="color:#A32D2D"> ${errores.length} error(es).</span>`:''}
-  </div>`;
+    <strong>${nuevas.length}</strong> reserva(s) nuevas.
+    ${skipped.length?`<span style="color:#888;margin-left:6px">${skipped.length} omitida(s).</span>`:''}
+    ${errores.length?`<span style="color:#A32D2D;margin-left:6px">${errores.length} error(es).</span>`:''}
+  </div>
+  ${skipped.length?`<div style="background:#F5F4F0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px">
+    <p style="font-weight:600;color:#888;margin-bottom:6px">Líneas omitidas:</p>
+    ${skipped.map(sk=>`<div style="display:flex;gap:8px;padding:3px 0;border-bottom:0.5px solid #EEE;align-items:baseline">
+      <span style="color:#AAA;flex-shrink:0">Fila ${sk.fila}</span>
+      <span style="flex:1;font-weight:500">${sk.nombre}${sk.cbId?' <span style="color:#AAA">CB:'+sk.cbId+'</span>':''}</span>
+      <span style="color:#888;flex-shrink:0">${sk.razon}</span>
+    </div>`).join('')}
+  </div>`:''}`;
 
   if(nuevas.length){
     html+=`<div style="margin-bottom:10px">
