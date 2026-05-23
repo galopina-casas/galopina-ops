@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v16.9</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v16.9</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -267,59 +267,85 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </div>
 
   <div class="sec" id="sec-consumos">
-    <div class="sh"><h2>Registrar consumo</h2></div>
+    <div class="sh">
+      <h2>Consumos</h2>
+      <button class="btn btn-primary" onclick="showNuevoConsumo()">+ Nuevo consumo</button>
+    </div>
+    <!-- Filtros -->
+    <div class="card" style="padding:.6rem 1rem">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="cons-search" placeholder="Buscar huésped..." oninput="renderConsList()"
+          style="flex:1;min-width:160px;height:32px;font-size:13px">
+        <select id="cons-mes" onchange="renderConsList()" style="height:32px;font-size:13px">
+          <option value="">Todos los meses</option>
+        </select>
+      </div>
+    </div>
+    <!-- Lista consumos -->
+    <div id="cons-list"></div>
+  </div>
+
+  <!-- Nuevo/Editar consumo (oculto) -->
+  <div class="sec" id="sec-nuevo-consumo">
+    <div class="sh">
+      <h2 id="cons-form-title">Nuevo consumo</h2>
+      <button class="btn btn-sm" onclick="showTab('consumos')">&#x2190; Volver</button>
+    </div>
     <div class="card">
-      <p class="ctitle">Huésped</p>
+      <p class="ctitle">Hu&eacute;sped</p>
       <div class="ac-wrap">
-        <input type="text" id="ac-h" placeholder="Escribe nombre o apellido..." oninput="onAcH(this.value)" autocomplete="off" onblur="setTimeout(function(){var d=document.getElementById('co-dd');if(d)d.style.display='none'},200)">
+        <input type="text" id="ac-h" placeholder="Escribe nombre o apellido..." oninput="onAcH(this.value)" autocomplete="off"
+          onblur="setTimeout(function(){var d=document.getElementById('ac-hdd');if(d)d.style.display='none'},200)">
         <div class="ac-dd" id="ac-hdd" style="display:none"></div>
       </div>
-      <div id="res-preview"></div>
+      <div id="ac-info" style="font-size:12px;color:#888;margin-top:4px"></div>
     </div>
     <div class="card">
-      <p class="ctitle">Agregar producto</p>
-      <div class="divider">Buscar por nombre</div>
-      <div class="ac-wrap" style="margin-bottom:5px">
-        <input type="text" id="p-search" placeholder="Escribe o haz clic para ver catálogo..." oninput="onPSearch(this.value)" onfocus="onPFocus()" autocomplete="off" onblur="setTimeout(function(){var d=document.getElementById('co-dd');if(d)d.style.display='none'},200)">
-        <div class="ac-dd" id="p-dd" style="display:none"></div>
+      <p class="ctitle">Fecha y nota</p>
+      <div class="frow">
+        <div><label>Fecha</label><input type="date" id="c-fecha"></div>
+        <div><label>Nota (opcional)</label><input type="text" id="c-nota" placeholder="Observaciones..."></div>
       </div>
-      <div id="prod-pill-area"></div>
-      <div class="divider">O filtrar por categoría</div>
-      <div class="frow" style="margin-bottom:7px">
-        <div><label>Categoría</label><select id="sel-cat" onchange="onCatChange(this.value)"><option value="">— Categoría —</option></select></div>
-        <div><label>Producto</label><select id="sel-prod" disabled onchange="onProdSel(this.value)"><option value="">— Producto —</option></select></div>
+    </div>
+    <div class="card">
+      <p class="ctitle">Productos</p>
+      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+        <input type="text" id="p-search" placeholder="Buscar producto..." oninput="onPSearch(this.value)"
+          style="flex:1;min-width:140px;height:32px;font-size:13px">
+        <select id="sel-cat" onchange="onCatChange()" style="height:32px;font-size:13px;min-width:120px">
+          <option value="">Todas</option>
+        </select>
       </div>
-      <div class="frow four" style="margin-bottom:8px">
-        <div><label>Cantidad</label><input type="number" id="inp-qty" min="1" value="1" oninput="recalcPrev()"></div>
-        <div><label>Precio unit.</label><input type="number" id="inp-precio" placeholder="0" oninput="recalcPrev()"></div>
-        <div><label>Subtotal</label><input type="text" id="inp-sub" readonly></div>
-        <div><label>Método pago</label>
-          <select id="inp-pago">
+      <div id="p-sugg" style="margin-bottom:8px"></div>
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:120px"><label>Producto seleccionado</label><input type="text" id="p-sel" readonly></div>
+        <div style="width:70px"><label>Cant.</label><input type="number" id="co-qty" value="1" min="1" style="height:32px"></div>
+        <div style="width:100px"><label>Precio</label><input type="number" id="co-precio" style="height:32px"></div>
+        <div style="width:130px"><label>M&eacute;todo</label>
+          <select id="co-pago" style="height:32px;font-size:13px">
             <option value="tbd">TBD</option>
-            <option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option>
-            <option value="transferencia">Transferencia</option><option value="debito">Débito</option>
-            <option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option>
+            <option value="efectivo">Efectivo</option>
+            <option value="efectivo-nd">Efectivo ND</option>
+            <option value="transferencia">Transferencia</option>
+            <option value="debito">D&eacute;bito</option>
+            <option value="mercadopago">Mercado Pago</option>
+            <option value="stripe">Stripe</option>
           </select>
         </div>
+        <button class="btn btn-primary btn-sm" onclick="addLinea()" style="height:32px">+ Agregar</button>
       </div>
-      <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="addLinea()">+ Agregar a la lista</button></div>
-    </div>
-    <div class="card" id="lineas-card" style="display:none">
-      <p class="ctitle">Lista de consumos</p>
-      <div class="lineas-hdr"><span>Producto</span><span>Categ.</span><span>Cant.</span><span>Precio</span><span>Pago</span><span></span></div>
+      <div class="lineas-hdr" style="grid-template-columns:2fr 1fr 60px 80px 110px 32px">
+        <span>Producto</span><span>Categor&#237;a</span>
+        <span style="text-align:center">Cant.</span>
+        <span style="text-align:right">Precio</span>
+        <span>M&eacute;todo</span><span></span>
+      </div>
       <div id="lineas-list"></div>
-      <div style="background:#f5f5f3;border-radius:6px;padding:9px 12px;margin-top:9px">
-        <div class="tline sub"><span>Subtotal</span><span id="c-sub">$0</span></div>
-        <div class="tline sub"><span>IVA (16%)</span><span id="c-iva">$0</span></div>
-        <div class="tline grand"><span>Total</span><span id="c-total" style="color:#1D9E75">$0</span></div>
-      </div>
     </div>
-    <div class="card">
-      <div class="frow"><div><label>Fecha de pago (referencia)</label><input type="date" id="c-fecha"></div><div></div></div>
-      <div class="frow full"><label>Nota</label><input type="text" id="c-nota" placeholder="Opcional"></div>
-      <div class="acts"><button class="btn btn-primary" onclick="guardarConsumo()">✓ Guardar consumo</button></div>
+    <div class="acts">
+      <button class="btn" onclick="showTab('consumos')">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarConsumo()">Guardar consumo</button>
     </div>
-    <div class="card"><p class="ctitle">Historial del mes</p><div id="historial"></div></div>
   </div>
 
   <div class="sec" id="sec-ingresos">
@@ -624,9 +650,10 @@ function showTab(t){
   if(t==='dashboard')renderDash();
   if(t==='cierre')setTimeout(initCierre,50);
   if(t==='reservas')renderRes();
-  if(t==='consumos'){resetC();renderHistorial()}
+  if(t==='consumos'){initConsList();renderConsList();}
   if(t==='ingresos'){populateIngMeses();renderIngresos()}
   if(t==='admin')renderAdmin();
+  if(t==='nuevo-consumo'){populateAll();renderLineas();}
 }
 
 function renderDash(){
@@ -1138,35 +1165,127 @@ function resetC(){
   document.getElementById('lineas-card').style.display='none';renderLineas();
 }
 
-function renderHistorial(){
-  const cons=gd(KC),m=new Date().getMonth(),y=new Date().getFullYear();
-  const tm=cons.filter(c=>{const d=new Date(c.fecha||'');return d.getMonth()===m&&d.getFullYear()===y}).reverse();
-  const box=document.getElementById('historial');
-  if(!tm.length){box.innerHTML='<p class="empty">Sin consumos este mes</p>';return}
-  box.innerHTML=tm.map(c=>`
-    <div class="colrow">
-      <div class="colhdr" onclick="toggleCol('chb-${c.id}','chv-${c.id}')">
-        <div style="display:flex;align-items:center;gap:7px;min-width:0">
-          <span id="chv-${c.id}" style="font-size:11px;color:#bbb;transition:transform .15s">▼</span>
-          <div><p style="font-size:13px;font-weight:500">${c.huesped}${c.habitacion?` <span class="tag">${c.habitacion}</span>`:''}</p><p style="font-size:11px;color:#888">${c.fecha||'—'} · ${c.items.length} item(s)${c.nota?' · '+c.nota:''}</p></div>
-        </div>
-        <span style="font-size:13px;font-weight:600">${fmt(c.total)}</span>
-      </div>
-      <div class="colbody" id="chb-${c.id}">
-        <div class="cons-detail-hdr"><span>Producto</span><span>Cat.</span><span>Cant.</span><span>Precio</span><span></span></div>
-        <div id="chd-${c.id}"></div>
-        <div style="margin-top:9px;display:flex;gap:7px;flex-wrap:wrap;align-items:flex-end">
-          <div style="flex:1"><label style="font-size:10px">Nota</label><input type="text" id="cnota-${c.id}" value="${c.nota||''}" style="font-size:12px;height:28px"></div>
-          <div style="display:flex;gap:5px">
-            <button class="btn btn-sm btn-primary" onclick="saveCH(${c.id})">✓</button>
-            ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delCon(${c.id})">🗑</button>`:''}
-          </div>
-        </div>
-        <div id="ctotals-${c.id}" style="margin-top:8px"></div>
-      </div>
-    </div>`).join('');
-  tm.forEach(c=>renderCI(c.id));
+function initConsList(){
+  const mesEl=document.getElementById('cons-mes');
+  if(!mesEl||mesEl.options.length>1)return;
+  const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  const cons=gd(KC);
+  const meses=new Set(cons.map(c=>(c.fecha||'').substring(0,7)).filter(Boolean));
+  [...meses].sort().reverse().forEach(m=>{
+    const [y,mo]=m.split('-');
+    const opt=document.createElement('option');
+    opt.value=m; opt.textContent=MN[parseInt(mo)-1]+' '+y;
+    mesEl.appendChild(opt);
+  });
 }
+
+function renderConsList(){
+  const search=(document.getElementById('cons-search').value||'').toLowerCase();
+  const mes=document.getElementById('cons-mes').value;
+  let cons=[...gd(KC)];
+  if(mes) cons=cons.filter(c=>(c.fecha||'').startsWith(mes));
+  if(search) cons=cons.filter(c=>(c.huesped||'').toLowerCase().includes(search));
+  cons.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  const box=document.getElementById('cons-list');
+  if(!cons.length){box.innerHTML='<p class="empty">Sin consumos registrados</p>';return;}
+
+  box.innerHTML=cons.map(c=>{
+    const total=c.total||(c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0);
+    const items=(c.items||[]);
+    return `<div class="res-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">
+            <span style="font-size:13px;font-weight:700">${c.huesped}</span>
+            ${c.habitacion?`<span class="tag">${c.habitacion}</span>`:''}
+            <span style="font-size:11px;color:#AAA">${fmtDate(c.fecha)||''}</span>
+          </div>
+          <div style="font-size:12px;color:#888;margin-bottom:4px">
+            ${items.map(i=>`${i.nombre}${i.cantidad>1?' ×'+i.cantidad:''} <span class="badge ${pagoBadge(i.pago)}">${pagoLabel(i.pago)}</span>`).join(' &nbsp;·&nbsp; ')}
+          </div>
+          <div style="font-size:13px;font-weight:700;color:#1A1916">${fmt(total)}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+          <button class="btn btn-sm" onclick="editConsumo('${c.id}')">✏️ Editar</button>
+          ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delConsumo('${c.id}')">🗑</button>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showNuevoConsumo(){
+  window._editConsId=null;
+  document.getElementById('cons-form-title').textContent='Nuevo consumo';
+  resetC();
+  document.getElementById('c-fecha').value=today();
+  showTab('nuevo-consumo');
+}
+
+function editConsumo(id){
+  const cons=gd(KC);
+  const c=cons.find(x=>String(x.id)===String(id));
+  if(!c)return;
+  window._editConsId=id;
+  document.getElementById('cons-form-title').textContent='Editar consumo';
+  resetC();
+  // Pre-fill huesped
+  document.getElementById('ac-h').value=c.huesped||'';
+  // Find reservation
+  const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
+  if(res){selGuest=res;document.getElementById('ac-info').textContent=res.habitacion+' · '+fmtDate(res.checkin)+' → '+fmtDate(res.checkout);}
+  document.getElementById('c-fecha').value=fmtDate(c.fecha)||today();
+  document.getElementById('c-nota').value=c.nota||'';
+  // Pre-fill lineas
+  lineas=(c.items||[]).map(i=>({...i}));
+  renderLineas();
+  showTab('nuevo-consumo');
+}
+
+function delConsumo(id){
+  if(!confirm('¿Eliminar este consumo?'))return;
+  const cons=gd(KC).filter(c=>String(c.id)!==String(id));
+  sd(KC,cons);
+  renderConsList();
+  showAlert('Consumo eliminado','success');
+}
+
+function guardarConsumo(){
+  const nombre=document.getElementById('ac-h').value.trim();
+  if(!nombre){showAlert('Indica el huésped','error');return;}
+  if(!lineas.length){showAlert('Agrega al menos un producto','error');return;}
+  const sub=lineas.reduce((s,l)=>s+(l.precio*l.cantidad),0);
+  const c={
+    id:window._editConsId||Date.now(),
+    reservaId:selGuest?selGuest.id:null,
+    huesped:nombre,
+    habitacion:selGuest?selGuest.habitacion:'',
+    fecha:document.getElementById('c-fecha').value,
+    items:lineas.map(l=>({
+      id:l.id||(Date.now()+Math.random()),
+      cat:l.cat,nombre:l.nombre,cantidad:l.cantidad,precio:l.precio,
+      pago:l.pago,
+      fechaPago:l.pago&&l.pago!=='tbd'?document.getElementById('c-fecha').value:''
+    })),
+    subtotal:Math.round(sub/1.16*100)/100,
+    iva:Math.round((sub-sub/1.16)*100)/100,
+    total:sub,
+    nota:document.getElementById('c-nota').value
+  };
+  const cons=gd(KC);
+  if(window._editConsId){
+    const idx=cons.findIndex(x=>String(x.id)===String(window._editConsId));
+    if(idx>-1) cons[idx]=c; else cons.push(c);
+  } else {
+    cons.push(c);
+  }
+  sd(KC,cons);
+  window._editConsId=null;
+  showTab('consumos');
+  showAlert(window._editConsId?'Consumo actualizado':'Consumo registrado','success');
+}
+
 function toggleCol(bId,cId){const b=document.getElementById(bId),ch=document.getElementById(cId);const open=b.classList.toggle('open');if(ch)ch.style.transform=open?'rotate(180deg)':''}
 function renderCI(cid){
   const c=gd(KC).find(x=>x.id===cid);if(!c)return;
