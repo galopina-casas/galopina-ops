@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -405,7 +405,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     </div>
     <div class="card" id="ck-lineas-card" style="display:none">
       <p class="ctitle">Lista de consumos extra</p>
-      <div class="lineas-hdr"><span>Producto</span><span>Categor&#237;a</span><span style="text-align:center">Cant.</span><span style="text-align:right">Precio</span><span></span></div>
+      <div class="lineas-hdr" style="grid-template-columns:2fr 1fr 50px 70px 1fr 32px"><span>Producto</span><span>Categor&#237;a</span><span style="text-align:center">Cant.</span><span style="text-align:right">Precio</span><span>M&#233;todo</span><span></span></div>
       <div id="ck-extras"></div>
     </div>
     <div class="card"><p class="ctitle">Resumen</p><div id="ck-tots"></div>
@@ -1601,24 +1601,27 @@ function ckAddExtra(){
 function ckRemove(id){CK_EX=CK_EX.filter(e=>e.id!==id);ckRenderExtras();ckTotals();}
 function ckUpdExtra(id,field,val){
   const e=CK_EX.find(x=>x.id===id);if(!e)return;
-  e[field]=field==='cantidad'?parseInt(val)||1:parseFloat(val)||0;
+  if(field==='pago') e.pago=val;
+  else if(field==='cantidad') e.cantidad=parseInt(val)||1;
+  else e.precio=parseFloat(val)||0;
   ckRenderExtras();ckTotals();
 }
 function ckRenderExtras(){
   const card=document.getElementById('ck-lineas-card');
   if(!CK_EX.length){if(card)card.style.display='none';return;}
   if(card)card.style.display='block';
-  document.getElementById('ck-extras').innerHTML=CK_EX.map(e=>`
-    <div class="linea-row">
+  const pagoOpts=['tbd','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'];
+  document.getElementById('ck-extras').innerHTML=CK_EX.map(e=>{
+    const opts=pagoOpts.map(v=>`<option value="${v}"${v===e.pago?' selected':''}>${pagoLabel(v)}</option>`).join('');
+    return `<div class="linea-row" style="grid-template-columns:2fr 1fr 50px 70px 1fr 32px">
       <span style="font-size:13px;font-weight:600">${e.nombre}</span>
       <span style="font-size:12px;color:#888">${catLabel(e.cat)}</span>
-      <input type="number" min="1" value="${e.cantidad}" onchange="ckUpdExtra(${e.id},'cantidad',this.value)" style="text-align:center">
-      <input type="number" value="${e.precio}" onchange="ckUpdExtra(${e.id},'precio',this.value)" style="text-align:right">
-      <button class="btn btn-sm btn-danger" onclick="ckRemove(${e.id})">&#x1F5D1;</button>
-    </div>
-    <div style="font-size:11px;color:#888;padding:0 3px 5px;display:flex;gap:6px">
-      <span class="badge b-${e.pago}">${pagoLabel(e.pago)}</span>
-    </div>`).join('');
+      <input type="number" min="1" value="${e.cantidad}" onchange="ckUpdExtra(${e.id},'cantidad',this.value)" style="text-align:center;height:29px">
+      <input type="number" value="${e.precio}" onchange="ckUpdExtra(${e.id},'precio',this.value)" style="text-align:right;height:29px">
+      <select onchange="ckUpdExtra(${e.id},'pago',this.value)" style="font-size:12px;height:29px">${opts}</select>
+      <button class="btn btn-sm btn-danger" onclick="ckRemove(${e.id})">&#x2715;</button>
+    </div>`;
+  }).join('');
 }
 function ckTotals(){
   if(!CK_ID)return;
