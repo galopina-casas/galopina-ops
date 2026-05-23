@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v16.2</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v16.4</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v16.2</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v16.4</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1789,190 +1789,6 @@ function ckConfirm(){
 function closeIngModal(){
   document.getElementById('ing-modal-overlay').style.display='none';
 }
-function openIngModal(gKey){
-  const nombre=Object.keys(ING_CACHE).find(n=>n.replace(/[^a-zA-Z0-9]/g,'_')===gKey);
-  if(!nombre)return;
-  const items=ING_CACHE[nombre];
-  const res=gd(KR).find(r=>r.nombre===nombre);
-
-  document.getElementById('ing-modal-title').textContent=nombre;
-  document.getElementById('ing-modal-sub').textContent=res
-    ? res.habitacion+' · '+fmtDate(res.checkin)+' → '+fmtDate(res.checkout) : '';
-
-  const hospItems=items.filter(i=>i.tipo==='hospedaje');
-  const consItems=items.filter(i=>i.tipo==='consumo');
-
-  const thStyle='font-size:10px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:2px solid #EEE';
-  const thL='font-size:10px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;text-align:left;border-bottom:2px solid #EEE';
-  const td='padding:6px 8px;font-size:12px;text-align:right;border-bottom:0.5px solid #F0EDE8;vertical-align:top';
-  const tdL='padding:6px 8px;font-size:12px;text-align:left;border-bottom:0.5px solid #F0EDE8;vertical-align:top';
-  const tdTot='padding:7px 8px;font-size:13px;font-weight:700;text-align:right;border-top:2px solid #EEE;background:#F5F4F0';
-  const tdTotL='padding:7px 8px;font-size:13px;font-weight:700;text-align:left;border-top:2px solid #EEE;background:#F5F4F0';
-
-  let html='';
-
-  // ── HOSPEDAJE TABLE ──
-  if(hospItems.length){
-    // Sort by fecha asc (oldest first)
-    const sorted=[...hospItems].sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-
-    html+=`<p style="font-size:11px;font-weight:700;color:#1860A5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Hospedaje</p>
-    <div style="overflow-x:auto;margin-bottom:1.2rem">
-    <table style="width:100%;border-collapse:collapse;font-family:sans-serif">
-      <thead><tr>
-        <th style="${thL}">Concepto</th>
-        <th style="${thStyle}">Base</th>
-        <th style="${thStyle}">ISH</th>
-        <th style="${thStyle}">IVA</th>
-        <th style="${thStyle}">Total</th>
-        <th style="${thStyle}">Método</th>
-        <th style="${thStyle}">Fecha pago</th>
-      </tr></thead>
-      <tbody>`;
-
-    const grandHosp=hospItems.reduce((s,i)=>s+i.monto,0);
-    const rr=gd(KR).find(r=>r.nombre===nombre);
-    let bnTotal=0,ishTotal=0,ivaTotal=0;
-    if(rr&&rr.base){
-      bnTotal=(parseFloat(rr.base)||0)*(1-(parseFloat(rr.descuento)||0)/100);
-      ishTotal=bnTotal*0.045; ivaTotal=bnTotal*0.16;
-    } else {
-      bnTotal=grandHosp/1.205; ishTotal=bnTotal*0.045; ivaTotal=bnTotal*0.16;
-    }
-
-    let sumBase=0,sumIsh=0,sumIva=0,sumTot=0;
-    sorted.forEach(it=>{
-      const monto=it.monto||0;
-      const ratio=grandHosp>0?monto/grandHosp:0;
-      const base=Math.round(bnTotal*ratio*100)/100;
-      const ish=Math.round(ishTotal*ratio*100)/100;
-      const iva=Math.round(ivaTotal*ratio*100)/100;
-      const isPend=it.pago==='pendiente'||it.pago==='tbd';
-      if(!isPend){sumBase+=base;sumIsh+=ish;sumIva+=iva;sumTot+=monto;}
-      html+=`<tr>
-        <td style="${tdL}${isPend?';color:#E24B4A':''}">
-          <strong>${it.label}</strong>
-          ${grandHosp>0?`<br><span style="font-size:10px;color:#AAA">${Math.round(monto/grandHosp*100)}% del total</span>`:''}
-        </td>
-        <td style="${td}${isPend?';color:#E24B4A':''}">${fmt(base)}</td>
-        <td style="${td}${isPend?';color:#E24B4A':''}">${fmt(ish)}</td>
-        <td style="${td}${isPend?';color:#E24B4A':''}">${fmt(iva)}</td>
-        <td style="${td};font-weight:600${isPend?';color:#E24B4A':''}">${fmt(monto)}</td>
-        <td style="${td}"><span class="badge ${pagoBadge(it.pago)}">${pagoLabel(it.pago||'')}</span></td>
-        <td style="${td}">${it.fecha||'<span style=\"color:#AAA\">—</span>'}</td>
-      </tr>`;
-    });
-
-    html+=`<tr>
-      <td style="${tdTotL}">Total hospedaje</td>
-      <td style="${tdTot}">${fmt(sumBase)}</td>
-      <td style="${tdTot}">${fmt(sumIsh)}</td>
-      <td style="${tdTot}">${fmt(sumIva)}</td>
-      <td style="${tdTot}">${fmt(sumTot)}</td>
-      <td style="${tdTot}" colspan="2"></td>
-    </tr></tbody></table></div>`;
-  }
-
-  // ── CONSUMOS TABLE ──
-  if(consItems.length){
-    // Collect all consumo rows with fecha
-    const consRows=[];
-    consItems.forEach(group=>{
-      (group.items||[]).forEach(ci=>{
-        const tot=ci.precio*ci.cantidad;
-        const base=Math.round(tot/1.16*100)/100;
-        const iva=Math.round((tot-base)*100)/100;
-        consRows.push({nombre:ci.nombre,cat:ci.cat,cantidad:ci.cantidad,
-          precio:ci.precio,tot,base,iva,pago:ci.pago,
-          fecha:ci.fechaPago&&ci.fechaPago!=='tbd'?fmtDate(ci.fechaPago):''});
-      });
-    });
-    // Sort by fecha asc
-    consRows.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-
-    let sumCBase=0,sumCIva=0,sumCTot=0;
-    html+=`<p style="font-size:11px;font-weight:700;color:#1D9E75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Consumos</p>
-    <div style="overflow-x:auto;margin-bottom:1.2rem">
-    <table style="width:100%;border-collapse:collapse;font-family:sans-serif">
-      <thead><tr>
-        <th style="${thL}">Producto</th>
-        <th style="${thStyle}">Cant.</th>
-        <th style="${thStyle}">Base</th>
-        <th style="${thStyle}">IVA</th>
-        <th style="${thStyle}">Total</th>
-        <th style="${thStyle}">Método</th>
-        <th style="${thStyle}">Fecha pago</th>
-      </tr></thead><tbody>`;
-
-    consRows.forEach(ci=>{
-      sumCBase+=ci.base; sumCIva+=ci.iva; sumCTot+=ci.tot;
-      html+=`<tr>
-        <td style="${tdL}"><strong>${ci.nombre}</strong><br><span style="font-size:10px;color:#AAA">${catLabel(ci.cat)}</span></td>
-        <td style="${td}">${ci.cantidad}</td>
-        <td style="${td}">${fmt(ci.base)}</td>
-        <td style="${td}">${fmt(ci.iva)}</td>
-        <td style="${td};font-weight:600">${fmt(ci.tot)}</td>
-        <td style="${td}"><span class="badge ${pagoBadge(ci.pago)}">${pagoLabel(ci.pago||'')}</span></td>
-        <td style="${td}">${ci.fecha||'<span style=\"color:#AAA\">—</span>'}</td>
-      </tr>`;
-    });
-
-    html+=`<tr>
-      <td style="${tdTotL}">Total consumos</td>
-      <td style="${tdTot}"></td>
-      <td style="${tdTot}">${fmt(sumCBase)}</td>
-      <td style="${tdTot}">${fmt(sumCIva)}</td>
-      <td style="${tdTot}">${fmt(sumCTot)}</td>
-      <td style="${tdTot}" colspan="2"></td>
-    </tr></tbody></table></div>`;
-  }
-
-  // ── GRAND TOTAL ROW (table) ──
-  const allHospRows=hospItems;
-  const grandHosp2=allHospRows.reduce((s,i)=>s+(i.pago!=='pendiente'&&i.pago!=='tbd'?i.monto:0),0);
-  const rr2=gd(KR).find(r=>r.nombre===nombre);
-  let bnT=0,ishT=0,ivaT=0;
-  if(rr2&&rr2.base){
-    bnT=(parseFloat(rr2.base)||0)*(1-(parseFloat(rr2.descuento)||0)/100);
-    ishT=bnT*0.045; ivaT=bnT*0.16;
-  } else {
-    const gh=allHospRows.reduce((s,i)=>s+i.monto,0);
-    bnT=gh/1.205; ishT=bnT*0.045; ivaT=gh*0.16/1.205;
-  }
-  const paidRatio=allHospRows.reduce((s,i)=>s+i.monto,0)>0
-    ?grandHosp2/allHospRows.reduce((s,i)=>s+i.monto,0):0;
-  const hospBase=Math.round(bnT*paidRatio*100)/100;
-  const hospIsh=Math.round(ishT*paidRatio*100)/100;
-  const hospIva=Math.round(ivaT*paidRatio*100)/100;
-
-  let consBase2=0,consIva2=0,consTot2=0;
-  consItems.forEach(group=>(group.items||[]).forEach(ci=>{
-    const tot=ci.precio*ci.cantidad;
-    const base=Math.round(tot/1.16*100)/100;
-    consBase2+=base; consIva2+=Math.round((tot-base)*100)/100; consTot2+=tot;
-  }));
-
-  const grandTot=grandHosp2+consTot2;
-  const pend=items.filter(i=>i.pago==='pendiente'||i.pago==='tbd').reduce((s,i)=>s+i.monto,0);
-
-  html+=`<div style="background:#F5F4F0;border-radius:8px;overflow:hidden">
-    <table style="width:100%;border-collapse:collapse;font-size:13px">
-      <tr>
-        <td style="padding:10px 12px;font-weight:700;font-size:14px">Total cobrado</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:600">${fmt(hospBase+consBase2)}</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:600">${fmt(hospIsh)}</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:600">${fmt(hospIva+consIva2)}</td>
-        <td style="padding:10px 8px;text-align:right;font-weight:700;font-size:15px;color:#1860A5">${fmt(grandTot)}</td>
-        <td colspan="2" style="padding:10px 8px">
-          ${pend>0?`<span style="font-size:11px;color:#E24B4A">+ ${fmt(pend)} pend.</span>`:''}
-        </td>
-      </tr>
-    </table>
-  </div>`;
-
-  document.getElementById('ing-modal-body').innerHTML=html;
-  document.getElementById('ing-modal-overlay').style.display='flex';
-}
 
 function closeIngModal(){
   document.getElementById('ing-modal-overlay').style.display='none';
@@ -1982,299 +1798,139 @@ function openIngModal(gKey){
   if(!nombre)return;
   const items=ING_CACHE[nombre];
   const res=gd(KR).find(r=>r.nombre===nombre);
-
   document.getElementById('ing-modal-title').textContent=nombre;
   document.getElementById('ing-modal-sub').textContent=res
-    ? res.habitacion+' · '+res.checkin+' → '+res.checkout
-    : '';
+    ? res.habitacion+' · '+fmtDate(res.checkin)+' → '+fmtDate(res.checkout) : '';
 
   const hospItems=items.filter(i=>i.tipo==='hospedaje');
   const consItems=items.filter(i=>i.tipo==='consumo');
-
-  const thStyle='font-size:10px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:2px solid #EEE';
-  const thL='font-size:10px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.05em;padding:5px 8px;text-align:left;border-bottom:2px solid #EEE';
+  const thS='font-size:10px;font-weight:700;color:#AAA;text-transform:uppercase;padding:5px 8px;text-align:right;white-space:nowrap;border-bottom:2px solid #EEE';
+  const thL='font-size:10px;font-weight:700;color:#AAA;text-transform:uppercase;padding:5px 8px;text-align:left;border-bottom:2px solid #EEE';
   const td='padding:6px 8px;font-size:12px;text-align:right;border-bottom:0.5px solid #F0EDE8;vertical-align:top';
   const tdL='padding:6px 8px;font-size:12px;text-align:left;border-bottom:0.5px solid #F0EDE8;vertical-align:top';
-  const tdTot='padding:7px 8px;font-size:13px;font-weight:700;text-align:right;border-top:2px solid #EEE;background:#F5F4F0';
-  const tdTotL='padding:7px 8px;font-size:13px;font-weight:700;text-align:left;border-top:2px solid #EEE;background:#F5F4F0';
-
+  const tdT='padding:7px 8px;font-size:13px;font-weight:700;text-align:right;border-top:2px solid #EEE;background:#F5F4F0';
+  const tdTL='padding:7px 8px;font-size:13px;font-weight:700;text-align:left;border-top:2px solid #EEE;background:#F5F4F0';
   let html='';
 
-  // ── HOSPEDAJE TABLE ──
   if(hospItems.length){
+    // 1. Sort by fecha asc
+    const sorted=[...hospItems].sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    const grandHosp=hospItems.reduce((s,i)=>s+i.monto,0);
+    const rr=gd(KR).find(r=>r.nombre===nombre);
+    let bnT=0,ishT=0,ivaT=0;
+    if(rr&&rr.base){bnT=(parseFloat(rr.base)||0);ishT=bnT*0.045;ivaT=bnT*0.16;}
+    else{bnT=grandHosp/1.205;ishT=bnT*0.045;ivaT=bnT*0.16;}
+    // 2. Accum column sums
+    let sumBase=0,sumIsh=0,sumIva=0,sumTot=0;
     html+=`<p style="font-size:11px;font-weight:700;color:#1860A5;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Hospedaje</p>
-    <div style="overflow-x:auto;margin-bottom:1.2rem">
-    <table style="width:100%;border-collapse:collapse;font-family:sans-serif">
+    <div style="overflow-x:auto;margin-bottom:1.2rem"><table style="width:100%;border-collapse:collapse;font-family:sans-serif">
       <thead><tr>
         <th style="${thL}">Concepto</th>
-        <th style="${thStyle}">Base</th>
-        <th style="${thStyle}">ISH</th>
-        <th style="${thStyle}">IVA</th>
-        <th style="${thStyle}">Total</th>
-        <th style="${thStyle}">M&eacute;todo</th>
-        <th style="${thStyle}">Fecha pago</th>
-      </tr></thead>
-      <tbody>`;
-
-    // Calculate total hospedaje fiscal breakdown first
-    // Total = base_neta * (1 + 0.045 + 0.16) = base_neta * 1.205
-    // So base_neta = total / 1.205
-    const totalHosp = hospItems.reduce((s,i)=>s+(i.pago!=='pendiente'?i.monto:0), 0);
-    const pendHosp  = hospItems.reduce((s,i)=>s+(i.pago==='pendiente'||i.pago==='tbd'?i.monto:0), 0);
-    const grandHosp = totalHosp + pendHosp;
-
-    // Use reservation fiscal data if available, otherwise reverse-calculate
-    const rr = gd(KR).find(r=>r.nombre===nombre);
-    let bnTotal=0, ishTotal=0, ivaTotal=0;
-    if(rr && rr.base){
-      const desc=parseFloat(rr.descuento)||0;
-      bnTotal = (parseFloat(rr.base)||0)*(1-desc/100);
-      ishTotal = bnTotal*0.045;
-      ivaTotal = bnTotal*0.16;
-    } else {
-      // reverse from grand total: total = bn*(1+0.045+0.16)
-      bnTotal  = grandHosp/1.205;
-      ishTotal = bnTotal*0.045;
-      ivaTotal = bnTotal*0.16;
-    }
-
-    // Each payment row gets proportional share of fiscal breakdown
-    let hospSubtotal=0;
-    hospItems.forEach(it=>{
+        <th style="${thS}">Base</th><th style="${thS}">ISH</th><th style="${thS}">IVA</th>
+        <th style="${thS}">Total</th><th style="${thS}">Método</th><th style="${thS}">Fecha pago</th>
+      </tr></thead><tbody>`;
+    sorted.forEach(it=>{
       const monto=it.monto||0;
-      const ratio = grandHosp>0 ? monto/grandHosp : 0;
-      const base  = Math.round(bnTotal*ratio*100)/100;
-      const ish   = Math.round(ishTotal*ratio*100)/100;
-      const iva   = Math.round(ivaTotal*ratio*100)/100;
-      if(it.pago!=='pendiente'&&it.pago!=='tbd') hospSubtotal+=monto;
+      const ratio=grandHosp>0?monto/grandHosp:0;
+      const base=Math.round(bnT*ratio*100)/100;
+      const ish=Math.round(ishT*ratio*100)/100;
+      const iva=Math.round(ivaT*ratio*100)/100;
       const isPend=it.pago==='pendiente'||it.pago==='tbd';
+      if(!isPend){sumBase+=base;sumIsh+=ish;sumIva+=iva;sumTot+=monto;}
       html+=`<tr>
-        <td style="${tdL}${isPend?';color:#E24B4A':''}">
-          <strong>${it.label}</strong>
-          ${grandHosp>0?`<br><span style="font-size:10px;color:#AAA">${Math.round(it.monto/grandHosp*100)}% del total</span>`:''}
-          ${(it.descuento||0)>0?`<br><span style="font-size:10px;color:#888">Dto ${it.descuento}%</span>`:''}
+        <td style="${tdL}${isPend?';color:#E24B4A':''}"><strong>${it.label}</strong>
+          ${grandHosp>0?`<br><span style="font-size:10px;color:#AAA">${Math.round(monto/grandHosp*100)}% del total</span>`:''}
         </td>
-        <td style="${td}${isPend?';color:#E24B4A':''}">${fmt(base)}</td>
-        <td style="${td}${isPend?';color:#E24B4A':''}">${fmt(ish)}</td>
-        <td style="${td}${isPend?';color:#E24B4A':''}">${fmt(iva)}</td>
-        <td style="${td};font-weight:600${isPend?';color:#E24B4A':''}">${fmt(monto)}</td>
+        <td style="${td}">${fmt(base)}</td><td style="${td}">${fmt(ish)}</td><td style="${td}">${fmt(iva)}</td>
+        <td style="${td};font-weight:600">${fmt(monto)}</td>
         <td style="${td}"><span class="badge ${pagoBadge(it.pago)}">${pagoLabel(it.pago||'')}</span></td>
         <td style="${td}">${it.fecha||'<span style=\"color:#AAA\">&mdash;</span>'}</td>
       </tr>`;
     });
-
-    // Total hospedaje row
+    // 2. Total hospedaje with column sums
     html+=`<tr>
-      <td style="${tdTotL}" colspan="4">Total hospedaje${pendHosp>0?` <span style="font-size:11px;color:#E24B4A">(incl. ${fmt(pendHosp)} pend.)</span>`:''}
-        <br><span style="font-size:10px;color:#888;font-weight:400">Base: ${fmt(bnTotal)} · ISH: ${fmt(ishTotal)} · IVA: ${fmt(ivaTotal)}</span>
-      </td>
-      <td style="${tdTot}">${fmt(grandHosp)}</td>
-      <td style="${tdTot}" colspan="2"></td>
+      <td style="${tdTL}">Total hospedaje</td>
+      <td style="${tdT}">${fmt(sumBase)}</td><td style="${tdT}">${fmt(sumIsh)}</td><td style="${tdT}">${fmt(sumIva)}</td>
+      <td style="${tdT}">${fmt(sumTot)}</td><td style="${tdT}" colspan="2"></td>
     </tr></tbody></table></div>`;
   }
 
-  // ── CONSUMOS TABLE ──
   if(consItems.length){
-    html+=`<p style="font-size:11px;font-weight:700;color:#1D9E75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Consumos</p>
-    <div style="overflow-x:auto;margin-bottom:1.2rem">
-    <table style="width:100%;border-collapse:collapse;font-family:sans-serif">
-      <thead><tr>
-        <th style="${thL}">Producto</th>
-        <th style="${thStyle}">Cant.</th>
-        <th style="${thStyle}">Base</th>
-        <th style="${thStyle}">IVA</th>
-        <th style="${thStyle}">Total</th>
-        <th style="${thStyle}">M&eacute;todo</th>
-        <th style="${thStyle}">Fecha pago</th>
-      </tr></thead>
-      <tbody>`;
-
-    let consTot=0;
+    // 3. Collect all consumo rows with fecha, sort by fecha asc
+    const consRows=[];
     consItems.forEach(group=>{
       (group.items||[]).forEach(ci=>{
         const tot=ci.precio*ci.cantidad;
         const base=Math.round(tot/1.16*100)/100;
         const iva=Math.round((tot-base)*100)/100;
-        consTot+=tot;
-        html+=`<tr>
-          <td style="${tdL}"><strong>${ci.nombre}</strong><br><span style="font-size:10px;color:#AAA">${catLabel(ci.cat)}</span></td>
-          <td style="${td}">${ci.cantidad}</td>
-          <td style="${td}">${fmt(base)}</td>
-          <td style="${td}">${fmt(iva)}</td>
-          <td style="${td};font-weight:600">${fmt(tot)}</td>
-          <td style="${td}"><span class="badge ${pagoBadge(ci.pago)}">${pagoLabel(ci.pago||'')}</span></td>
-          <td style="${td}">${ci.fechaPago&&ci.fechaPago!=='tbd'?ci.fechaPago:'<span style="color:#AAA">&mdash;</span>'}</td>
-        </tr>`;
+        consRows.push({nombre:ci.nombre,cat:ci.cat,cantidad:ci.cantidad,
+          tot,base,iva,pago:ci.pago,
+          fecha:ci.fechaPago&&ci.fechaPago!=='tbd'?fmtDate(ci.fechaPago):''});
       });
     });
-
+    consRows.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    let sumCBase=0,sumCIva=0,sumCTot=0;
+    html+=`<p style="font-size:11px;font-weight:700;color:#1D9E75;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Consumos</p>
+    <div style="overflow-x:auto;margin-bottom:1.2rem"><table style="width:100%;border-collapse:collapse;font-family:sans-serif">
+      <thead><tr>
+        <th style="${thL}">Producto</th>
+        <th style="${thS}">Cant.</th><th style="${thS}">Base</th><th style="${thS}">IVA</th>
+        <th style="${thS}">Total</th><th style="${thS}">Método</th><th style="${thS}">Fecha pago</th>
+      </tr></thead><tbody>`;
+    consRows.forEach(ci=>{
+      sumCBase+=ci.base;sumCIva+=ci.iva;sumCTot+=ci.tot;
+      // 3. Show fecha pago
+      html+=`<tr>
+        <td style="${tdL}"><strong>${ci.nombre}</strong><br><span style="font-size:10px;color:#AAA">${catLabel(ci.cat)}</span></td>
+        <td style="${td}">${ci.cantidad}</td>
+        <td style="${td}">${fmt(ci.base)}</td><td style="${td}">${fmt(ci.iva)}</td>
+        <td style="${td};font-weight:600">${fmt(ci.tot)}</td>
+        <td style="${td}"><span class="badge ${pagoBadge(ci.pago)}">${pagoLabel(ci.pago||'')}</span></td>
+        <td style="${td}">${ci.fecha||'<span style=\"color:#AAA\">&mdash;</span>'}</td>
+      </tr>`;
+    });
+    // 4. Total consumos (not subtotal) with column sums
     html+=`<tr>
-      <td style="${tdTotL}" colspan="4">Subtotal consumos</td>
-      <td style="${tdTot}">${fmt(consTot)}</td>
-      <td style="${tdTot}" colspan="2"></td>
+      <td style="${tdTL}">Total consumos</td>
+      <td style="${tdT}"></td>
+      <td style="${tdT}">${fmt(sumCBase)}</td><td style="${tdT}">${fmt(sumCIva)}</td>
+      <td style="${tdT}">${fmt(sumCTot)}</td><td style="${tdT}" colspan="2"></td>
     </tr></tbody></table></div>`;
   }
 
-  // ── GRAND TOTAL ──
-  const grandTot=items.filter(i=>i.pago!=='pendiente'&&i.pago!=='tbd').reduce((s,i)=>s+i.monto,0);
+  // 5. Grand total with column sums
+  const rr2=gd(KR).find(r=>r.nombre===nombre);
+  const grandHosp2=hospItems.reduce((s,i)=>s+i.monto,0);
+  let bnT2=0,ishT2=0,ivaT2=0;
+  if(rr2&&rr2.base){bnT2=parseFloat(rr2.base)||0;ishT2=bnT2*0.045;ivaT2=bnT2*0.16;}
+  else{bnT2=grandHosp2/1.205;ishT2=bnT2*0.045;ivaT2=bnT2*0.16;}
+  const paidHosp=hospItems.filter(i=>i.pago!=='pendiente'&&i.pago!=='tbd').reduce((s,i)=>s+i.monto,0);
+  const ratio2=grandHosp2>0?paidHosp/grandHosp2:0;
+  const hospBase=Math.round(bnT2*ratio2*100)/100;
+  const hospIsh=Math.round(ishT2*ratio2*100)/100;
+  const hospIva=Math.round(ivaT2*ratio2*100)/100;
+  let consBase2=0,consIva2=0,consTot2=0;
+  consItems.forEach(g=>(g.items||[]).forEach(ci=>{
+    const tot=ci.precio*ci.cantidad;
+    const base=Math.round(tot/1.16*100)/100;
+    consBase2+=base;consIva2+=Math.round((tot-base)*100)/100;consTot2+=tot;
+  }));
+  const grandTot=paidHosp+consTot2;
   const pend=items.filter(i=>i.pago==='pendiente'||i.pago==='tbd').reduce((s,i)=>s+i.monto,0);
-  html+=`<div style="background:#F5F4F0;border-radius:8px;padding:10px 14px">
-    ${pend>0?`<div style="display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:#E24B4A"><span>Pendiente de cobro</span><span style="font-weight:600">${fmt(pend)}</span></div>`:''}
-    <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:6px 0;${pend>0?'border-top:1px solid #DDD;margin-top:4px':''}">
-      <span>Total cobrado</span><span style="color:#1860A5">${fmt(grandTot)}</span>
-    </div>
+  html+=`<div style="background:#F5F4F0;border-radius:8px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <tr>
+        <td style="padding:10px 12px;font-weight:700;font-size:14px">Total cobrado</td>
+        <td style="padding:10px 8px;text-align:right;font-size:12px;color:#666">${fmt(hospBase+consBase2)}</td>
+        <td style="padding:10px 8px;text-align:right;font-size:12px;color:#666">${fmt(hospIsh)}</td>
+        <td style="padding:10px 8px;text-align:right;font-size:12px;color:#666">${fmt(hospIva+consIva2)}</td>
+        <td style="padding:10px 8px;text-align:right;font-weight:700;font-size:15px;color:#1860A5">${fmt(grandTot)}</td>
+        <td colspan="2" style="padding:10px 8px">${pend>0?`<span style="font-size:11px;color:#E24B4A">+${fmt(pend)} pend.</span>`:''}</td>
+      </tr>
+    </table>
   </div>`;
 
   document.getElementById('ing-modal-body').innerHTML=html;
   document.getElementById('ing-modal-overlay').style.display='flex';
 }
-
-
-const EXENTOS_PRODS=['Miel bote','Propina'];
-const METODOS_REPORTABLES=['efectivo','transferencia','debito','stripe'];
-const METODOS_LABELS={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe'};
-
-function initCierre(){
-  const mesEl=document.getElementById('cm-mes');
-  const anioEl=document.getElementById('cm-anio');
-  if(!mesEl||!anioEl){setTimeout(initCierre,100);return;}
-  const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  mesEl.innerHTML=MN.map((m,i)=>`<option value="${String(i+1).padStart(2,'0')}">${m}</option>`).join('');
-  const now=new Date();
-  mesEl.value=String(now.getMonth()+1).padStart(2,'0');
-  const y=now.getFullYear();
-  anioEl.innerHTML=[y-1,y,y+1].map(yr=>`<option value="${yr}"${yr===y?' selected':''}>${yr}</option>`).join('');
-  renderCierre();
-}
-
-function getCierreData(prefix){
-  const res=gd(KR),cons=gd(KC),rows=[];
-  res.forEach(r=>{
-    if((r.anticipo||0)>0&&r.antiFecha&&fmtDate(r.antiFecha).startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd'){
-      const bn=(r.base||0)*(1-(r.descuento||0)/100);
-      const ratio=r.total>0?r.anticipo/r.total:0;
-      rows.push({tipo:'hospedaje',concepto:'Anticipo hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        fecha:fmtDate(r.antiFecha),pago:r.antiPago,monto:r.anticipo,
-        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0});
-    }
-    (r.pagos||[]).filter(p=>p.tipo==='saldo'&&fmtDate(p.fecha).startsWith(prefix)&&p.pago!=='tbd').forEach(p=>{
-      const bn=(r.base||0)*(1-(r.descuento||0)/100);
-      const ratio=r.total>0?p.monto/r.total:0;
-      rows.push({tipo:'hospedaje',concepto:'Saldo hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        fecha:fmtDate(p.fecha),pago:p.pago,monto:p.monto,
-        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0});
-    });
-  });
-  cons.forEach(c=>{
-    (c.items||[]).forEach(it=>{
-      if(!it.fechaPago||!fmtDate(it.fechaPago).startsWith(prefix))return;
-      if(!it.pago||it.pago==='tbd')return;
-      const total=it.precio*it.cantidad;
-      const esEx=EXENTOS_PRODS.includes(it.nombre);
-      const base=esEx?0:Math.round(total/1.16*100)/100;
-      const iva=esEx?0:Math.round((total-base)*100)/100;
-      rows.push({tipo:'consumo',concepto:it.nombre,huesped:c.huesped,habitacion:c.habitacion,
-        fecha:fmtDate(it.fechaPago),pago:it.pago,monto:total,base,ish:0,iva,exento:esEx?total:0});
-    });
-  });
-  return rows;
-}
-
-function renderCierre(){
-  const mes=document.getElementById('cm-mes').value;
-  const anio=document.getElementById('cm-anio').value;
-  if(!mes||!anio)return;
-  const prefix=anio+'-'+mes;
-  const rows=getCierreData(prefix);
-  const byPago={};
-  rows.forEach(r=>{const p=r.pago||'tbd';if(!byPago[p])byPago[p]=0;byPago[p]+=r.monto;});
-  const totalMes=rows.reduce((s,r)=>s+r.monto,0);
-  const totalRep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago)).reduce((s,r)=>s+r.monto,0);
-  const ORDER=['efectivo','transferencia','debito','stripe','mercadopago','efectivo-nd'];
-  let resHtml=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Método</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th><th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Contador</th></tr></thead><tbody>`;
-  ORDER.forEach(p=>{if(!byPago[p])return;const rep=METODOS_REPORTABLES.includes(p);
-    resHtml+=`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${METODOS_LABELS[p]||p}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(byPago[p])}</td><td style="padding:7px 8px;text-align:center">${rep?'<span style="color:#1D9E75;font-weight:700">&#x2713;</span>':'<span style="color:#CCC">&#x2715;</span>'}</td></tr>`;
-  });
-  resHtml+=`<tr style="border-top:2px solid #EEE;font-weight:700"><td style="padding:7px 8px">Total cobrado</td><td style="padding:7px 8px;text-align:right">${fmt(totalMes)}</td><td></td></tr><tr style="font-weight:700;color:#1860A5"><td style="padding:4px 8px;font-size:12px">Reportable al contador</td><td style="padding:4px 8px;text-align:right;font-size:12px">${fmt(totalRep)}</td><td></td></tr></tbody></table>`;
-  document.getElementById('cm-resumen').innerHTML=rows.length?resHtml:'<p class="empty">Sin ingresos en este periodo</p>';
-
-  const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
-  const hospR=rep.filter(r=>r.tipo==='hospedaje');
-  const consG=rep.filter(r=>r.tipo==='consumo'&&r.exento===0);
-  const consE=rep.filter(r=>r.tipo==='consumo'&&r.exento>0);
-  const sv=(arr,f)=>arr.reduce((t,r)=>t+(r[f]||0),0);
-  document.getElementById('cm-fiscal').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Base</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">ISH 4.5%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">IVA 16%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody><tr style="border-bottom:0.5px solid #F0EDE8;color:#1860A5"><td style="padding:7px 8px;font-weight:600">Hospedaje</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'base'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(hospR,'monto'))}</td></tr><tr style="border-bottom:0.5px solid #F0EDE8;color:#1D9E75"><td style="padding:7px 8px;font-weight:600">Consumos gravados IVA 16%</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'base'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consG,'monto'))}</td></tr>${consE.length?`<tr style="border-bottom:0.5px solid #F0EDE8;color:#888"><td style="padding:7px 8px;font-weight:600">Exentos (Miel, Propina)</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consE,'exento'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consE,'monto'))}</td></tr>`:''}<tr style="border-top:2px solid #EEE;font-weight:700;font-size:14px"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'iva')+sv(consG,'iva'))}</td><td style="padding:8px;text-align:right;color:#1860A5">${fmt(sv(rep,'monto'))}</td></tr></tbody></table>`;
-
-  const bancos=['transferencia','debito','stripe','efectivo'];
-  let reconHtml=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Método</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">En app</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado de cuenta</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Diferencia</th></tr></thead><tbody>`;
-  bancos.forEach(p=>{const enApp=rows.filter(r=>r.pago===p).reduce((s,r)=>s+r.monto,0);
-    reconHtml+=`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${METODOS_LABELS[p]||p}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(enApp)}</td><td style="padding:7px 8px;text-align:right"><input type="number" id="recon-${p}" placeholder="0" oninput="updRecon('${p}',${enApp})" style="width:110px;font-size:12px;text-align:right;border:1px solid #CCC;border-radius:5px;padding:4px 6px"></td><td style="padding:7px 8px;text-align:right;font-weight:700" id="recon-diff-${p}">&mdash;</td></tr>`;
-  });
-  reconHtml+=`</tbody></table>`;
-  document.getElementById('cm-recon').innerHTML=reconHtml;
-}
-
-function updRecon(pago,enApp){
-  const val=parseFloat(document.getElementById('recon-'+pago).value)||0;
-  const diff=val-enApp;
-  const el=document.getElementById('recon-diff-'+pago);
-  if(!el)return;
-  el.textContent=diff===0?'✓ OK':(diff>0?'+':'')+fmt(diff);
-  el.style.color=diff===0?'#1D9E75':'#C83232';
-}
-
-function exportarCierreExcel(){
-  const mes=document.getElementById('cm-mes').value;
-  const anio=document.getElementById('cm-anio').value;
-  const prefix=anio+'-'+mes;
-  const rows=getCierreData(prefix);
-  const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-  const mesNombre=MN[parseInt(mes)-1]+' '+anio;
-  if(!rows.length){showAlert('Sin ingresos en este periodo','error');return;}
-  const wb=XLSX.utils.book_new();
-  const det=[['Fecha','Huésped','Habitación','Concepto','Método','Base','ISH','IVA','Exento','Total','Para contador']];
-  rows.forEach(r=>det.push([r.fecha,r.huesped,r.habitacion||'',r.concepto,METODOS_LABELS[r.pago]||r.pago,r.base,r.ish,r.iva,r.exento,r.monto,METODOS_REPORTABLES.includes(r.pago)?'Sí':'No']));
-  const ws1=XLSX.utils.aoa_to_sheet(det);
-  XLSX.utils.book_append_sheet(wb,ws1,'Detalle');
-  const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
-  const hospR=rep.filter(r=>r.tipo==='hospedaje');
-  const consG=rep.filter(r=>r.tipo==='consumo'&&r.exento===0);
-  const consE=rep.filter(r=>r.tipo==='consumo'&&r.exento>0);
-  const sv=(arr,f)=>arr.reduce((t,r)=>t+(r[f]||0),0);
-  const fis=[['REPORTE FISCAL — '+mesNombre],[''],['Concepto','Base','ISH 4.5%','IVA 16%','Total'],
-    ['Hospedaje',sv(hospR,'base'),sv(hospR,'ish'),sv(hospR,'iva'),sv(hospR,'monto')],
-    ['Consumos gravados',sv(consG,'base'),0,sv(consG,'iva'),sv(consG,'monto')]];
-  if(consE.length)fis.push(['Exentos',sv(consE,'exento'),0,0,sv(consE,'monto')]);
-  fis.push([''],['TOTAL',sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'),sv(hospR,'ish'),sv(hospR,'iva')+sv(consG,'iva'),sv(rep,'monto')]);
-  const ws2=XLSX.utils.aoa_to_sheet(fis);
-  XLSX.utils.book_append_sheet(wb,ws2,'Resumen Fiscal');
-  const met=[['TOTALES POR MÉTODO — '+mesNombre],[''],['Método','Monto','Reportar al contador']];
-  ['efectivo','transferencia','debito','stripe','mercadopago','efectivo-nd'].forEach(p=>{
-    const t=rows.filter(r=>r.pago===p).reduce((s,r)=>s+r.monto,0);
-    if(t>0)met.push([METODOS_LABELS[p]||p,t,METODOS_REPORTABLES.includes(p)?'Sí':'No']);
-  });
-  met.push([''],['Total reportable',sv(rep,'monto'),'']);
-  const ws3=XLSX.utils.aoa_to_sheet(met);
-  XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
-  XLSX.writeFile(wb,'Galopina_Cierre_'+mesNombre.replace(' ','_')+'.xlsx');
-  showAlert('Excel exportado','success');
-}
-
-</script>
-<div id="co-dd" style="position:fixed;background:#FFF;border:1px solid #CCC;border-radius:8px;z-index:99999;max-height:220px;overflow-y:auto;box-shadow:0 6px 20px rgba(0,0,0,.2);display:none;min-width:260px"></div>
-
-<!-- INGRESO DETALLE MODAL -->
-<div id="ing-modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeIngModal()">
-  <div style="background:#FFF;border-radius:10px;padding:1.4rem;width:94%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.2)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;border-bottom:1px solid #EEE;padding-bottom:10px">
-      <div>
-        <h3 id="ing-modal-title" style="font-size:16px;font-weight:700"></h3>
-        <p id="ing-modal-sub" style="font-size:12px;color:#888;margin-top:2px"></p>
-      </div>
-      <button onclick="closeIngModal()" style="background:none;border:none;cursor:pointer;font-size:20px;color:#AAA">&times;</button>
-    </div>
-    <div id="ing-modal-body"></div>
-  </div>
-</div>
-</body>
-</html>
+>
