@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.9</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v19.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.9</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v19.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -177,7 +177,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <input type="checkbox" id="res-split-mes" onchange="renderRes()" style="width:15px;height:15px;margin:0;cursor:pointer">
           Agrupar por mes
         </label>
-        <button class="btn btn-sm" onclick="clearResFilters()" title="Limpiar filtros" style="height:32px;padding:0 8px">&#x2715;</button>
+        <button class="btn btn-sm" onclick="clearResFilters()" style="height:32px;padding:0 10px;margin-left:auto;white-space:nowrap">Limpiar &#x2715;</button>
       </div>
     </div>
     <div id="lista-res"></div>
@@ -286,13 +286,18 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <button class="btn btn-primary" onclick="showNuevoConsumo()">+ Nuevo consumo</button>
     </div>
     <!-- Filtros -->
-    <div class="card" style="padding:.6rem 1rem">
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <input type="text" id="cons-search" placeholder="Buscar huésped..." oninput="renderConsList()"
+    <div class="card" style="padding:.6rem 1rem;margin-bottom:.5rem">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="cons-search" placeholder="Buscar hu&#233;sped..." oninput="renderConsList()"
           style="flex:1;min-width:160px;height:32px;font-size:13px">
-        <select id="cons-mes" onchange="renderConsList()" style="height:32px;font-size:13px">
+        <select id="cons-mes" onchange="renderConsList()" style="height:32px;font-size:13px;min-width:150px">
           <option value="">Todos los meses</option>
         </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;font-weight:normal;cursor:pointer">
+          <input type="checkbox" id="cons-split-mes" onchange="renderConsList()" style="width:15px;height:15px;margin:0;cursor:pointer">
+          Agrupar por mes
+        </label>
+        <button class="btn btn-sm" onclick="clearConsFilters()" style="height:32px;padding:0 10px;margin-left:auto;white-space:nowrap">Limpiar &#x2715;</button>
       </div>
     </div>
     <!-- Lista consumos -->
@@ -1322,15 +1327,32 @@ function initConsList(){
 }
 
 function renderConsList(){
-  const search=(document.getElementById('cons-search').value||'').toLowerCase();
-  const mes=document.getElementById('cons-mes').value;
+  // Populate month selector
+  const mesEl=document.getElementById('cons-mes');
+  if(mesEl&&mesEl.options.length<=1){
+    const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const meses=new Set(gd(KC).map(c=>(c.fecha||'').substring(0,7)).filter(Boolean));
+    [...meses].sort().reverse().forEach(m=>{
+      const [y,mo]=m.split('-');
+      const opt=document.createElement('option');
+      opt.value=m; opt.textContent=MN[parseInt(mo)-1]+' '+y;
+      mesEl.appendChild(opt);
+    });
+  }
+
+  const search=(document.getElementById('cons-search')?.value||'').toLowerCase();
+  const mes=document.getElementById('cons-mes')?.value||'';
+  const split=document.getElementById('cons-split-mes')?.checked||false;
+
   let cons=[...gd(KC)];
   if(mes) cons=cons.filter(c=>(c.fecha||'').startsWith(mes));
   if(search) cons=cons.filter(c=>(c.huesped||'').toLowerCase().includes(search));
   cons.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
   const box=document.getElementById('cons-list');
   if(!cons.length){box.innerHTML='<p class="empty">Sin consumos registrados</p>';return;}
-  box.innerHTML=cons.map(c=>{
+
+  const renderCard=c=>{
     const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
     const total=c.total||(c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0);
     const origen=res?res.origen:'directo';
@@ -1355,8 +1377,37 @@ function renderConsList(){
       <div style="display:flex;gap:4px">${editBtn}${delBtn}</div>
     </div>
   </div>`;
-  }).join('');
+  };
+
+  if(split){
+    const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const groups={};
+    cons.forEach(c=>{
+      const m=(c.fecha||'').substring(0,7)||'Sin fecha';
+      if(!groups[m])groups[m]=[];
+      groups[m].push(c);
+    });
+    const sorted=Object.keys(groups).sort().reverse();
+    box.innerHTML=sorted.map(m=>{
+      const [y,mo]=m.split('-');
+      const label=mo?MN[parseInt(mo)-1]+' '+y:m;
+      return `<div style="margin-bottom:1.2rem">
+        <p style="font-size:11px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.06em;padding:4px 0;border-bottom:1px solid #EEE;margin-bottom:6px">${label}</p>
+        ${groups[m].map(renderCard).join('')}
+      </div>`;
+    }).join('');
+  } else {
+    box.innerHTML=cons.map(renderCard).join('');
+  }
 }
+
+function clearConsFilters(){
+  const s=document.getElementById('cons-search');if(s)s.value='';
+  const m=document.getElementById('cons-mes');if(m)m.value='';
+  const c=document.getElementById('cons-split-mes');if(c)c.checked=false;
+  renderConsList();
+}
+
 
 
 
