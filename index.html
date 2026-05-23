@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.4</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.6</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.4</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v15.6</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -974,16 +974,30 @@ const PAIS_FLAGS={
 function paisFlag(pais){
   return PAIS_FLAGS[pais]||'🌍';
 }
+
+function origenLogo(origen, fuente){
+  const wrap=(title,svg)=>`<span title="${title}" style="display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;flex-shrink:0">${svg}</span>`;
+  const logos={
+    'airbnb': wrap('Airbnb','<svg viewBox="0 0 24 24" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><path fill="#FF5A5F" d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm0 2c5.523 0 10 4.477 10 10S17.523 22 12 22 2 17.523 2 12 6.477 2 12 2zm-.002 3.5c-.828 0-1.498.67-1.498 1.498 0 .414.168.788.44 1.06-.34.41-.65.86-.93 1.34-.79 1.36-1.23 2.8-1.23 4.1 0 1.83 1.05 3 2.72 3 .76 0 1.46-.28 2-.77.54.49 1.24.77 2 .77 1.67 0 2.72-1.17 2.72-3 0-1.3-.44-2.74-1.23-4.1-.28-.48-.59-.93-.93-1.34.272-.272.44-.646.44-1.06 0-.828-.67-1.498-1.498-1.498-.414 0-.788.168-1.06.44-.272-.272-.646-.44-1.06-.44h-.002zm0 1c.276 0 .5.224.5.498 0 .276-.224.5-.5.5-.276 0-.5-.224-.5-.5 0-.274.224-.498.5-.498zm0 2.3c.22 0 .43.02.63.06.28.46.54.96.76 1.5.36.87.57 1.76.57 2.64 0 1.27-.6 2-1.72 2-.56 0-1.06-.22-1.42-.6l-.21-.22-.21.22c-.36.38-.86.6-1.42.6-1.12 0-1.72-.73-1.72-2 0-.88.21-1.77.57-2.64.22-.54.48-1.04.76-1.5.2-.04.41-.06.63-.06z"/></svg>'),
+    'booking': wrap('Booking.com','<svg viewBox="0 0 24 24" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="#003580"/><text x="12" y="16.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="900" fill="#fff">B.</text></svg>'),
+    'expedia': wrap('Expedia','<svg viewBox="0 0 24 24" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="#FFC72C"/><text x="12" y="16.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="11" font-weight="900" fill="#00355F">exp</text></svg>'),
+    'directo': wrap('Directo','<svg viewBox="0 0 24 24" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#1D9E75"/><text x="12" y="16" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#fff">⌂</text></svg>'),
+    'whatsapp': wrap('WhatsApp','<svg viewBox="0 0 24 24" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#25D366"/><path fill="#fff" d="M12 5.5c-3.59 0-6.5 2.91-6.5 6.5 0 1.15.3 2.23.83 3.16L5 19l3.96-1.31A6.46 6.46 0 0012 18.5c3.59 0 6.5-2.91 6.5-6.5S15.59 5.5 12 5.5zm3.18 9.07c-.14.38-.8.73-1.1.77-.28.04-.64.05-.97-.06a9.1 9.1 0 01-.88-.33c-1.55-.67-2.56-2.2-2.64-2.3-.08-.1-.64-.85-.64-1.62 0-.77.4-1.15.55-1.31.14-.16.3-.2.4-.2h.28c.1 0 .23-.04.36.27.14.32.46 1.12.5 1.2.04.08.07.18.01.29-.06.1-.09.17-.18.26-.08.09-.18.2-.25.27-.08.08-.17.17-.07.33.1.16.43.72.93 1.16.64.58 1.18.76 1.34.84.16.08.26.07.35-.04.1-.12.4-.47.51-.63.11-.16.22-.13.37-.08.15.06.93.44 1.09.52.16.08.27.12.31.19.04.07.04.38-.1.76z"/></svg>'),
+    'cloudbeds': wrap('Cloudbeds','<svg viewBox="0 0 24 24" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><rect width="24" height="24" rx="4" fill="#7B5EA7"/><text x="12" y="15.5" text-anchor="middle" font-family="Arial,sans-serif" font-size="8" font-weight="700" fill="#fff">CB</text></svg>'),
+    'email': wrap('Email','<svg viewBox="0 0 24 24" width="22" height="22" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="12" fill="#888"/><path fill="#fff" d="M5 8.5v7h14v-7L12 13 5 8.5zm0-1h14L12 11 5 7.5z"/></svg>'),
+  };
+  const src=(fuente==='cloudbeds')?'cloudbeds':(origen||'directo');
+  return logos[src]||logos['directo'];
+}
 function resHtml(r,i){
   const saldoPend=(r.saldo||0)>0&&!r.saldFecha;
   const eb=r.estado==='checkin'?'b-efectivo':r.estado==='checkout'?'b-transferencia':'b-stripe';
   return `<div class="res-item">
     <div style="flex:1;min-width:0">
-      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:3px">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
+        ${origenLogo(r.origen,r.fuente)}
+        ${r.pais?`<span title="${r.pais}" style="font-size:18px;cursor:default;line-height:1">${paisFlag(r.pais)}</span>`:''}
         <span style="font-size:13px;font-weight:600">${r.nombre}</span>
-        ${r.pais?`<span title="${r.pais}" style="font-size:18px;cursor:default">${paisFlag(r.pais)}</span>`:''}
-        <span class="badge ${eb}">${r.estado}</span>
-
       </div>
       <p style="font-size:11px;color:#888"><span class="tag">${r.habitacion}</span> ${r.checkin||'?'} → ${r.checkout||'?'} · ${r.noches||'?'} noches · Total: ${fmt(r.total||0)}</p>
       ${(r.anticipo||0)>0?`<p style="font-size:11px;color:#888;margin-top:2px">Anticipo: ${fmt(r.anticipo||0)} (${r.antiPct||0}%) · ${pagoLabel(r.antiPago||'')}${r.antiFecha?' · '+fmtDate(r.antiFecha):''}</p>`:''}
