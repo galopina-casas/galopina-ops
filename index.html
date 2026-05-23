@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.6</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.7</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.6</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v22.7</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -910,7 +910,7 @@ function editRes(id){
   // For Cloudbeds reservations, skip calcTarifa and use original CB fiscal values
   if(r.fuente==='cloudbeds'&&r.total){
     const el2=id=>document.getElementById(id);
-    const fmt2=v=>'$'+Math.round(v).toLocaleString('en');
+    const fmt2=v=>'$'+(v||0).toLocaleString('en',{minimumFractionDigits:0,maximumFractionDigits:2});
     el2('r-base')&&(el2('r-base').value=fmt2(r.base||0));
     el2('r-ish')&&(el2('r-ish').value=fmt2(r.ish||0));
     el2('r-iva')&&(el2('r-iva').value=fmt2(r.iva||0));
@@ -965,6 +965,9 @@ function guardarRes(){
     base=cleanN(document.getElementById('r-base').value);
     ish=cleanN(document.getElementById('r-ish').value);
     iva=cleanN(document.getElementById('r-iva').value);
+    // For CB reservations, use stored values directly (full precision)
+    const storedR=gd(KR).find(x=>x.id===editId);
+    if(storedR){base=storedR.base||base;ish=storedR.ish||ish;iva=storedR.iva||iva;total=storedR.total||total;}
   } else {
     const habs=gd(KH);
     let totalConImp=0;
@@ -1924,11 +1927,13 @@ function processImport(rows, preview){
       const saldoPend=parseFloat(get(['Saldo pendiente','saldo pendiente','balance due']))||0;
 
 
-      // Total de la habitación = BASE sin impuestos
+      // Total de la habitación = BASE sin impuestos — preserve decimal precision
       const base=tarifaTotal;
       const ish=Math.round(base*0.045*100)/100;
       const iva=Math.round(base*0.16*100)/100;
-      const totalConImpuestos=Math.round(base*1.205*100)/100;
+      // Use totalGeneral if close to base*1.205 (within $2), else calculate
+      const calcTotal=Math.round(base*1.205*100)/100;
+      const totalConImpuestos=totalGeneral>0&&Math.abs(totalGeneral-calcTotal)<=2?totalGeneral:calcTotal;
 
       // Validation flags
       const near=(a,b)=>Math.abs(a-b)<=(Math.max(a,b)*0.01+1);
@@ -1959,7 +1964,7 @@ function processImport(rows, preview){
         origen, estado, fuente:'cloudbeds',
         tarifaNoche:noches>0?Math.round(tarifaTotal/noches):tarifaTotal,
         base, ish, iva,
-        total:totalConImpuestos,
+        total:Math.round(totalConImpuestos*100)/100,
         anticipo:anticoFinal,
         antiFecha:'', antiPago:'',
         saldo:saldoFinal,
