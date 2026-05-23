@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1680,22 +1680,33 @@ function renderIngresos(){
     const totCons=consItems.reduce((s,i)=>s+i.monto,0);
     const pendSaldo=(res&&(res.saldo||0)>0&&!res.saldPago);
 
+    // Get res data for icons
+    const resData=gd(KR).find(r=>r.nombre===nombre);
+    const origenIcon=resData?origenLogo(resData.origen):'';
+    const paisIcon=resData&&resData.pais?`<span title="${resData.pais}" style="font-size:17px;line-height:1;flex-shrink:0">${paisFlag(resData.pais)}</span>`:'';
+    const nochesTxt=resData&&resData.noches?` &nbsp;·&nbsp; ${resData.noches} noche${resData.noches>1?'s':''}`:'';
+
     return`<div class="colrow">
       <div class="colhdr" onclick="toggleIngRow('${gKey}')">
         <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
           <span id="ic-${gKey}" style="font-size:11px;color:#bbb;transition:transform .15s;flex-shrink:0">▼</span>
+          ${origenIcon}
+          ${paisIcon}
           <div style="flex:1;min-width:0">
-            <p style="font-size:13px;font-weight:600">${nombre}</p>
-            <p style="font-size:11px;color:#888;margin-top:1px">${subInfo}</p>
-            <div style="display:flex;gap:10px;margin-top:2px;flex-wrap:wrap">
-              ${totHosp>0?`<span style="font-size:11px;color:#1860A5">Hosp: ${fmt(totHosp)}</span>`:''}
-              ${totCons>0?`<span style="font-size:11px;color:#1D9E75">Cons: ${fmt(totCons)}</span>`:''}
-              ${pendSaldo?`<span style="font-size:11px;color:#E24B4A">Saldo pend: ${fmt(res.saldo)}</span>`:''}
-            </div>
+            <p style="font-size:13px;font-weight:600;margin:0 0 2px">${nombre}</p>
+            <p style="font-size:11px;color:#888;margin:0">${subInfo}${nochesTxt}</p>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-          <span style="font-size:15px;font-weight:700">${fmt(tot)}</span>
+        <div style="display:flex;align-items:center;gap:12px;flex-shrink:0">
+          <div style="text-align:right">
+            <p style="font-size:15px;font-weight:700;margin:0 0 3px">${fmt(tot)}</p>
+            <p style="font-size:11px;margin:0 0 ${pendSaldo?'2px':'0'};white-space:nowrap">
+              ${totHosp>0?`<span style="color:#1860A5">Hosp: ${fmt(totHosp)}</span>`:''}
+              ${totHosp>0&&totCons>0?`<span style="color:#888;margin:0 4px">·</span>`:''}
+              ${totCons>0?`<span style="color:#1D9E75">Cons: ${fmt(totCons)}</span>`:''}
+            </p>
+            ${pendSaldo?`<p style="font-size:11px;margin:0;color:#E24B4A;white-space:nowrap">Saldo pend: ${fmt(res.saldo)}</p>`:''}
+          </div>
           <button onclick="event.stopPropagation();openIngModal('${gKey}')" style="background:#F0EDE8;border:1px solid #DDD;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;flex-shrink:0" title="Ver detalle">&#x1F441;</button>
         </div>
       </div>
