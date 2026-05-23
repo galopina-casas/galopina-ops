@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.6</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.9</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.6</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.9</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1302,35 +1302,49 @@ function editConsumo(id){
   if(!c)return;
   window._editConsId=id;
 
-  // Pre-fill form
   resetC();
-  const ah=document.getElementById('ac-h');
-  if(ah){ah.value=c.huesped||'';ah.readOnly=true;ah.style.background='#F5F4F0';ah.style.color='#888';}
-  const titleEl=document.getElementById('cons-form-title');
-  if(titleEl)titleEl.textContent='Editar consumo';
 
-  // Show guest info read-only
-  const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
-  if(res){
-    selGuest=res;
-    const rp=document.getElementById('res-preview');
-    if(rp)rp.textContent=res.habitacion+' · '+fmtDate(res.checkin)+' → '+fmtDate(res.checkout);
-  }
+  // Fill date and note BEFORE showTab
   const fd=document.getElementById('c-fecha');if(fd)fd.value=fmtDate(c.fecha)||today();
   const fn2=document.getElementById('c-nota');if(fn2)fn2.value=c.nota||'';
 
-  // Pre-fill lineas
+  // Set lineas AFTER resetC
   lineas=(c.items||[]).map(i=>({...i}));
+
+  // Find reservation
+  const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
+  if(res) selGuest=res;
+
   showTab('nuevo-consumo');
+
+  // After DOM is ready, fill huesped fields and render lineas
   setTimeout(()=>{
+    // Title
+    const titleEl=document.getElementById('cons-form-title');
+    if(titleEl)titleEl.textContent='Editar consumo';
+
+    // Huesped field — show name, read-only
+    const ah=document.getElementById('ac-h');
+    if(ah){
+      ah.value=c.huesped||'';
+      ah.readOnly=true;
+      ah.style.background='#F5F4F0';
+      ah.style.color='#333';
+      ah.style.border='1px solid #DDD';
+    }
+
+    // Reservation preview
+    if(res){
+      const rp=document.getElementById('res-preview');
+      if(rp)rp.textContent=res.habitacion+' · '+fmtDate(res.checkin)+' → '+fmtDate(res.checkout);
+    }
+
+    // Render items
     renderLineas();
-    // Lock huesped section again after tab switch
-    const ah2=document.getElementById('ac-h');
-    if(ah2){ah2.readOnly=true;ah2.style.background='#F5F4F0';ah2.style.color='#888';}
-    const rp2=document.getElementById('res-preview');
-    if(rp2&&res)rp2.textContent=(res.habitacion||'')+' · '+fmtDate(res.checkin)+' → '+fmtDate(res.checkout);
-  },50);
+  }, 80);
 }
+
+
 
 
 function delConsumo(id){
