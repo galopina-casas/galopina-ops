@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.7</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.8</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.7</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.8</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -672,6 +672,7 @@ function showTab(t){
   if(t==='ingresos'){populateIngMeses();renderIngresos()}
   if(t==='admin')renderAdmin();
   if(t==='nuevo-consumo'){populateAll();}
+  if(t==='nueva-reserva'){populateAll();}
 }
 
 function renderDash(){
@@ -1903,7 +1904,7 @@ function processImport(rows, preview){
       const cbId=get(['Número de la reserva','numero de la reserva','reservation id']);
       if(!cbId){skipped.push({fila:i+2,nombre:get(['Nombre','nombre'])||'?',razon:'Sin número de reserva'});return;}
       const cbIdClean=String(cbId).trim();
-      if(existingIds.has(cbIdClean)){skipped.push({fila:i+2,nombre:String(nombre||'?').trim(),razon:'Ya importada (duplicado)',cbId:String(cbId).trim()});return;}
+      if(existingIds.has(cbIdClean)){skipped.push({fila:i+2,nombre:String(get(['Nombre','nombre','guest name'])||'?').trim(),razon:'Ya importada (duplicado)',cbId:cbIdClean});return;}
 
       const nombre=get(['Nombre','nombre','guest name']);
       if(!nombre){skipped.push({fila:i+2,nombre:'?',razon:'Sin nombre de huésped'});return;}
