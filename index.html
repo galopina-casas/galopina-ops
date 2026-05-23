@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1115,32 +1115,37 @@ function recalcPrev(){
 }
 function addLinea(){
   const nombre=document.getElementById('p-search').value.trim()||(document.getElementById('sel-cat').value?catLabel(document.getElementById('sel-cat').value):'');
-  if(!nombre){showAlert('Selecciona un producto','error');return}
-  const cat=curProd?curProd.cat:(document.getElementById('sel-cat').value||'');
-  const qty=parseInt(document.getElementById('inp-qty').value)||1;
-  const precio=parseFloat(document.getElementById('inp-precio').value)||0;
-  const pago=document.getElementById('inp-pago').value;
-  lineas.push({id:Date.now()+Math.random(),cat,nombre:curProd?curProd.nombre:nombre,cantidad:qty,precio,pago});
-  clearProd();document.getElementById('inp-qty').value=1;document.getElementById('inp-pago').value='tbd';
+  if(!curProd&&!nombre){showAlert('Selecciona un producto','error');return;}
+  const qty=parseInt(document.getElementById('co-qty').value)||1;
+  const precio=parseFloat(document.getElementById('co-precio').value)||0;
+  const pago=document.getElementById('co-pago').value||'tbd';
+  const prod=curProd||{cat:document.getElementById('sel-cat').value,nombre,precio};
+  lineas.push({id:Date.now()+Math.random(),cat:prod.cat,nombre:prod.nombre,cantidad:qty,precio:precio||prod.precio,pago});
+  clearProd();
+  document.getElementById('p-search').value='';
+  document.getElementById('p-sugg').innerHTML='';
+  document.getElementById('co-qty').value=1;
+  document.getElementById('co-precio').value='';
   renderLineas();
 }
+
 function renderLineas(){
-  const card=document.getElementById('lineas-card');
-  if(!lineas.length){card.style.display='none';updateTotals();return}
-  card.style.display='block';
-  document.getElementById('lineas-list').innerHTML=lineas.map(l=>`
-    <div class="linea-row">
-      <span style="font-size:12px;font-weight:500">${l.nombre}</span>
-      <span style="font-size:11px;color:#888">${catLabel(l.cat)}</span>
-      <input type="number" min="1" value="${l.cantidad}" onchange="updL(${l.id},'cantidad',this.value)" style="text-align:center">
-      <input type="number" value="${l.precio}" onchange="updL(${l.id},'precio',this.value)" style="text-align:right">
-      <select onchange="updL(${l.id},'pago',this.value)" style="font-size:11px">
-        ${['tbd','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'].map(v=>`<option value="${v}" ${v===l.pago?'selected':''}>${pagoLabel(v)}</option>`).join('')}
-      </select>
-      <button class="btn btn-sm btn-danger" onclick="delLinea(${l.id})">🗑</button>
-    </div>`).join('');
-  updateTotals();
+  const box=document.getElementById('lineas-list');
+  if(!box)return;
+  const pagoOpts=['tbd','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'];
+  box.innerHTML=lineas.map((l,i)=>{
+    const opts=pagoOpts.map(v=>`<option value="${v}"${v===l.pago?' selected':''}>${pagoLabel(v)}</option>`).join('');
+    return `<div class="linea-row" style="grid-template-columns:2fr 1fr 50px 70px 110px 32px">
+      <span style="font-size:13px;font-weight:600">${l.nombre}</span>
+      <span style="font-size:12px;color:#888">${catLabel(l.cat)}</span>
+      <input type="number" min="1" value="${l.cantidad}" onchange="lineas[${i}].cantidad=parseInt(this.value)||1;renderLineas()" style="text-align:center;height:29px">
+      <input type="number" value="${l.precio}" onchange="lineas[${i}].precio=parseFloat(this.value)||0;renderLineas()" style="text-align:right;height:29px">
+      <select onchange="lineas[${i}].pago=this.value;renderLineas()" style="font-size:12px;height:29px">${opts}</select>
+      <button class="btn btn-sm btn-danger" onclick="lineas.splice(${i},1);renderLineas()">&#x2715;</button>
+    </div>`;
+  }).join('');
 }
+
 function updL(id,f,v){const l=lineas.find(x=>x.id===id);if(!l)return;l[f]=f==='cantidad'?parseInt(v)||1:f==='precio'?parseFloat(v)||0:v;renderLineas()}
 function delLinea(id){lineas=lineas.filter(x=>x.id!==id);renderLineas()}
 function updateTotals(){
@@ -1160,9 +1165,19 @@ function guardarConsumo(){
 }
 function resetC(){
   selGuest=null;lineas=[];curProd=null;
-  document.getElementById('ac-h').value='';document.getElementById('ac-hdd').style.display='none';document.getElementById('res-preview').innerHTML='';
-  clearProd();document.getElementById('inp-qty').value=1;document.getElementById('c-nota').value='';
-  document.getElementById('lineas-card').style.display='none';renderLineas();
+  const el=id=>{const e=document.getElementById(id);return e||{value:'',style:{},innerHTML:''};};
+  el('ac-h').value='';
+  const dd=document.getElementById('ac-hdd');if(dd)dd.style.display='none';
+  el('ac-info').innerHTML='';
+  el('c-nota').value='';
+  el('co-qty').value=1;
+  el('co-precio').value='';
+  el('co-pago').value='tbd';
+  el('p-search').value='';
+  el('p-sel').value='';
+  el('p-sugg').innerHTML='';
+  clearProd();
+  renderLineas();
 }
 
 function initConsList(){
@@ -1191,22 +1206,25 @@ function renderConsList(){
   if(!cons.length){box.innerHTML='<p class="empty">Sin consumos registrados</p>';return;}
 
   box.innerHTML=cons.map(c=>{
+    const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
     const total=c.total||(c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0);
-    const items=(c.items||[]);
+    const origen=res?res.origen:'directo';
+    const pais=res?res.pais:'';
+    const ci=res?fmtDate(res.checkin):'';
+    const co=res?fmtDate(res.checkout):'';
     return `<div class="res-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">
+            ${origenLogo(origen)}
+            ${pais?`<span title="${pais}" style="font-size:18px;cursor:default;line-height:1">${paisFlag(pais)}</span>`:''}
             <span style="font-size:13px;font-weight:700">${c.huesped}</span>
-            ${c.habitacion?`<span class="tag">${c.habitacion}</span>`:''}
-            <span style="font-size:11px;color:#AAA">${fmtDate(c.fecha)||''}</span>
           </div>
-          <div style="font-size:12px;color:#888;margin-bottom:4px">
-            ${items.map(i=>`${i.nombre}${i.cantidad>1?' ×'+i.cantidad:''} <span class="badge ${pagoBadge(i.pago)}">${pagoLabel(i.pago)}</span>`).join(' &nbsp;·&nbsp; ')}
-          </div>
-          <div style="font-size:13px;font-weight:700;color:#1A1916">${fmt(total)}</div>
+          ${ci?`<p style="font-size:12px;color:#888;margin-bottom:2px">${c.habitacion||''} &nbsp;${ci} &rarr; ${co}</p>`:''}
+          <p style="font-size:12px;color:#AAA">${fmtDate(c.fecha)||''}</p>
         </div>
         <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+          <span style="font-size:15px;font-weight:700">${fmt(total)}</span>
           <button class="btn btn-sm" onclick="editConsumo('${c.id}')">✏️ Editar</button>
           ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delConsumo('${c.id}')">🗑</button>`:''}
         </div>
