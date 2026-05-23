@@ -36,10 +36,10 @@ input[readonly]{background:#f5f5f3;color:#555}
 .litem{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:0.5px solid #e8e8e2;font-size:13px}
 .litem:last-child{border-bottom:none}
 .badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
-.b-efectivo{background:#EAF3DE;color:#3B6D11}.b-efectivo-nd{background:#C0DD97;color:#27500A}
-.b-transferencia{background:#E6F1FB;color:#185FA5}.b-debito{background:#B5D4F4;color:#0C447C}
-.b-mercadopago{background:#EEEDFE;color:#3C3489}.b-stripe{background:#FAEEDA;color:#854F0B}
-.b-pendiente,.b-tbd{background:#FCEBEB;color:#A32D2D}
+.b-efectivo{background:#F0EDE8;color:#5F5E5A}.b-efectivo-nd{background:#F0EDE8;color:#5F5E5A}
+.b-transferencia{background:#F0EDE8;color:#5F5E5A}.b-debito{background:#F0EDE8;color:#5F5E5A}
+.b-mercadopago{background:#F0EDE8;color:#5F5E5A}.b-stripe{background:#F0EDE8;color:#5F5E5A}
+.b-pendiente,.b-tbd{background:#F0EDE8;color:#5F5E5A}
 .b-cb{background:#E1F5EE;color:#085041}.b-manual{background:#F1EFE8;color:#5F5E5A}
 .b-hospedaje{background:#E6F1FB;color:#0C447C}.b-consumo{background:#EAF3DE;color:#27500A}
 .b-pagado{background:#EAF3DE;color:#27500A}
@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v20.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v20.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v20.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v20.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1568,6 +1568,24 @@ function buildIngresos(){
   return rows.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
 }
 
+
+function toggleIngRow(gKey){
+  const body=document.getElementById('ib-'+gKey);
+  const arrow=document.getElementById('ic-'+gKey);
+  const isOpen=body.classList.toggle('open');
+  if(arrow)arrow.style.transform=isOpen?'rotate(180deg)':'';
+  if(isOpen){
+    // Render modal content inline (reuse openIngModal logic)
+    const inline=document.getElementById('ing-inline-'+gKey);
+    if(inline&&!inline.innerHTML){
+      // Temporarily use modal to generate HTML, then copy
+      openIngModal(gKey);
+      const modalBody=document.getElementById('ing-modal-body');
+      if(modalBody)inline.innerHTML=modalBody.innerHTML;
+      closeIngModal();
+    }
+  }
+}
 function renderIngresos(){
   const mes=document.getElementById('ing-mes').value;
   const cli=(document.getElementById('ing-cli').value||'').toLowerCase();
@@ -1656,22 +1674,33 @@ function renderIngresos(){
         +(consItems.length?`<div>${consHtml}</div>`:'')
       : '<p style="font-size:12px;color:#bbb;padding:8px 0">Sin detalle</p>';
 
+    // Totals for header
+    const totHosp=hospItems.reduce((s,i)=>s+(i.pago&&i.pago!=='pendiente'&&i.pago!=='tbd'?i.monto:0),0);
+    const totCons=consItems.reduce((s,i)=>s+i.monto,0);
+    const pendSaldo=(res&&(res.saldo||0)>0&&!res.saldPago);
+
     return`<div class="colrow">
-      <div class="colhdr" onclick="toggleCol('ib-${gKey}','ic-${gKey}')">
-        <div style="display:flex;align-items:center;gap:8px">
-          <span id="ic-${gKey}" style="font-size:11px;color:#bbb;transition:transform .15s">▼</span>
-          <div>
+      <div class="colhdr" onclick="toggleIngRow('${gKey}')">
+        <div style="display:flex;align-items:center;gap:8px;flex:1;min-width:0">
+          <span id="ic-${gKey}" style="font-size:11px;color:#bbb;transition:transform .15s;flex-shrink:0">▼</span>
+          <div style="flex:1;min-width:0">
             <p style="font-size:13px;font-weight:600">${nombre}</p>
             <p style="font-size:11px;color:#888;margin-top:1px">${subInfo}</p>
-            <p style="font-size:11px;color:#888">${items.length} movimiento(s)${pendCount?' · <span style="color:#E24B4A">'+pendCount+' pend.</span>':''}</p>
+            <div style="display:flex;gap:10px;margin-top:2px;flex-wrap:wrap">
+              ${totHosp>0?`<span style="font-size:11px;color:#1860A5">Hosp: ${fmt(totHosp)}</span>`:''}
+              ${totCons>0?`<span style="font-size:11px;color:#1D9E75">Cons: ${fmt(totCons)}</span>`:''}
+              ${pendSaldo?`<span style="font-size:11px;color:#E24B4A">Saldo pend: ${fmt(res.saldo)}</span>`:''}
+            </div>
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          <span style="font-size:14px;font-weight:700">${fmt(tot)}</span>
-          <button onclick="event.stopPropagation();openIngModal('${gKey}')" style="background:#F0EDE8;border:1px solid #DDD;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px" title="Ver detalle">&#x1F441;</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <span style="font-size:15px;font-weight:700">${fmt(tot)}</span>
+          <button onclick="event.stopPropagation();openIngModal('${gKey}')" style="background:#F0EDE8;border:1px solid #DDD;border-radius:6px;padding:4px 8px;cursor:pointer;font-size:14px;flex-shrink:0" title="Ver detalle">&#x1F441;</button>
         </div>
       </div>
-      <div class="colbody" id="ib-${gKey}">${detalle}</div>
+      <div class="colbody" id="ib-${gKey}">
+        <div id="ing-inline-${gKey}"></div>
+      </div>
     </div>`;
   }).join('');
 }
