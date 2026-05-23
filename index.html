@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v19.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v20.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v19.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v20.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -565,7 +565,7 @@ const PAGO_MAP={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'T
 const pagoLabel=v=>PAGO_MAP[v]||v;
 const BADGE_MAP={efectivo:'b-efectivo','efectivo-nd':'b-efectivo-nd',transferencia:'b-transferencia',debito:'b-debito',mercadopago:'b-mercadopago',stripe:'b-stripe',pendiente:'b-pendiente',tbd:'b-tbd',''   :'b-pendiente'};
 const pagoBadge=v=>BADGE_MAP[v]||'b-pendiente';
-const PAISES=['México','Argentina','Brasil','Canadá','Chile','Colombia','España','Estados Unidos','Francia','Alemania','Italia','Japón','Reino Unido','Australia','Holanda','Bélgica','Suiza','Portugal','Suecia','Dinamarca','Noruega','Polonia','Rusia','China','India','Israel','Corea del Sur','Singapur','Nueva Zelanda','Otro'];
+const PAISES=['México','Argentina','Brasil','Canadá','Chile','Colombia','España','Estados Unidos','Francia','Alemania','Italia','Japón','Reino Unido','Australia','Países Bajos','Bélgica','Suiza','Portugal','Suecia','Dinamarca','Noruega','Polonia','Rusia','China','India','Israel','Corea del Sur','Singapur','Nueva Zelanda','Otro'];
 
 const DP=[
   {id:1,cat:'bebidas_alc',nombre:'Bailey',precio:130},{id:2,cat:'bebidas_alc',nombre:'Bta Capotondo',precio:1250},{id:3,cat:'bebidas_alc',nombre:'Bta Chablis',precio:1840},{id:4,cat:'bebidas_alc',nombre:'Bta Ensamble',precio:1550},{id:5,cat:'bebidas_alc',nombre:'Bta La Gde Metairie',precio:790},{id:6,cat:'bebidas_alc',nombre:'Bta Las Moras Malbec',precio:480},{id:7,cat:'bebidas_alc',nombre:'Bta Las Moras Sauv',precio:470},{id:8,cat:'bebidas_alc',nombre:'Bta Linvincible',precio:890},{id:9,cat:'bebidas_alc',nombre:'Bta Nítido',precio:1150},{id:10,cat:'bebidas_alc',nombre:'Bta Paradoja',precio:1200},{id:11,cat:'bebidas_alc',nombre:'Bta Piensos',precio:1080},{id:12,cat:'bebidas_alc',nombre:'Bta Reserva',precio:780},{id:13,cat:'bebidas_alc',nombre:'Bta Rosé Tangible',precio:1180},{id:14,cat:'bebidas_alc',nombre:'Cerveza',precio:55},{id:15,cat:'bebidas_alc',nombre:'Cerveza artesanal',precio:100},{id:16,cat:'bebidas_alc',nombre:'Cerveza artesanal Thodes',precio:110},{id:17,cat:'bebidas_alc',nombre:'Champagne',precio:2500},{id:18,cat:'bebidas_alc',nombre:'Cóctel cortesía',precio:0},{id:19,cat:'bebidas_alc',nombre:'Cóctel mezcal',precio:180},{id:20,cat:'bebidas_alc',nombre:'Cóctel ron',precio:160},{id:21,cat:'bebidas_alc',nombre:'Cóctel tequila',precio:210},{id:22,cat:'bebidas_alc',nombre:'Cóctel vodka',precio:170},{id:23,cat:'bebidas_alc',nombre:'Copa Las Moras Malbec',precio:170},{id:24,cat:'bebidas_alc',nombre:'Copa Las Moras Sauv',precio:160},{id:25,cat:'bebidas_alc',nombre:'Descorche',precio:470},{id:26,cat:'bebidas_alc',nombre:'Michelada',precio:80},{id:27,cat:'bebidas_alc',nombre:'Shot mezcal Jipi Espadín',precio:140},{id:28,cat:'bebidas_alc',nombre:'Shot mezcal Jipi Tobalá',precio:210},{id:29,cat:'bebidas_alc',nombre:'Shot ron',precio:100},{id:30,cat:'bebidas_alc',nombre:'Shot tequila',precio:160},{id:31,cat:'bebidas_alc',nombre:'Shot vodka',precio:140},{id:32,cat:'bebidas_alc',nombre:'Whisky',precio:250},
@@ -1327,7 +1327,6 @@ function initConsList(){
 }
 
 function renderConsList(){
-  // Populate month selector
   const mesEl=document.getElementById('cons-mes');
   if(mesEl&&mesEl.options.length<=1){
     const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
@@ -1339,16 +1338,13 @@ function renderConsList(){
       mesEl.appendChild(opt);
     });
   }
-
   const search=(document.getElementById('cons-search')?.value||'').toLowerCase();
   const mes=document.getElementById('cons-mes')?.value||'';
   const split=document.getElementById('cons-split-mes')?.checked||false;
-
   let cons=[...gd(KC)];
   if(mes) cons=cons.filter(c=>(c.fecha||'').startsWith(mes));
   if(search) cons=cons.filter(c=>(c.huesped||'').toLowerCase().includes(search));
   cons.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
-
   const box=document.getElementById('cons-list');
   if(!cons.length){box.innerHTML='<p class="empty">Sin consumos registrados</p>';return;}
 
@@ -1360,33 +1356,57 @@ function renderConsList(){
     const ci=res?fmtDate(res.checkin):'';
     const co=res?fmtDate(res.checkout):'';
     const cid=c.id;
-    const editBtn=`<button class="btn btn-sm" onclick="editConsumo('`+cid+`')" title="Editar" style="padding:4px 7px">✏️</button>`;
-    const delBtn=CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delConsumo('`+cid+`')" title="Eliminar" style="padding:4px 7px">🗑</button>`:'';
-    return `<div class="res-item">
-    <div style="flex:1;min-width:0">
-      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
-        ${origenLogo(origen)}
-        ${pais?`<span title="${pais}" style="font-size:18px;cursor:default;line-height:1">${paisFlag(pais)}</span>`:''}
-        <span style="font-size:13px;font-weight:700">${c.huesped}</span>
+    const editBtn=`<button class="btn btn-sm" onclick="event.stopPropagation();editConsumo('`+cid+`')" title="Editar" style="padding:4px 7px">✏️</button>`;
+    const delBtn=CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delConsumo('`+cid+`')" title="Eliminar" style="padding:4px 7px">🗑</button>`:'';
+    // Detail rows (read-only)
+    const detailRows=(c.items||[]).map(it=>`
+      <div style="display:grid;grid-template-columns:2fr 1fr 40px 70px 90px;gap:4px;align-items:center;padding:5px 0;border-bottom:0.5px solid #F0EDE8;font-size:12px">
+        <span style="font-weight:500">${it.nombre}</span>
+        <span style="color:#888">${catLabel(it.cat)}</span>
+        <span style="text-align:center">${it.cantidad}</span>
+        <span style="text-align:right">${fmt(it.precio*it.cantidad)}</span>
+        <span><span class="badge ${pagoBadge(it.pago)}">${pagoLabel(it.pago||'')}</span></span>
+      </div>`).join('');
+    const sub=(c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0);
+    return `<div class="colrow">
+      <div class="colhdr" onclick="toggleCol('chb-${cid}','chv-${cid}')">
+        <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+          <span id="chv-${cid}" style="font-size:11px;color:#BBB;transition:transform .15s;flex-shrink:0">▼</span>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+              ${origenLogo(origen)}
+              ${pais?`<span title="${pais}" style="font-size:16px;line-height:1">${paisFlag(pais)}</span>`:''}
+              <span style="font-size:13px;font-weight:700">${c.huesped}</span>
+            </div>
+            ${ci?`<p style="font-size:12px;color:#888;margin-top:2px">${c.habitacion||''} &nbsp;${ci} &rarr; ${co} &nbsp;·&nbsp; ${fmtDate(c.fecha)||''}</p>`:`<p style="font-size:12px;color:#AAA">${fmtDate(c.fecha)||''}</p>`}
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
+          <span style="font-size:15px;font-weight:700">${fmt(total)}</span>
+          <div style="display:flex;gap:4px">${editBtn}${delBtn}</div>
+        </div>
       </div>
-      ${ci?`<p style="font-size:12px;color:#888;margin-bottom:2px">${c.habitacion||''} &nbsp;${ci} &rarr; ${co}</p>`:''}
-      <p style="font-size:12px;color:#AAA">${fmtDate(c.fecha)||''}</p>
-    </div>
-    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;min-width:90px">
-      <span style="font-size:15px;font-weight:700;white-space:nowrap">${fmt(total)}</span>
-      <div style="display:flex;gap:4px">${editBtn}${delBtn}</div>
-    </div>
-  </div>`;
+      <div class="colbody" id="chb-${cid}">
+        <div style="padding:6px 0">
+          <div style="display:grid;grid-template-columns:2fr 1fr 40px 70px 90px;gap:4px;padding:3px 0;border-bottom:2px solid #EEE;font-size:10px;font-weight:700;color:#AAA;text-transform:uppercase">
+            <span>Producto</span><span>Categoría</span><span style="text-align:center">Cant.</span><span style="text-align:right">Total</span><span>Método</span>
+          </div>
+          ${detailRows}
+          <div style="display:flex;justify-content:flex-end;gap:16px;margin-top:8px;padding-top:6px;border-top:1px solid #EEE;font-size:12px">
+            <span style="color:#888">Base: ${fmt(sub/1.16)}</span>
+            <span style="color:#888">IVA: ${fmt(sub-sub/1.16)}</span>
+            <span style="font-weight:700">Total: ${fmt(sub)}</span>
+          </div>
+          ${c.nota?`<p style="font-size:11px;color:#AAA;margin-top:4px">Nota: ${c.nota}</p>`:''}
+        </div>
+      </div>
+    </div>`;
   };
 
   if(split){
     const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const groups={};
-    cons.forEach(c=>{
-      const m=(c.fecha||'').substring(0,7)||'Sin fecha';
-      if(!groups[m])groups[m]=[];
-      groups[m].push(c);
-    });
+    cons.forEach(c=>{const m=(c.fecha||'').substring(0,7)||'Sin fecha';if(!groups[m])groups[m]=[];groups[m].push(c);});
     const sorted=Object.keys(groups).sort().reverse();
     box.innerHTML=sorted.map(m=>{
       const [y,mo]=m.split('-');
@@ -1400,6 +1420,7 @@ function renderConsList(){
     box.innerHTML=cons.map(renderCard).join('');
   }
 }
+
 
 function clearConsFilters(){
   const s=document.getElementById('cons-search');if(s)s.value='';
