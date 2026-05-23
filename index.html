@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.8</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.9</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.8</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.9</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -165,6 +165,20 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     </div>
     <div style="font-size:11px;color:#888;margin-bottom:.8rem;display:flex;gap:10px">
       <span><span class="dot-cb"></span>Cloudbeds</span><span><span class="dot-m"></span>Manual</span>
+    </div>
+    <div class="card" style="padding:.6rem 1rem;margin-bottom:.5rem">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input type="text" id="res-search" placeholder="Buscar hu&#233;sped..." oninput="renderRes()"
+          style="flex:1;min-width:160px;height:32px;font-size:13px">
+        <select id="res-mes" onchange="renderRes()" style="height:32px;font-size:13px;min-width:150px">
+          <option value="">Todos los meses</option>
+        </select>
+        <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;font-weight:normal;cursor:pointer">
+          <input type="checkbox" id="res-split-mes" onchange="renderRes()" style="width:15px;height:15px;margin:0;cursor:pointer">
+          Agrupar por mes
+        </label>
+        <button class="btn btn-sm" onclick="clearResFilters()" title="Limpiar filtros" style="height:32px;padding:0 8px">&#x2715;</button>
+      </div>
     </div>
     <div id="lista-res"></div>
   </div>
