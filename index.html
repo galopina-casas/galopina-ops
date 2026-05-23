@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.2</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.3</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.2</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.3</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -287,65 +287,59 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
   <!-- Nuevo/Editar consumo (oculto) -->
   <div class="sec" id="sec-nuevo-consumo">
-    <div class="sh">
-      <h2 id="cons-form-title">Nuevo consumo</h2>
-      <button class="btn btn-sm" onclick="showTab('consumos')">&#x2190; Volver</button>
-    </div>
+    <div class="sh"><h2>Registrar consumo</h2></div>
     <div class="card">
-      <p class="ctitle">Hu&eacute;sped</p>
+      <p class="ctitle">Huésped</p>
       <div class="ac-wrap">
-        <input type="text" id="ac-h" placeholder="Escribe nombre o apellido..." oninput="onAcH(this.value)" autocomplete="off"
-          onblur="setTimeout(function(){var d=document.getElementById('ac-hdd');if(d)d.style.display='none'},200)">
+        <input type="text" id="ac-h" placeholder="Escribe nombre o apellido..." oninput="onAcH(this.value)" autocomplete="off" onblur="setTimeout(function(){var d=document.getElementById('co-dd');if(d)d.style.display='none'},200)">
         <div class="ac-dd" id="ac-hdd" style="display:none"></div>
       </div>
-      <div id="ac-info" style="font-size:12px;color:#888;margin-top:4px"></div>
+      <div id="res-preview"></div>
     </div>
     <div class="card">
-      <p class="ctitle">Fecha y nota</p>
-      <div class="frow">
-        <div><label>Fecha</label><input type="date" id="c-fecha"></div>
-        <div><label>Nota (opcional)</label><input type="text" id="c-nota" placeholder="Observaciones..."></div>
+      <p class="ctitle">Agregar producto</p>
+      <div class="divider">Buscar por nombre</div>
+      <div class="ac-wrap" style="margin-bottom:5px">
+        <input type="text" id="p-search" placeholder="Escribe o haz clic para ver catálogo..." oninput="onPSearch(this.value)" onfocus="onPFocus()" autocomplete="off" onblur="setTimeout(function(){var d=document.getElementById('co-dd');if(d)d.style.display='none'},200)">
+        <div class="ac-dd" id="p-dd" style="display:none"></div>
       </div>
-    </div>
-    <div class="card">
-      <p class="ctitle">Productos</p>
-      <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
-        <input type="text" id="p-search" placeholder="Buscar producto..." oninput="onPSearch(this.value)"
-          style="flex:1;min-width:140px;height:32px;font-size:13px">
-        <select id="sel-cat" onchange="onCatChange()" style="height:32px;font-size:13px;min-width:120px">
-          <option value="">Todas</option>
-        </select>
+      <div id="prod-pill-area"></div>
+      <div class="divider">O filtrar por categoría</div>
+      <div class="frow" style="margin-bottom:7px">
+        <div><label>Categoría</label><select id="sel-cat" onchange="onCatChange(this.value)"><option value="">— Categoría —</option></select></div>
+        <div><label>Producto</label><select id="sel-prod" disabled onchange="onProdSel(this.value)"><option value="">— Producto —</option></select></div>
       </div>
-      <div id="p-sugg" style="margin-bottom:8px"></div>
-      <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px;flex-wrap:wrap">
-        <div style="flex:1;min-width:120px"><label>Producto seleccionado</label><input type="text" id="p-sel" readonly></div>
-        <div style="width:70px"><label>Cant.</label><input type="number" id="co-qty" value="1" min="1" style="height:32px"></div>
-        <div style="width:100px"><label>Precio</label><input type="number" id="co-precio" style="height:32px"></div>
-        <div style="width:130px"><label>M&eacute;todo</label>
-          <select id="co-pago" style="height:32px;font-size:13px">
+      <div class="frow four" style="margin-bottom:8px">
+        <div><label>Cantidad</label><input type="number" id="inp-qty" min="1" value="1" oninput="recalcPrev()"></div>
+        <div><label>Precio unit.</label><input type="number" id="inp-precio" placeholder="0" oninput="recalcPrev()"></div>
+        <div><label>Subtotal</label><input type="text" id="inp-sub" readonly></div>
+        <div><label>Método pago</label>
+          <select id="inp-pago">
             <option value="tbd">TBD</option>
-            <option value="efectivo">Efectivo</option>
-            <option value="efectivo-nd">Efectivo ND</option>
-            <option value="transferencia">Transferencia</option>
-            <option value="debito">D&eacute;bito</option>
-            <option value="mercadopago">Mercado Pago</option>
-            <option value="stripe">Stripe</option>
+            <option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option>
+            <option value="transferencia">Transferencia</option><option value="debito">Débito</option>
+            <option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option>
           </select>
         </div>
-        <button class="btn btn-primary btn-sm" onclick="addLinea()" style="height:32px">+ Agregar</button>
       </div>
-      <div class="lineas-hdr" style="grid-template-columns:2fr 1fr 60px 80px 110px 32px">
-        <span>Producto</span><span>Categor&#237;a</span>
-        <span style="text-align:center">Cant.</span>
-        <span style="text-align:right">Precio</span>
-        <span>M&eacute;todo</span><span></span>
-      </div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="addLinea()">+ Agregar a la lista</button></div>
+    </div>
+    <div class="card" id="lineas-card" style="display:none">
+      <p class="ctitle">Lista de consumos</p>
+      <div class="lineas-hdr"><span>Producto</span><span>Categ.</span><span>Cant.</span><span>Precio</span><span>Pago</span><span></span></div>
       <div id="lineas-list"></div>
+      <div style="background:#f5f5f3;border-radius:6px;padding:9px 12px;margin-top:9px">
+        <div class="tline sub"><span>Subtotal</span><span id="c-sub">$0</span></div>
+        <div class="tline sub"><span>IVA (16%)</span><span id="c-iva">$0</span></div>
+        <div class="tline grand"><span>Total</span><span id="c-total" style="color:#1D9E75">$0</span></div>
+      </div>
     </div>
-    <div class="acts">
-      <button class="btn" onclick="showTab('consumos')">Cancelar</button>
-      <button class="btn btn-primary" onclick="guardarConsumo()">Guardar consumo</button>
+    <div class="card">
+      <div class="frow"><div><label>Fecha de pago (referencia)</label><input type="date" id="c-fecha"></div><div></div></div>
+      <div class="frow full"><label>Nota</label><input type="text" id="c-nota" placeholder="Opcional"></div>
+      <div class="acts"><button class="btn btn-primary" onclick="guardarConsumo()">✓ Guardar consumo</button></div>
     </div>
+    <div class="card"><p class="ctitle">Historial del mes</p><div id="historial"></div></div>
   </div>
 
   <div class="sec" id="sec-ingresos">
@@ -653,7 +647,7 @@ function showTab(t){
   if(t==='consumos'){initConsList();renderConsList();}
   if(t==='ingresos'){populateIngMeses();renderIngresos()}
   if(t==='admin')renderAdmin();
-  if(t==='nuevo-consumo'){populateAll();renderLineas();}
+  if(t==='nuevo-consumo'){populateAll();resetC();renderLineas();}
 }
 
 function renderDash(){
@@ -1070,14 +1064,12 @@ function selH(r){
 }
 
 function onPSearch(val){
-  curProd=null;
-  const sugg=document.getElementById('p-sugg');
-  if(!val){if(sugg)sugg.innerHTML='';return;}
-  const cat=document.getElementById('sel-cat');
-  const catVal=cat?cat.value:'';
-  let prods=gd(KP).filter(p=>p.nombre.toLowerCase().includes(val.toLowerCase()));
-  if(catVal)prods=prods.filter(p=>p.cat===catVal);
-  if(sugg)sugg.innerHTML=prods.slice(0,6).map(p=>`<span class="tag" style="cursor:pointer;margin:2px" onclick="selProdById('${p.id}')">${p.nombre} <small style='color:#AAA'>${fmt(p.precio)}</small></span>`).join('');
+  curProd=null;document.getElementById('prod-pill-area').innerHTML='';
+  const dd=document.getElementById('p-dd');if(!val){dd.style.display='none';return}
+  const m=gd(KP).filter(p=>p.nombre.toLowerCase().includes(val.toLowerCase())).slice(0,10);
+  if(!m.length){dd.style.display='none';return}
+  dd.innerHTML=m.map(p=>`<div class="ac-it" onclick="setProd(${p.id})"><span class="ac-name">${p.nombre}</span><p class="ac-sub">${catLabel(p.cat)} · ${fmt(p.precio)}</p></div>`).join('');
+  dd.style.display='block';
 }
 function selProdById(id){
   const p=gd(KP).find(x=>String(x.id)===String(id));
@@ -1102,17 +1094,15 @@ function setProd(id){
   recalcPrev();
 }
 function clearProd(){
-  curProd=null;
-  ['p-search','p-sel','co-precio'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  const sugg=document.getElementById('p-sugg');if(sugg)sugg.innerHTML='';
-  const qty=document.getElementById('co-qty');if(qty)qty.value=1;
+  curProd=null;document.getElementById('p-search').value='';document.getElementById('prod-pill-area').innerHTML='';
+  document.getElementById('inp-precio').value='';document.getElementById('inp-sub').value='';
+  document.getElementById('sel-cat').value='';document.getElementById('sel-prod').innerHTML='<option value="">— Producto —</option>';document.getElementById('sel-prod').disabled=true;
 }
-function onCatChange(){
-  const cat=document.getElementById('sel-cat').value;
-  const sugg=document.getElementById('p-sugg');
-  if(!cat){if(sugg)sugg.innerHTML='';return;}
-  const prods=gd(KP).filter(p=>p.cat===cat).slice(0,8);
-  if(sugg)sugg.innerHTML=prods.map(p=>`<span class="tag" style="cursor:pointer;margin:2px" onclick="selProdById('${p.id}')">${p.nombre} <small style='color:#AAA'>${fmt(p.precio)}</small></span>`).join('');
+function onCatChange(cat){
+  curProd=null;document.getElementById('prod-pill-area').innerHTML='';document.getElementById('p-search').value='';document.getElementById('inp-precio').value='';
+  if(!cat){document.getElementById('sel-prod').innerHTML='<option value="">— Producto —</option>';document.getElementById('sel-prod').disabled=true;return}
+  if(CATS_LIBRE.has(cat)){document.getElementById('sel-prod').innerHTML='<option value="">Sin catálogo</option>';document.getElementById('sel-prod').disabled=true;return}
+  populateProdSel(cat,null);
 }
 function populateProdSel(cat,selId){
   const prods=gd(KP).filter(p=>p.cat===cat);
@@ -1127,17 +1117,13 @@ function recalcPrev(){
 }
 function addLinea(){
   const nombre=document.getElementById('p-search').value.trim()||(document.getElementById('sel-cat').value?catLabel(document.getElementById('sel-cat').value):'');
-  if(!curProd&&!nombre){showAlert('Selecciona un producto','error');return;}
-  const qty=parseInt(document.getElementById('co-qty').value)||1;
-  const precio=parseFloat(document.getElementById('co-precio').value)||0;
-  const pago=document.getElementById('co-pago').value||'tbd';
-  const prod=curProd||{cat:document.getElementById('sel-cat').value,nombre,precio};
-  lineas.push({id:Date.now()+Math.random(),cat:prod.cat,nombre:prod.nombre,cantidad:qty,precio:precio||prod.precio,pago});
-  clearProd();
-  document.getElementById('p-search').value='';
-  document.getElementById('p-sugg').innerHTML='';
-  document.getElementById('co-qty').value=1;
-  document.getElementById('co-precio').value='';
+  if(!nombre){showAlert('Selecciona un producto','error');return}
+  const cat=curProd?curProd.cat:(document.getElementById('sel-cat').value||'');
+  const qty=parseInt(document.getElementById('inp-qty').value)||1;
+  const precio=parseFloat(document.getElementById('inp-precio').value)||0;
+  const pago=document.getElementById('inp-pago').value;
+  lineas.push({id:Date.now()+Math.random(),cat,nombre:curProd?curProd.nombre:nombre,cantidad:qty,precio,pago});
+  clearProd();document.getElementById('inp-qty').value=1;document.getElementById('inp-pago').value='tbd';
   renderLineas();
 }
 
@@ -1177,19 +1163,9 @@ function guardarConsumo(){
 }
 function resetC(){
   selGuest=null;lineas=[];curProd=null;
-  const el=id=>{const e=document.getElementById(id);return e||{value:'',style:{},innerHTML:''};};
-  el('ac-h').value='';
-  const dd=document.getElementById('ac-hdd');if(dd)dd.style.display='none';
-  el('ac-info').innerHTML='';
-  el('c-nota').value='';
-  el('co-qty').value=1;
-  el('co-precio').value='';
-  el('co-pago').value='tbd';
-  el('p-search').value='';
-  el('p-sel').value='';
-  el('p-sugg').innerHTML='';
-  clearProd();
-  renderLineas();
+  document.getElementById('ac-h').value='';document.getElementById('ac-hdd').style.display='none';document.getElementById('res-preview').innerHTML='';
+  clearProd();document.getElementById('inp-qty').value=1;document.getElementById('c-nota').value='';
+  document.getElementById('lineas-card').style.display='none';renderLineas();
 }
 
 function initConsList(){
