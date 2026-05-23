@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.6</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v18.6</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -339,7 +339,6 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div class="frow full"><label>Nota</label><input type="text" id="c-nota" placeholder="Opcional"></div>
       <div class="acts"><button class="btn btn-primary" onclick="guardarConsumo()">✓ Guardar consumo</button></div>
     </div>
-    <div class="card"><p class="ctitle">Historial del mes</p><div id="historial"></div></div>
   </div>
 
   <div class="sec" id="sec-ingresos">
@@ -1026,9 +1025,12 @@ function resHtml(r,i){
         ''}
     </div>
     <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;min-width:90px">
-      ${saldoPend?`<button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')">🏁 Check-out</button>`:''}
-      <button class="btn btn-sm" onclick="editRes('${r.id}')">✏️ Editar</button>
-      ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delRes(${i})">🗑</button>`:''}
+      <span style="font-size:15px;font-weight:700;white-space:nowrap">${fmt(r.total||0)}</span>
+      <div style="display:flex;gap:4px;margin-top:4px">
+        ${saldoPend?`<button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')" title="Check-out" style="padding:4px 6px">🏁</button>`:''}
+        <button class="btn btn-sm" onclick="editRes('${r.id}')" title="Editar" style="padding:4px 6px">✏️</button>
+        ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delRes(${i})" title="Eliminar" style="padding:4px 6px">🗑</button>`:''}
+      </div>
     </div>
   </div>`;
 }
@@ -1274,6 +1276,9 @@ function renderConsList(){
     const pais=res?res.pais:'';
     const ci=res?fmtDate(res.checkin):'';
     const co=res?fmtDate(res.checkout):'';
+    const cid=c.id;
+    const editBtn=`<button class="btn btn-sm" onclick="editConsumo('`+cid+`')" title="Editar" style="padding:4px 7px">✏️</button>`;
+    const delBtn=CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delConsumo('`+cid+`')" title="Eliminar" style="padding:4px 7px">🗑</button>`:'';
     return `<div class="res-item">
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
@@ -1284,14 +1289,14 @@ function renderConsList(){
       ${ci?`<p style="font-size:12px;color:#888;margin-bottom:2px">${c.habitacion||''} &nbsp;${ci} &rarr; ${co}</p>`:''}
       <p style="font-size:12px;color:#AAA">${fmtDate(c.fecha)||''}</p>
     </div>
-    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
-      <span style="font-size:15px;font-weight:700">${fmt(total)}</span>
-      <button class="btn btn-sm" onclick="editConsumo('${c.id}')">✏️ Editar</button>
-      ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delConsumo('${c.id}')">🗑</button>`:''}
+    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;min-width:90px">
+      <span style="font-size:15px;font-weight:700;white-space:nowrap">${fmt(total)}</span>
+      <div style="display:flex;gap:4px">${editBtn}${delBtn}</div>
     </div>
   </div>`;
   }).join('');
 }
+
 
 
 function showNuevoConsumo(){
