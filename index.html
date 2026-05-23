@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.3</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.4</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.3</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v17.4</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1189,10 +1189,8 @@ function renderConsList(){
   if(mes) cons=cons.filter(c=>(c.fecha||'').startsWith(mes));
   if(search) cons=cons.filter(c=>(c.huesped||'').toLowerCase().includes(search));
   cons.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
-
   const box=document.getElementById('cons-list');
   if(!cons.length){box.innerHTML='<p class="empty">Sin consumos registrados</p>';return;}
-
   box.innerHTML=cons.map(c=>{
     const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
     const total=c.total||(c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0);
@@ -1200,32 +1198,32 @@ function renderConsList(){
     const pais=res?res.pais:'';
     const ci=res?fmtDate(res.checkin):'';
     const co=res?fmtDate(res.checkout):'';
-    return `<div class="res-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
-        <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;flex-wrap:wrap">
-            ${origenLogo(origen)}
-            ${pais?`<span title="${pais}" style="font-size:18px;cursor:default;line-height:1">${paisFlag(pais)}</span>`:''}
-            <span style="font-size:13px;font-weight:700">${c.huesped}</span>
-          </div>
-          ${ci?`<p style="font-size:12px;color:#888;margin-bottom:2px">${c.habitacion||''} &nbsp;${ci} &rarr; ${co}</p>`:''}
-          <p style="font-size:12px;color:#AAA">${fmtDate(c.fecha)||''}</p>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
-          <span style="font-size:15px;font-weight:700">${fmt(total)}</span>
-          <button class="btn btn-sm" onclick="editConsumo('${c.id}')">✏️ Editar</button>
-          ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delConsumo('${c.id}')">🗑</button>`:''}
-        </div>
+    return `<div class="res-item">
+    <div style="flex:1;min-width:0">
+      <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
+        ${origenLogo(origen)}
+        ${pais?`<span title="${pais}" style="font-size:18px;cursor:default;line-height:1">${paisFlag(pais)}</span>`:''}
+        <span style="font-size:13px;font-weight:700">${c.huesped}</span>
       </div>
-    </div>`;
+      ${ci?`<p style="font-size:12px;color:#888;margin-bottom:2px">${c.habitacion||''} &nbsp;${ci} &rarr; ${co}</p>`:''}
+      <p style="font-size:12px;color:#AAA">${fmtDate(c.fecha)||''}</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0">
+      <span style="font-size:15px;font-weight:700">${fmt(total)}</span>
+      <button class="btn btn-sm" onclick="editConsumo('${c.id}')">✏️ Editar</button>
+      ${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delConsumo('${c.id}')">🗑</button>`:''}
+    </div>
+  </div>`;
   }).join('');
 }
 
+
 function showNuevoConsumo(){
   window._editConsId=null;
-  document.getElementById('cons-form-title').textContent='Nuevo consumo';
+  const titleEl=document.getElementById('cons-form-title');
+  if(titleEl)titleEl.textContent='Nuevo consumo';
   resetC();
-  document.getElementById('c-fecha').value=today();
+  const fd=document.getElementById('c-fecha');if(fd)fd.value=today();
   showTab('nuevo-consumo');
 }
 
@@ -1234,16 +1232,20 @@ function editConsumo(id){
   const c=cons.find(x=>String(x.id)===String(id));
   if(!c)return;
   window._editConsId=id;
-  document.getElementById('cons-form-title').textContent='Editar consumo';
+  const titleEl=document.getElementById('cons-form-title');
+  if(titleEl)titleEl.textContent='Editar consumo';
   resetC();
-  // Pre-fill huesped
-  document.getElementById('ac-h').value=c.huesped||'';
-  // Find reservation
+  const ah=document.getElementById('ac-h');if(ah)ah.value=c.huesped||'';
   const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
-  if(res){selGuest=res;document.getElementById('ac-info').textContent=res.habitacion+' · '+fmtDate(res.checkin)+' → '+fmtDate(res.checkout);}
-  document.getElementById('c-fecha').value=fmtDate(c.fecha)||today();
-  document.getElementById('c-nota').value=c.nota||'';
-  // Pre-fill lineas
+  if(res){
+    selGuest=res;
+    const info=document.getElementById('ac-info');
+    if(info)info.textContent=res.habitacion+' · '+fmtDate(res.checkin)+' → '+fmtDate(res.checkout);
+    const rp=document.getElementById('res-preview');
+    if(rp)rp.textContent=res.habitacion+' · '+fmtDate(res.checkin)+' → '+fmtDate(res.checkout);
+  }
+  const fd=document.getElementById('c-fecha');if(fd)fd.value=fmtDate(c.fecha)||today();
+  const fn=document.getElementById('c-nota');if(fn)fn.value=c.nota||'';
   lineas=(c.items||[]).map(i=>({...i}));
   renderLineas();
   showTab('nuevo-consumo');
@@ -1257,40 +1259,7 @@ function delConsumo(id){
   showAlert('Consumo eliminado','success');
 }
 
-function guardarConsumo(){
-  const nombre=document.getElementById('ac-h').value.trim();
-  if(!nombre){showAlert('Indica el huésped','error');return;}
-  if(!lineas.length){showAlert('Agrega al menos un producto','error');return;}
-  const sub=lineas.reduce((s,l)=>s+(l.precio*l.cantidad),0);
-  const c={
-    id:window._editConsId||Date.now(),
-    reservaId:selGuest?selGuest.id:null,
-    huesped:nombre,
-    habitacion:selGuest?selGuest.habitacion:'',
-    fecha:document.getElementById('c-fecha').value,
-    items:lineas.map(l=>({
-      id:l.id||(Date.now()+Math.random()),
-      cat:l.cat,nombre:l.nombre,cantidad:l.cantidad,precio:l.precio,
-      pago:l.pago,
-      fechaPago:l.pago&&l.pago!=='tbd'?document.getElementById('c-fecha').value:''
-    })),
-    subtotal:Math.round(sub/1.16*100)/100,
-    iva:Math.round((sub-sub/1.16)*100)/100,
-    total:sub,
-    nota:document.getElementById('c-nota').value
-  };
-  const cons=gd(KC);
-  if(window._editConsId){
-    const idx=cons.findIndex(x=>String(x.id)===String(window._editConsId));
-    if(idx>-1) cons[idx]=c; else cons.push(c);
-  } else {
-    cons.push(c);
-  }
-  sd(KC,cons);
-  window._editConsId=null;
-  showTab('consumos');
-  showAlert(window._editConsId?'Consumo actualizado':'Consumo registrado','success');
-}
+
 
 function toggleCol(bId,cId){const b=document.getElementById(bId),ch=document.getElementById(cId);const open=b.classList.toggle('open');if(ch)ch.style.transform=open?'rotate(180deg)':''}
 function renderCI(cid){
