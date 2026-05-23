@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.5</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.6</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.5</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v21.6</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -314,6 +314,10 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <div class="ac-dd" id="ac-hdd" style="display:none"></div>
       </div>
       <div id="res-preview"></div>
+      <div id="cons-pais-row" style="display:none;margin-top:8px">
+        <label>Pa&#237;s del hu&#233;sped</label>
+        <select id="cons-pais" style="height:32px;font-size:13px"></select>
+      </div>
     </div>
     <div class="card">
       <p class="ctitle">Agregar producto</p>
@@ -1117,6 +1121,9 @@ function coSelProd(id){
   document.getElementById('co-extra-precio').value = p.precio;
 }
 function onAcH(val){
+  // Show pais selector if typing (no reservation yet selected)
+  const paisRow=document.getElementById('cons-pais-row');
+  if(paisRow) paisRow.style.display=val&&!selGuest?'block':'none';
   selGuest=null;document.getElementById('res-preview').innerHTML='';
   const dd=document.getElementById('ac-hdd');
   if(val.length<2){dd.style.display='none';return}
@@ -1277,6 +1284,7 @@ function guardarConsumo(){
         reservaId,
         huesped:nombre,
         habitacion:selGuest?selGuest.habitacion:'',
+        pais:selGuest?selGuest.pais:(document.getElementById('cons-pais')?.value||''),
         fecha,
         items:lineas.map(l=>({
           id:Date.now()+Math.random(),
@@ -1352,7 +1360,7 @@ function renderConsList(){
     const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
     const total=c.total||(c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0);
     const origen=res?res.origen:'directo';
-    const pais=res?res.pais:'';
+    const pais=res?res.pais:(c.pais||'');
     const ci=res?fmtDate(res.checkin):'';
     const co=res?fmtDate(res.checkout):'';
     const cid=c.id;
@@ -1436,6 +1444,13 @@ function clearConsFilters(){
 function showNuevoConsumo(){
   window._editConsId=null;
   resetC();
+  // Populate pais selector
+  const cp=document.getElementById('cons-pais');
+  if(cp&&cp.options.length<=1){
+    cp.innerHTML='<option value="">— País —</option>'+PAISES.map(p=>`<option value="${p}">${p}</option>`).join('');
+  }
+  const paisRow=document.getElementById('cons-pais-row');
+  if(paisRow)paisRow.style.display='none';
   const ah=document.getElementById('ac-h');
   if(ah){ah.readOnly=false;ah.style.background='';ah.style.color='';}
   const titleEl=document.getElementById('cons-form-title');
