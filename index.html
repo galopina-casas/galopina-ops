@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.3</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.4</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.3</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.4</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -886,14 +886,13 @@ function editRes(id){
 
   // For Cloudbeds reservations, skip calcTarifa and use original CB fiscal values
   if(r.fuente==='cloudbeds'&&r.total){
-    const el2=id=>document.getElementById(id);
     const fmt2=v=>'$'+(v||0).toLocaleString('en',{minimumFractionDigits:0,maximumFractionDigits:2});
     const fullTotal=(r.hospTotal||0)+(r.consumoCena||0)||r.total||0;
-    el2('r-base')&&(el2('r-base').value=fmt2(r.base||0));
-    el2('r-ish')&&(el2('r-ish').value=fmt2(r.ish||0));
-    el2('r-iva')&&(el2('r-iva').value=fmt2(r.iva||0));
-    el2('r-total')&&(el2('r-total').value=fmt2(fullTotal));
-    el2('r-noches')&&(el2('r-noches').value=r.noches||0);
+    el('r-base')&&(el('r-base').value=fmt2(r.base||0));
+    el('r-ish')&&(el('r-ish').value=fmt2(r.ish||0));
+    el('r-iva')&&(el('r-iva').value=fmt2(r.iva||0));
+    el('r-total')&&(el('r-total').value=fmt2(fullTotal));
+    el('r-noches')&&(el('r-noches').value=r.noches||0);
     // Add cena note below total if applicable
     const totalCard=document.getElementById('r-total')?.parentElement;
     const existingNote=document.getElementById('r-cena-note');
