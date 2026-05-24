@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.7</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.8</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.7</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.8</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -911,11 +911,23 @@ function editRes(id){
   if(r.fuente==='cloudbeds'&&r.total){
     const el2=id=>document.getElementById(id);
     const fmt2=v=>'$'+(v||0).toLocaleString('en',{minimumFractionDigits:0,maximumFractionDigits:2});
+    const fullTotal=(r.hospTotal||0)+(r.consumoCena||0)||r.total||0;
     el2('r-base')&&(el2('r-base').value=fmt2(r.base||0));
     el2('r-ish')&&(el2('r-ish').value=fmt2(r.ish||0));
     el2('r-iva')&&(el2('r-iva').value=fmt2(r.iva||0));
-    el2('r-total')&&(el2('r-total').value=fmt2(r.total||0));
+    el2('r-total')&&(el2('r-total').value=fmt2(fullTotal));
     el2('r-noches')&&(el2('r-noches').value=r.noches||0);
+    // Add cena note below total if applicable
+    const totalCard=document.getElementById('r-total')?.parentElement;
+    const existingNote=document.getElementById('r-cena-note');
+    if(existingNote)existingNote.remove();
+    if((r.consumoCena||0)>0&&totalCard){
+      const note=document.createElement('p');
+      note.id='r-cena-note';
+      note.style.cssText='font-size:11px;color:#1D9E75;margin-top:4px';
+      note.innerHTML='🍽 Incluye cenas: '+fmt(r.consumoCena||0)+' · Hospedaje: '+fmt(r.hospTotal||0);
+      totalCard.appendChild(note);
+    }
   } else {
     calcTarifa();
   }
@@ -967,7 +979,13 @@ function guardarRes(){
     iva=cleanN(document.getElementById('r-iva').value);
     // For CB reservations, use stored values directly (full precision)
     const storedR=gd(KR).find(x=>String(x.id)===String(editId));
-    if(storedR){base=storedR.base||base;ish=storedR.ish||ish;iva=storedR.iva||iva;total=storedR.total||total;}
+    if(storedR){
+      base=storedR.base||base;
+      ish=storedR.ish||ish;
+      iva=storedR.iva||iva;
+      // total = full amount (hospedaje + cenas) for correct anticipo/saldo calculation
+      total=(storedR.hospTotal||0)+(storedR.consumoCena||0)||storedR.total||total;
+    }
   } else {
     const habs=gd(KH);
     let totalConImp=0;
@@ -1508,6 +1526,7 @@ function showNuevoConsumo(){
   }
   const paisRow=document.getElementById('cons-pais-row');
   if(paisRow)paisRow.style.display='none';
+  const existCN=document.getElementById('r-cena-note');if(existCN)existCN.remove();
   const ah=document.getElementById('ac-h');
   if(ah){ah.readOnly=false;ah.style.background='';ah.style.color='';}
   const titleEl=document.getElementById('cons-form-title');
