@@ -38,7 +38,8 @@ input[readonly]{background:#f5f5f3;color:#555}
 .badge{font-size:10px;padding:2px 7px;border-radius:20px;font-weight:500;white-space:nowrap}
 .b-efectivo{background:#F0EDE8;color:#5F5E5A}.b-efectivo-nd{background:#F0EDE8;color:#5F5E5A}
 .b-transferencia{background:#F0EDE8;color:#5F5E5A}.b-debito{background:#F0EDE8;color:#5F5E5A}
-.b-mercadopago{background:#F0EDE8;color:#5F5E5A}.b-stripe{background:#F0EDE8;color:#5F5E5A}
+.b-mercadopago{background:#F0EDE8;color:#5F5E5A}.b-cloudbeds{background:#F0EDE8;color:#5F5E5A}
+.b-stripe{background:#F0EDE8;color:#5F5E5A}
 .b-pendiente,.b-tbd{background:#F0EDE8;color:#5F5E5A}
 .b-cb{background:#E1F5EE;color:#085041}.b-manual{background:#F1EFE8;color:#5F5E5A}
 .b-hospedaje{background:#E6F1FB;color:#0C447C}.b-consumo{background:#EAF3DE;color:#27500A}
@@ -114,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v25.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v25.4</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v25.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v25.4</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1290,9 +1291,9 @@ function renderLineas(){
       <input type="number" min="1" value="${l.cantidad}" onchange="updL(${l.id},'cantidad',this.value)" style="text-align:center">
       <input type="number" value="${l.precio}" onchange="updL(${l.id},'precio',this.value)" style="text-align:right">
       <select onchange="updL(${l.id},'pago',this.value)" style="font-size:11px">
-        ${['tbd','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'].map(v=>`<option value="${v}" ${v===l.pago?'selected':''}>${pagoLabel(v)}</option>`).join('')}
+        ${['tbd','cloudbeds','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'].map(v=>`<option value="${v}" ${v===l.pago?'selected':''}>${pagoLabel(v)}</option>`).join('')}
       </select>
-      <button class="btn btn-sm btn-danger" onclick="delLinea(${l.id})">🗑</button>
+      <button class="btn btn-sm" onclick="delLinea(${l.id})" title="Eliminar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;font-size:15px;opacity:.65">🗑</button>
     </div>`).join('');
   updateTotals();
 }
@@ -1441,8 +1442,8 @@ function renderConsList(){
     const ci=res?fmtDate(res.checkin):'';
     const co=res?fmtDate(res.checkout):'';
     const cid=c.id;
-    const editBtn=`<button class="btn btn-sm" onclick="event.stopPropagation();editConsumo('`+cid+`')" title="Editar" style="padding:4px 7px">✏️</button>`;
-    const delBtn=CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delConsumo('`+cid+`')" title="Eliminar" style="padding:4px 7px">🗑</button>`:'';
+    const editBtn=`<button class="btn btn-sm" onclick="event.stopPropagation();editConsumo('`+cid+`')" title="Editar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;font-size:15px;opacity:.65">✏️</button>`;
+    const delBtn=CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delConsumo('`+cid+`')" title="Eliminar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;font-size:15px;opacity:.65">🗑</button>`:'';
     // Detail rows (read-only)
     const detailRows=(c.items||[]).map(it=>`
       <div style="display:grid;grid-template-columns:2fr 1fr 40px 70px 90px 80px;gap:4px;align-items:center;padding:5px 0;border-bottom:0.5px solid #F0EDE8;font-size:12px">
@@ -1609,7 +1610,7 @@ function renderCI(cid){
       <span style="font-size:10px;color:#888">${catLabel(it.cat)}</span>
       <input type="number" min="1" value="${it.cantidad}" onchange="updCI(${cid},${it.id},'cantidad',this.value)" style="text-align:center;font-size:12px">
       <input type="number" value="${it.precio}" onchange="updCI(${cid},${it.id},'precio',this.value)" style="text-align:right;font-size:12px">
-      <button class="btn btn-sm btn-danger" onclick="delCI(${cid},${it.id})">🗑</button>
+      <button class="btn btn-sm" onclick="delCI(${cid},${it.id})" title="Eliminar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;font-size:15px;opacity:.65">🗑</button>
     </div>`).join('');
   const sub=c.items.reduce((s,i)=>s+(i.precio*i.cantidad),0);
   const tb=document.getElementById('ctotals-'+cid);
@@ -1833,11 +1834,11 @@ function renderAdmin(){
   const byCat={};prods.forEach(p=>{if(!byCat[p.cat])byCat[p.cat]=[];byCat[p.cat].push(p)});
   document.getElementById('admin-prods').innerHTML=Object.keys(byCat).sort((a,b)=>catLabel(a).localeCompare(catLabel(b),'es')).map(cat=>`<div class="cat-section"><p class="cat-lbl">${catLabel(cat)} (${byCat[cat].length})</p>${byCat[cat].map(p=>prodRowHtml(p)).join('')}</div>`).join('')||'<p class="empty">Sin resultados</p>';
   const habs=gd(KH);
-  document.getElementById('admin-habs').innerHTML=habs.map((h,i)=>`<div class="litem"><span style="font-size:13px">${h.nombre}</span><div style="display:flex;gap:6px;align-items:center"><span style="font-size:12px;font-weight:500">${fmt(h.precio)}/noche</span>${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delHab(${i})">🗑</button>`:''}</div></div>`).join('')||'<p class="empty">Sin habitaciones</p>';
+  document.getElementById('admin-habs').innerHTML=habs.map((h,i)=>`<div class="litem"><span style="font-size:13px">${h.nombre}</span><div style="display:flex;gap:6px;align-items:center"><span style="font-size:12px;font-weight:500">${fmt(h.precio)}/noche</span>${CU==='admin'?`<button class="btn btn-sm" onclick="delHab(${i})" title="Eliminar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;font-size:15px;opacity:.65">🗑</button>`:''}</div></div>`).join('')||'<p class="empty">Sin habitaciones</p>';
 }
 function prodRowHtml(p){
   if(editingProdId===p.id)return`<div class="prod-row edit-mode"><input type="text" id="ep-n-${p.id}" value="${p.nombre}"><span style="font-size:10px;color:#888">${catLabel(p.cat)}</span><input type="number" id="ep-p-${p.id}" value="${p.precio}" style="text-align:right"><button class="btn btn-sm btn-primary" onclick="savePE(${p.id})">✓</button><button class="btn btn-sm" onclick="cancelEdit()">✕</button></div>`;
-  return`<div class="prod-row view-mode"><span style="font-size:13px">${p.nombre}</span><span style="font-size:10px;color:#888">${catLabel(p.cat)}</span><span style="font-size:12px;font-weight:500;text-align:right">${fmt(p.precio)}</span><button class="btn btn-sm" onclick="startEdit(${p.id})">✏</button>${CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="delProd(${p.id})">🗑</button>`:''}</div>`;
+  return`<div class="prod-row view-mode"><span style="font-size:13px">${p.nombre}</span><span style="font-size:10px;color:#888">${catLabel(p.cat)}</span><span style="font-size:12px;font-weight:500;text-align:right">${fmt(p.precio)}</span><button class="btn btn-sm" onclick="startEdit(${p.id})">✏</button>${CU==='admin'?`<button class="btn btn-sm" onclick="delProd(${p.id})" title="Eliminar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;font-size:15px;opacity:.65">🗑</button>`:''}</div>`;
 }
 function startEdit(id){editingProdId=id;renderAdmin()}
 function cancelEdit(){editingProdId=null;renderAdmin()}
@@ -1983,7 +1984,7 @@ function processImport(rows, preview){
         base, ish, iva,
         total:Math.round(totalConImpuestos*100)/100,
         anticipo:anticoFinal,
-        antiFecha:'', antiPago:'',
+        antiFecha:'', antiPago:(!isTriple&&missingPayInfo&&isCBDirect)?'cloudbeds':'',
         saldo:saldoFinal,
         saldFecha:'', saldPago:'',
         descuento:0, pagos:[],
@@ -2203,7 +2204,7 @@ function ckRenderExtras(){
   const card=document.getElementById('ck-lineas-card');
   if(!CK_EX.length){if(card)card.style.display='none';return;}
   if(card)card.style.display='block';
-  const pagoOpts=['tbd','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'];
+  const pagoOpts=['tbd','cloudbeds','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'];
   document.getElementById('ck-extras').innerHTML=CK_EX.map(e=>{
     const opts=pagoOpts.map(v=>`<option value="${v}"${v===e.pago?' selected':''}>${pagoLabel(v)}</option>`).join('');
     return `<div class="linea-row" style="grid-template-columns:2fr 1fr 50px 70px 1fr 32px">
