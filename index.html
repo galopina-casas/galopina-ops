@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.8</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.9</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.8</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v23.9</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -853,7 +853,7 @@ function onSaldPagoChange(){
 
 function editRes(id){
   const res=gd(KR);
-  const r=res.find(x=>x.id===id);
+  const r=res.find(x=>String(x.id)===String(id));
   if(!r)return;
 
   // Set edit mode flag
@@ -953,7 +953,7 @@ function guardarRes(){
   const noches=parseInt(document.getElementById('r-noches').value)||0;
   const desc=parseFloat(document.getElementById('r-desc').value)||0;
   const editId=window._editResId;
-  const editingCB=editId&&(gd(KR).find(x=>x.id===editId)?.fuente==='cloudbeds');
+  const editingCB=editId&&(gd(KR).find(x=>String(x.id)===String(editId))?.fuente==='cloudbeds');
 
   let base,ish,iva,total;
   if(editingCB){
@@ -964,7 +964,7 @@ function guardarRes(){
     ish=cleanN(document.getElementById('r-ish').value);
     iva=cleanN(document.getElementById('r-iva').value);
     // For CB reservations, use stored values directly (full precision)
-    const storedR=gd(KR).find(x=>x.id===editId);
+    const storedR=gd(KR).find(x=>String(x.id)===String(editId));
     if(storedR){base=storedR.base||base;ish=storedR.ish||ish;iva=storedR.iva||iva;total=storedR.total||total;}
   } else {
     const habs=gd(KH);
@@ -996,7 +996,7 @@ function guardarRes(){
 
   if(editId){
     // Edit mode: update existing
-    const idx=res.findIndex(x=>x.id===editId);
+    const idx=res.findIndex(x=>String(x.id)===String(editId));
     if(idx>-1){
       // Recalculate warning after manual edit
       let newWarning=res[idx].cbWarning||'';
@@ -1939,7 +1939,7 @@ function processImport(rows, preview){
 
       const origen=mapOrigen(get(['Fuente','fuente','source']));
       const estado=mapEstado(get(['Estado ','estado ','Estado','estado','status']));
-      if(estado==='cancelado')return;
+      if(estado==='cancelado'){skipped.push({fila:i+2,nombre:String(nombre||'?').trim(),cbId:cbIdClean,razon:'Cancelada'});return;}
       const pais=get(['País','pais','país','country'])||'';
 
 
