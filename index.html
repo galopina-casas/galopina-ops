@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.6</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.7</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.6</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.7</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1142,7 +1142,7 @@ function resHtml(r,i){
         ${r.pais?`<span title="${r.pais}" style="font-size:18px;cursor:default;line-height:1">${paisFlag(r.pais)}</span>`:''}
         <span style="font-size:13px;font-weight:600">${r.nombre}</span>
       </div>
-      <p style="font-size:11px;color:#888"><span class="tag">${r.habitacion}</span> ${r.checkin||'?'} → ${r.checkout||'?'} · ${r.noches||'?'} noches · Total: ${fmt(r.total||0)}</p>
+      <p style="font-size:11px;color:#888"><span class="tag">${r.habitacion}</span> ${r.checkin||'?'} → ${r.checkout||'?'} · ${r.noches||'?'} noches · Hosp: ${fmt(r.hospTotal||r.total||0)}</p>
       ${r.cbWarning==='incoherente'?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Pagos incoherentes en Cloudbeds — verificar</p>`:''}
       ${(r.consumoCena||0)>0?`<div style="display:inline-flex;align-items:center;gap:5px;background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:20px;padding:2px 9px;margin-top:5px;font-size:11px;color:#085041">🍽 <strong>${r.consumoCenaCant||Math.round((r.consumoCena||0)/800)} cena${(r.consumoCenaCant||Math.round((r.consumoCena||0)/800))>1?'s':''} incluida${Math.round(r.consumoCena/800)>1?'s':''}</strong> · ${fmt(r.consumoCena)}</div>`:''}
       ${r.cbWarning==='sin-pago-info'&&(r.anticipo||0)>0&&(!r.antiFecha||!r.antiPago)?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Sin fecha/método de anticipo — completar</p>`:''}
@@ -1152,7 +1152,7 @@ function resHtml(r,i){
         ''}
     </div>
     <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;min-width:90px">
-      <span style="font-size:15px;font-weight:700;white-space:nowrap">${fmt(r.total||0)}</span>
+      <span style="font-size:15px;font-weight:700;white-space:nowrap">${fmt((r.consumoCena||0)>0?(r.hospTotal||0)+(r.consumoCena||0):r.total||0)}</span>
       <div style="display:flex;gap:4px;margin-top:4px">
         ${saldoPend?`<button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')" title="Check-out" style="padding:4px 6px">🏁</button>`:''}
         <button class="btn btn-sm" onclick="editRes('${r.id}')" title="Editar" style="padding:4px 6px">✏️</button>
