@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v27.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v27.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v27.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v27.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1049,10 +1049,10 @@ function guardarRes(){
         habitacion, checkin:ci, checkout:co, noches,
         origen:document.getElementById('r-origen').value,
         estado:document.getElementById('r-estado').value,
-        base:Math.round(base), ish:Math.round(ish), iva:Math.round(iva),
-        total:Math.round(total), descuento:desc,
-        anticipo:anti, antiPct:total>0?Math.round(anti/total*100):0,
-        antiFecha, antiPago, saldo, saldFecha, saldPago,
+        base:Math.round(base*100)/100, ish:Math.round(ish*100)/100, iva:Math.round(iva*100)/100,
+        total:Math.round(total*100)/100, descuento:desc,
+        anticipo:Math.round(anti*100)/100, antiPct:total>0?Math.round(anti/total*100):0,
+        antiFecha, antiPago, saldo:Math.round(saldo*100)/100, saldFecha, saldPago,
         fechaReserva:document.getElementById('r-fechareserva')?.value||'',
         cbWarning:newWarning
       };
@@ -1071,10 +1071,10 @@ function guardarRes(){
       origen:document.getElementById('r-origen').value,
       estado:document.getElementById('r-estado').value,
       fuente:'manual',
-      base:Math.round(base), ish:Math.round(ish), iva:Math.round(iva),
-      total:Math.round(total), descuento:desc,
-      anticipo:anti, antiPct:total>0?Math.round(anti/total*100):0,
-      antiFecha, antiPago, saldo, saldFecha, saldPago,
+      base:Math.round(base*100)/100, ish:Math.round(ish*100)/100, iva:Math.round(iva*100)/100,
+      total:Math.round(total*100)/100, descuento:desc,
+      anticipo:Math.round(anti*100)/100, antiPct:total>0?Math.round(anti/total*100):0,
+      antiFecha, antiPago, saldo:Math.round(saldo*100)/100, saldFecha, saldPago,
       fechaReserva:document.getElementById('r-fechareserva')?.value||'', pagos:[]
     };
     res.push(r);
