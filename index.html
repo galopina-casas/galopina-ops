@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2017,7 +2017,16 @@ function confirmImport(nuevas){
     res.push(r);
     // Create consumo "Cena" if there is extra amount
     if(cena>0){
-      const precioUnit=Math.round(cena*100)/100; // cena price includes IVA already
+      // Option A: divide by catalog cena price to get quantity
+      const cenaProd=gd(KP).find(p=>p.cat==='cenas'&&p.nombre==='Cena');
+      const cenaCatPrice=cenaProd?cenaProd.precio:800; // fallback $800
+      const cenaQty=Math.round(cena/cenaCatPrice);
+      const cenaExact=cenaQty>0&&Math.abs(cenaQty*cenaCatPrice-cena)<=1;
+      // If exact match: use catalog price × qty; else fallback: 1 item with full amount
+      const cenaItemPrecio=cenaExact?cenaCatPrice:Math.round(cena*100)/100;
+      const cenaItemQty=cenaExact?cenaQty:1;
+      const cenaItemNota=cenaExact?'Importado desde Cloudbeds':'Importado desde Cloudbeds — verificar cantidad';
+      const cenaTot=Math.round(cenaItemPrecio*cenaItemQty*100)/100;
       cons.push({
         id:'CB-CENA-'+r.id+'-'+Date.now(),
         reservaId:r.id,
@@ -2027,14 +2036,14 @@ function confirmImport(nuevas){
           id:'item-'+Date.now(),
           cat:'cenas',
           nombre:'Cena',
-          cantidad:1,
-          precio:precioUnit,
+          cantidad:cenaItemQty,
+          precio:cenaItemPrecio,
           pago:'tbd',
           fechaPago:''
         }],
-        subtotal:Math.round(precioUnit/1.16*100)/100,
-        iva:Math.round((precioUnit-precioUnit/1.16)*100)/100,
-        total:precioUnit,
+        subtotal:Math.round(cenaTot/1.16*100)/100,
+        iva:Math.round((cenaTot-cenaTot/1.16)*100)/100,
+        total:cenaTot,
         nota:'Importado desde Cloudbeds'
       });
     }
