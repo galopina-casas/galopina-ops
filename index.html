@@ -114,7 +114,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.3</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.4</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -137,7 +137,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.3</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v24.4</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1144,7 +1144,7 @@ function resHtml(r,i){
       </div>
       <p style="font-size:11px;color:#888"><span class="tag">${r.habitacion}</span> ${r.checkin||'?'} → ${r.checkout||'?'} · ${r.noches||'?'} noches · Total: ${fmt(r.total||0)}</p>
       ${r.cbWarning==='incoherente'?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Pagos incoherentes en Cloudbeds — verificar</p>`:''}
-      ${(r.consumoCena||0)>0?`<div style="display:inline-flex;align-items:center;gap:5px;background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:20px;padding:2px 9px;margin-top:5px;font-size:11px;color:#085041">🍽 <strong>${Math.round(r.consumoCena/800)} cena${Math.round(r.consumoCena/800)>1?'s':''} incluida${Math.round(r.consumoCena/800)>1?'s':''}</strong> · ${fmt(r.consumoCena)}</div>`:''}
+      ${(r.consumoCena||0)>0?`<div style="display:inline-flex;align-items:center;gap:5px;background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:20px;padding:2px 9px;margin-top:5px;font-size:11px;color:#085041">🍽 <strong>${r.consumoCenaCant||Math.round((r.consumoCena||0)/800)} cena${(r.consumoCenaCant||Math.round((r.consumoCena||0)/800))>1?'s':''} incluida${Math.round(r.consumoCena/800)>1?'s':''}</strong> · ${fmt(r.consumoCena)}</div>`:''}
       ${r.cbWarning==='sin-pago-info'&&(r.anticipo||0)>0&&(!r.antiFecha||!r.antiPago)?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Sin fecha/método de anticipo — completar</p>`:''}
       ${(r.anticipo||0)>0?`<p style="font-size:11px;color:#888;margin-top:2px">Anticipo: ${fmt(r.anticipo||0)} (${r.antiPct||0}%) · ${pagoLabel(r.antiPago||'')}${r.antiFecha?' · '+fmtDate(r.antiFecha):''}</p>`:''}
       ${(r.saldo||0)>0&&r.saldPago?`<p style="font-size:11px;color:#888;margin-top:2px">Saldo: ${fmt(r.saldo)} (${r.total>0?Math.round(r.saldo/r.total*100):0}%) · ${pagoLabel(r.saldPago)}${r.saldFecha?' · '+fmtDate(r.saldFecha):''}</p>`:
@@ -1966,7 +1966,8 @@ function processImport(rows, preview){
         saldFecha:'', saldPago:'',
         descuento:0, pagos:[],
         cbWarning:isTriple?'incoherente':missingPayInfo?'sin-pago-info':'',
-        consumoCena:tieneCena?diffCena:0
+        consumoCena:tieneCena?diffCena:0,
+        consumoCenaCant:tieneCena?Math.round(diffCena/(gd(KP).find(p=>p.cat==='cenas'&&p.nombre==='Cena')?.precio||800)):0
       });
     }catch(e){errores.push(`Fila ${i+2}: ${e.message}`);}
   });
@@ -1997,7 +1998,7 @@ function processImport(rows, preview){
         Total: <strong>${fmt(r.total)}</strong> · Anticipo: ${fmt(r.anticipo)} · Saldo: <span style="color:#C83232">${fmt(r.saldo)}</span>
         ${r.cbWarning==='incoherente'?'<br><span style="color:#B8860B;font-size:11px">⚠️ Anticipo=Saldo=Total en Cloudbeds — pagos no importados, verificar</span>':''}
         ${r.cbWarning==='sin-pago-info'&&r.anticipo>0?'<br><span style="color:#B8860B;font-size:11px">⚠️ Sin fecha/método de pago — completar después</span>':''}
-        ${r.consumoCena>0?`<br><span style="color:#1D9E75;font-size:11px">+ Cena: ${fmt(r.consumoCena)}</span>`:''}
+        ${r.consumoCena>0?`<br><span style="color:#1D9E75;font-size:11px">🍽 ${r.consumoCenaCant} cena${r.consumoCenaCant>1?'s':''} incluidas: ${fmt(r.consumoCena)}</span>`:''}
       </div>`).join('')}
     </div>
     <button class="btn btn-primary" onclick="confirmImport(${JSON.stringify(nuevas).replace(/"/g,'&quot;')})">
@@ -2013,41 +2014,7 @@ function confirmImport(nuevas){
   const cons=gd(KC);
   const hoy=today();
   nuevas.forEach(r=>{
-    const cena=r.consumoCena||0;
-    r.consumoCena=cena; // keep for desglose
-    res.push(r);
-    // Create consumo "Cena" if there is extra amount
-    if(cena>0){
-      // Option A: divide by catalog cena price to get quantity
-      const cenaProd=gd(KP).find(p=>p.cat==='cenas'&&p.nombre==='Cena');
-      const cenaCatPrice=cenaProd?cenaProd.precio:800; // fallback $800
-      const cenaQty=Math.round(cena/cenaCatPrice);
-      const cenaExact=cenaQty>0&&Math.abs(cenaQty*cenaCatPrice-cena)<=1;
-      // If exact match: use catalog price × qty; else fallback: 1 item with full amount
-      const cenaItemPrecio=cenaExact?cenaCatPrice:Math.round(cena*100)/100;
-      const cenaItemQty=cenaExact?cenaQty:1;
-      const cenaItemNota=cenaExact?'Importado desde Cloudbeds':'Importado desde Cloudbeds — verificar cantidad';
-      const cenaTot=Math.round(cenaItemPrecio*cenaItemQty*100)/100;
-      cons.push({
-        id:'CB-CENA-'+r.id+'-'+Date.now(),
-        reservaId:r.id,
-        huesped:r.nombre,
-        habitacion:r.habitacion,
-        items:[{
-          id:'item-'+Date.now(),
-          cat:'cenas',
-          nombre:'Cena',
-          cantidad:cenaItemQty,
-          precio:cenaItemPrecio,
-          pago:'tbd',
-          fechaPago:''
-        }],
-        subtotal:Math.round(cenaTot/1.16*100)/100,
-        iva:Math.round((cenaTot-cenaTot/1.16)*100)/100,
-        total:cenaTot,
-        nota:'Importado desde Cloudbeds'
-      });
-    }
+    res.push(r); // consumoCena is stored in reservation, no separate consumo needed
   });
   sd(KR,res);
   sd(KC,cons);
@@ -2397,7 +2364,7 @@ function openIngModal(gKey){
         ${hospRows}
         ${(rr&&(rr.consumoCena||0)>0)?`<tr><td colspan="8" style="padding:4px 8px 6px 9px;border-left:3px solid #185FA5;border-bottom:none">
           <div style="background:#F5F4F0;border-radius:6px;padding:5px 10px;font-size:11px;color:#888">
-            <span style="font-weight:500;color:#1A1916">🍽 Incluye ${Math.round(rr.consumoCena/800)} cena${Math.round(rr.consumoCena/800)>1?'s':''} · ${fmt(rr.consumoCena)}</span>
+            <span style="font-weight:500;color:#1A1916">🍽 Incluye ${rr.consumoCenaCant||Math.round((rr.consumoCena||0)/800)} cena${(rr.consumoCenaCant||Math.round((rr.consumoCena||0)/800))>1?'s':''} · ${fmt(rr.consumoCena)}</span>
             <span style="margin-left:10px">Hosp: ${fmt((rr.total||0)-(rr.consumoCena||0))} · Cenas: ${fmt(rr.consumoCena)}</span>
           </div>
         </td></tr>`:''}
