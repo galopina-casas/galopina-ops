@@ -1931,7 +1931,7 @@ function processImport(rows, preview){
       const iva=Math.round(base*0.16*100)/100;
       // Use totalGeneral if close to base*1.205 (within $2), else calculate
       const calcTotal=Math.round(base*1.205*100)/100;
-      const totalConImpuestos=totalGeneral>0?totalGeneral:calcTotal; // totalGeneral = full CB total (hospedaje+cenas)
+      const totalConImpuestos=totalGeneral>0&&Math.abs(totalGeneral-calcTotal)<=2?totalGeneral:calcTotal;
 
       // Validation flags
       const near=(a,b)=>Math.abs(a-b)<=(Math.max(a,b)*0.01+1);
@@ -1947,7 +1947,7 @@ function processImport(rows, preview){
 
 
       // Detect consumo extra (cena) if totalGeneral > tarifaTotal*1.205 + $1
-      const diffCena=Math.round(((totalGeneral||0)-totalConImpuestos)*100)/100;
+      const diffCena=Math.round(((totalGeneral||0)-calcTotal)*100)/100; // cenas = totalGeneral - hospedaje taxes
       const tieneCena=diffCena>1;
 
       nuevas.push({
