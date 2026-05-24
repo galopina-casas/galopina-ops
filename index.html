@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.2</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.3</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.2</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.3</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -883,27 +883,6 @@ function editRes(id){
   el('r-origen').value=r.origen||'directo';
   el('r-estado').value=r.estado||'confirmada';
   el('r-desc').value=r.descuento||0;
-
-  // Pagos — Anticipo
-  const hasAnti=(r.anticipo||0)>0;
-  el('chk-anticipo').checked=hasAnti;
-  el('anticipo-fields').style.display=hasAnti?'block':'none';
-  if(hasAnti){
-    el('r-antipct').value=r.antiPct||50;
-    el('r-antimonto').value=r.anticipo||0;
-    el('r-antipago').value=r.antiPago||'';
-    el('r-antifecha').value=fmtDate(r.antiFecha)||'';
-  }
-
-  // Pagos — Saldo
-  el('saldo-section').style.display='block';
-  const hasSaldo=!!(r.saldPago);
-  el('chk-saldo').checked=hasSaldo;
-  el('saldo-fields').style.display=hasSaldo?'block':'none';
-  if(hasSaldo){
-    el('r-saldpago').value=r.saldPago||'';
-    el('r-saldfecha').value=fmtDate(r.saldFecha)||'';
-  }
 
   // For Cloudbeds reservations, skip calcTarifa and use original CB fiscal values
   if(r.fuente==='cloudbeds'&&r.total){
