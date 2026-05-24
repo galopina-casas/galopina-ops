@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v25.5</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v25.7</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v25.5</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v25.7</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -254,7 +254,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           </div>
           <div class="frow">
             <div><label>Fecha pago anticipo</label><input type="date" id="r-antifecha"></div>
-            <div><label>M&eacute;todo anticipo</label><select id="r-antipago" onchange="onAntiPagoChange()"><option value="">Sin especificar</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">D&eacute;bito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
+            <div><label>M&eacute;todo anticipo</label><select id="r-antipago" onchange="onAntiPagoChange()"><option value="">Sin especificar</option><option value="cloudbeds">CloudBeds</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">D&eacute;bito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
           </div>
         </div>
       </div>
@@ -268,7 +268,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <div id="saldo-fields" style="display:none;margin-top:10px">
           <div class="frow">
             <div><label>Fecha pago saldo</label><input type="date" id="r-saldfecha"></div>
-            <div><label>M&eacute;todo saldo</label><select id="r-saldpago" onchange="onSaldPagoChange()"><option value="">Sin especificar</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">D&eacute;bito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
+            <div><label>M&eacute;todo saldo</label><select id="r-saldpago" onchange="onSaldPagoChange()"><option value="">Sin especificar</option><option value="cloudbeds">CloudBeds</option><option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option><option value="transferencia">Transferencia</option><option value="debito">D&eacute;bito</option><option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option></select></div>
           </div>
         </div>
       </div>
@@ -565,9 +565,9 @@ const CATS_KEY=['bebidas_alc','bebidas','snacks','cenas','boutique','cama_extra'
 const CATS_LIBRE=new Set(['fotoshooting','lavanderia','rembolso','transporte','day_pass','boda','propina']);
 const catLabel=k=>{const i=CATS_KEY.indexOf(k);return i>=0?CATS_RAW[i]:k};
 const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const PAGO_MAP={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe',pendiente:'Pendiente',tbd:'TBD',''   :'Pendiente'};
+const PAGO_MAP={cloudbeds:'CloudBeds',efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe',pendiente:'Pendiente',tbd:'TBD',''   :'Pendiente'};
 const pagoLabel=v=>PAGO_MAP[v]||v;
-const BADGE_MAP={efectivo:'b-efectivo','efectivo-nd':'b-efectivo-nd',transferencia:'b-transferencia',debito:'b-debito',mercadopago:'b-mercadopago',stripe:'b-stripe',pendiente:'b-pendiente',tbd:'b-tbd',''   :'b-pendiente'};
+const BADGE_MAP={cloudbeds:'b-cloudbeds',efectivo:'b-efectivo','efectivo-nd':'b-efectivo-nd',transferencia:'b-transferencia',debito:'b-debito',mercadopago:'b-mercadopago',stripe:'b-stripe',pendiente:'b-pendiente',tbd:'b-tbd',''   :'b-pendiente'};
 const pagoBadge=v=>BADGE_MAP[v]||'b-pendiente';
 const PAISES=['México','Alemania','Argentina','Australia','Austria','Bélgica','Brasil','Canadá','Chile','China','Colombia','Corea del Sur','Dinamarca','España','Estados Unidos','Francia','India','Israel','Italia','Japón','Noruega','Nueva Zelanda','Países Bajos','Polonia','Portugal','Reino Unido','Rusia','Singapur','Suecia','Suiza','Turquía','Otro'];
 
@@ -1990,6 +1990,7 @@ function processImport(rows, preview){
           const cbDirect=fuente2.toLowerCase().includes('sitio web')||fuente2.toLowerCase().includes('motor de reservas');
           return (!isTriple&&missingPayInfo&&cbDirect)?'cloudbeds':'';
         })(),
+        antiPct:totalConImpuestos>0?Math.round(anticoFinal/totalConImpuestos*100):0,
         saldo:saldoFinal,
         saldFecha:'', saldPago:'',
         descuento:0, pagos:[],
