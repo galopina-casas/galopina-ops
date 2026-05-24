@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v26.7</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v26.8</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v26.7</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v26.8</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1954,6 +1954,12 @@ function processImport(rows, preview){
 
       const nombre=get(['Nombre','nombre','guest name']);
       if(!nombre){skipped.push({fila:i+2,nombre:'?',razon:'Sin nombre de huésped'});return;}
+      if(isIncoherenteSaldo){
+        skipped.push({fila:i+2,nombre:String(nombre).trim(),cbId:cbIdClean,
+          razon:`Anticipo+Saldo (${fmt(sumaAS)}) ≠ Total (${fmt(totalConImpuestos)}) — corregir en Cloudbeds`,
+          isError:true});
+        return;
+      }
 
       const habRaw=get(['Categoría de habitación','categoria de habitacion','room type','Número de habitación','numero de habitacion']);
       const habitacion=mapHab(habRaw);
@@ -1983,6 +1989,9 @@ function processImport(rows, preview){
       const missingPayInfo=deposito>0&&!isTriple;
       const anticoFinal=isTriple?0:deposito;
       const saldoFinal=isTriple?0:saldoPend;
+      // Incoherent: anticipo+saldo≠total but NOT a triple case
+      const sumaAS=anticoFinal+saldoFinal;
+      const isIncoherenteSaldo=!isTriple&&saldoFinal>0&&anticoFinal>0&&Math.abs(sumaAS-totalConImpuestos)>2;
 
       const origen=mapOrigen(get(['Fuente','fuente','source']));
       const estado=mapEstado(get(['Estado ','estado ','Estado','estado','status']));
@@ -2033,17 +2042,20 @@ function processImport(rows, preview){
     preview.innerHTML='<p style="color:#888">No se encontraron reservas nuevas.</p>';return;
   }
 
+  const errSkipped=skipped.filter(sk=>sk.isError);
   let html=`<div style="margin-bottom:10px;font-size:13px">
     <strong>${nuevas.length}</strong> reserva(s) nuevas.
     ${skipped.length?`<span style="color:#888;margin-left:6px">${skipped.length} omitida(s).</span>`:''}
+    ${errSkipped.length?`<span style="color:#E24B4A;margin-left:6px">❌ ${errSkipped.length} no importable(s).</span>`:''}
     ${errores.length?`<span style="color:#A32D2D;margin-left:6px">${errores.length} error(es).</span>`:''}
   </div>
   ${skipped.length?`<div style="background:#F5F4F0;border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:12px">
     <p style="font-weight:600;color:#888;margin-bottom:6px">Líneas omitidas:</p>
-    ${skipped.map(sk=>`<div style="display:flex;gap:8px;padding:3px 0;border-bottom:0.5px solid #EEE;align-items:baseline">
-      <span style="color:#AAA;flex-shrink:0">Fila ${sk.fila}</span>
-      <span style="flex:1;font-weight:500">${sk.nombre}${sk.cbId?' <span style="color:#AAA">CB:'+sk.cbId+'</span>':''}</span>
-      <span style="color:#888;flex-shrink:0">${sk.razon}</span>
+    ${skipped.map(sk=>`<div style="display:flex;gap:8px;padding:4px 0;border-bottom:0.5px solid #EEE;align-items:center">
+      <span style="font-size:13px;flex-shrink:0">${sk.isError?'❌':'⬜'}</span>
+      <span style="color:#AAA;flex-shrink:0;font-size:11px">Fila ${sk.fila}</span>
+      <span style="flex:1;font-weight:500;font-size:12px">${sk.nombre}${sk.cbId?' <span style="color:#AAA;font-size:10px">CB:'+sk.cbId+'</span>':''}</span>
+      <span style="flex-shrink:0;font-size:11px;color:${sk.isError?'#E24B4A':'#888'}">${sk.razon}</span>
     </div>`).join('')}
   </div>`:''}`;
 
