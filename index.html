@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.9</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.7</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.9</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.7</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -175,7 +175,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <option value="">Todos los meses</option>
         </select>
         <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;font-weight:normal;cursor:pointer">
-          <input type="checkbox" id="res-split-mes" onchange="renderRes()" style="width:15px;height:15px;margin:0;cursor:pointer" checked>
+          <input type="checkbox" id="res-split-mes" onchange="renderRes()" style="width:15px;height:15px;margin:0;cursor:pointer">
           Agrupar por mes
         </label>
         <button class="btn btn-sm" onclick="clearResFilters()" style="height:32px;padding:0 10px;margin-left:auto;white-space:nowrap">Limpiar &#x2715;</button>
@@ -297,7 +297,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <option value="">Todos los meses</option>
         </select>
         <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;font-weight:normal;cursor:pointer">
-          <input type="checkbox" id="cons-split-mes" onchange="renderConsList()" style="width:15px;height:15px;margin:0;cursor:pointer" checked>
+          <input type="checkbox" id="cons-split-mes" onchange="renderConsList()" style="width:15px;height:15px;margin:0;cursor:pointer">
           Agrupar por mes
         </label>
         <button class="btn btn-sm" onclick="clearConsFilters()" style="height:32px;padding:0 10px;margin-left:auto;white-space:nowrap">Limpiar &#x2715;</button>
@@ -374,10 +374,6 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <div style="flex:1;min-width:110px"><label>Mes</label><select id="ing-mes" onchange="renderIngresos()"><option value="">Todos</option></select></div>
         <div style="flex:2;min-width:130px"><label>Cliente</label><input type="text" id="ing-cli" placeholder="Buscar..." oninput="renderIngresos()"></div>
         <div style="flex:1;min-width:90px"><label>Tipo</label><select id="ing-tipo" onchange="renderIngresos()"><option value="">Todos</option><option value="hospedaje">Hospedaje</option><option value="consumo">Consumos</option></select></div>
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;font-weight:normal;cursor:pointer">
-          <input type="checkbox" id="ing-split-mes" onchange="renderIngresos()" style="width:15px;height:15px;margin:0;cursor:pointer" checked>
-          Agrupar por mes
-        </label>
         <button class="btn btn-sm" onclick="clearFiltros()">✕</button>
       </div>
     </div>
@@ -1707,8 +1703,7 @@ function renderIngresos(){
     <div class="ing-sum"><p class="lbl">Consumos</p><p class="val" style="color:#1D9E75">${fmt(totC)}</p></div>
     <div class="ing-sum"><p class="lbl">Pendiente cobro</p><p class="val" style="color:#E24B4A">${fmt(pend)}</p></div>`;
 
-  // Group rows by month (if checkbox active) then by guest
-  const splitMes=document.getElementById('ing-split-mes')?.checked||false;
+  // Group rows by guest
   const byGuest={};
   rows.forEach(r=>{if(!byGuest[r.huesped])byGuest[r.huesped]=[];byGuest[r.huesped].push(r);});
   const box=document.getElementById('ing-list');
@@ -1719,36 +1714,11 @@ function renderIngresos(){
   gd(KR).forEach(r=>resMap[r.nombre]=r);
 
   ING_CACHE=byGuest;
-
-  if(splitMes){
-    // Group guests by their earliest fecha
-    const byMes={};
-    Object.entries(byGuest).forEach(([nombre,items])=>{
-      const m=(items.map(i=>i.fecha||'').filter(Boolean).sort()[0]||'').substring(0,7)||'Sin fecha';
-      if(!byMes[m])byMes[m]=[];
-      byMes[m].push(nombre);
-    });
-    const meses=Object.keys(byMes).sort().reverse();
-    box.innerHTML=meses.map(m=>{
-      const [y,mo]=m.split('-');
-      const mesLabel=mo?`${MESES[parseInt(mo)-1]} ${y}`:m;
-      const guestsHtml=byMes[m].map(nombre=>{const items=byGuest[nombre];return guestBlock(nombre,items,resMap);}).join('');
-      return`<div style="margin-bottom:8px">
-        <p style="font-size:11px;font-weight:600;color:#888;text-transform:uppercase;letter-spacing:.05em;padding:6px 0 4px;border-bottom:1px solid var(--color-border-tertiary);margin-bottom:4px">${mesLabel}</p>
-        ${guestsHtml}
-      </div>`;
-    }).join('');
-    return;
-  }
-
-  box.innerHTML=Object.entries(byGuest).map(([nombre,items])=>{return guestBlock(nombre,items,resMap);}).join('');
-}
-
-function guestBlock(nombre,items,resMap){
+  box.innerHTML=Object.entries(byGuest).map(([nombre,items])=>{
     const tot=items.reduce((s,i)=>s+i.monto,0);
     const pendCount=items.filter(i=>!i.pago||i.pago==='pendiente'||i.pago==='tbd').length;
     const gKey=nombre.replace(/[^a-zA-Z0-9]/g,'_');
-    const res=(resMap||{})[nombre];
+    const res=resMap[nombre];
 
     // Header subtitle: habitacion · checkin → checkout · Saldo
     const subInfo=res
@@ -1846,6 +1816,7 @@ function guestBlock(nombre,items,resMap){
         <div id="ing-inline-${gKey}"></div>
       </div>
     </div>`;
+  }).join('');
 }
 
 
