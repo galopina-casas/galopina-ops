@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v27.2</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v27.2</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1891,7 +1891,19 @@ function handleFile(input){
     try{
       let rows=[];
       if(file.name.endsWith('.csv')){const lines=e.target.result.split('\n').filter(l=>l.trim());const headers=lines[0].split(',').map(h=>h.trim().replace(/"/g,'').toLowerCase());rows=lines.slice(1).map(line=>{const vals=line.split(',').map(v=>v.trim().replace(/"/g,''));const o={};headers.forEach((h,i)=>o[h]=vals[i]||'');return o})}
-      else{const wb=XLSX.read(e.target.result,{type:'binary'});const ws=wb.Sheets[wb.SheetNames[0]];rows=XLSX.utils.sheet_to_json(ws,{defval:''}).map(r=>{const o={};Object.keys(r).forEach(k=>o[k.toLowerCase().trim()]=String(r[k]));return o})}
+      else{
+        const wb=XLSX.read(e.target.result,{type:'binary'});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const range=XLSX.utils.decode_range(ws['!ref']);
+        const hdrs=[];
+        for(let c=range.s.c;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r:0,c})];hdrs.push(cell?String(cell.v):'');}
+        rows=[];
+        for(let r=1;r<=range.e.r;r++){
+          const o={};
+          hdrs.forEach((h,ci)=>{const cell=ws[XLSX.utils.encode_cell({r,c:ci})];o[h]=cell!==undefined?String(cell.v):'';});
+          rows.push(o);
+        }
+      }
       processImport(rows,preview);
     }catch(err){preview.innerHTML=`<p style="color:#A32D2D">Error: ${err.message}</p>`}
   };
@@ -1956,10 +1968,13 @@ function processImport(rows, preview){
       if(!nombre){skipped.push({fila:i+2,nombre:'?',razon:'Sin nombre de huésped'});return;}
 
 
-      const habRaw=get(['Categoría de habitación','categoria de habitacion','room type','Número de habitación','numero de habitacion']);
+      // Número de habitación primero (código limpio), fallback a Categoría de habitación
+      const numHab=get(['Número de habitación','numero de habitacion']);
+      const catHab=get(['Categoría de habitación','categoria de habitacion','room type']);
+      const habRaw=(numHab&&numHab!=='N/A'&&numHab!=='')?numHab:catHab;
       const habitacion=mapHab(habRaw);
 
-      const ci=parseDate(get(['Fecha de llegada','fecha de llegada','arrival','check-in']));
+      const ci=parseDate(get(['Fecha del check-in','Fecha de llegada','fecha de llegada','arrival','check-in']));
       const co=parseDate(get(['Salida','salida','departure','check-out']));
       const fechaReservaVal=parseDate(get(['Fecha de la reserva','fecha de la reserva','reservation date'])||'');
       const noches=parseInt(get(['Noches','noches','nights']))||0;
@@ -1970,13 +1985,16 @@ function processImport(rows, preview){
       const saldoPend=parseFloat(get(['Saldo pendiente','saldo pendiente','balance due']))||0;
 
 
-      // Total de la habitación = BASE sin impuestos — preserve decimal precision
+      // Fiscal: usar columnas CB directamente cuando estén disponibles
       const base=tarifaTotal;
-      const ish=Math.round(base*0.045*100)/100;
-      const iva=Math.round(base*0.16*100)/100;
-      // Use totalGeneral if close to base*1.205 (within $2), else calculate
-      const calcTotal=Math.round(base*1.205*100)/100;
-      const totalConImpuestos=totalGeneral>0?totalGeneral:calcTotal; // always use CB total (includes cenas)
+      const ishCB=parseFloat(get(['ISH','ish']))||0;
+      const ivaCB=parseFloat(get(['IVA','iva']))||0;
+      const ivaColPunto=parseFloat(get(['IVA.','iva.']))||0;
+      // IVA hospedaje = IVA - IVA. (IVA. es el IVA de las cenas)
+      const ish=ishCB>0?Math.round(ishCB*100)/100:Math.round(base*0.045*100)/100;
+      const iva=ivaCB>0?Math.round((ivaCB-ivaColPunto)*100)/100:Math.round(base*0.16*100)/100;
+      const totalConImpuestos=totalGeneral>0?totalGeneral:Math.round(base*1.205*100)/100;
+      const calcTotal=Math.round((base+ish+iva)*100)/100; // hospedaje con impuestos
 
       // Validation flags
       const near=(a,b)=>Math.abs(a-b)<=(Math.max(a,b)*0.01+1);
@@ -2003,9 +2021,13 @@ function processImport(rows, preview){
       const pais=get(['País','pais','país','country'])||'';
 
 
-      // Detect consumo extra (cena) if totalGeneral > tarifaTotal*1.205 + $1
-      const diffCena=Math.round(((totalGeneral||0)-calcTotal)*100)/100; // cenas = totalGeneral - hospedaje taxes
-      const tieneCena=diffCena>1;
+      // Detectar cenas desde columna IVA. y catálogo de productos
+      const prodCena=gd(KP).find(p=>p.cat==='cenas'&&p.nombre==='Cena');
+      const precioCena=prodCena?.precio;
+      const ivaCenaUnit=precioCena?Math.round(precioCena/1.16*0.16*100)/100:null;
+      const nCenas=(ivaCenaUnit&&ivaColPunto>0)?Math.round(ivaColPunto/ivaCenaUnit):0;
+      const montoCenas=nCenas*(precioCena||0);
+      const tieneCena=nCenas>0;
 
       nuevas.push({
         id:Date.now()+Math.random(), cbId:cbIdClean,
@@ -2018,16 +2040,15 @@ function processImport(rows, preview){
         base, ish, iva,
         total:Math.round(totalConImpuestos*100)/100,
         anticipo:anticoFinal,
-        antiFecha:'',
-        antiPago:(()=>{
-          const fuente2=get(['Fuente','fuente','source'])||'';
-          const cbDirect=fuente2.toLowerCase().includes('sitio web')||fuente2.toLowerCase().includes('motor de reservas');
-          return (!isTriple&&missingPayInfo&&cbDirect)?'cloudbeds':'';
-        })(),
         antiFecha:(()=>{
           const fuente2=get(['Fuente','fuente','source'])||'';
           const cbDirect=fuente2.toLowerCase().includes('sitio web')||fuente2.toLowerCase().includes('motor de reservas');
           return (!isTriple&&cbDirect&&fechaReservaVal)?fechaReservaVal:'';
+        })(),
+        antiPago:(()=>{
+          const fuente2=get(['Fuente','fuente','source'])||'';
+          const cbDirect=fuente2.toLowerCase().includes('sitio web')||fuente2.toLowerCase().includes('motor de reservas');
+          return (!isTriple&&missingPayInfo&&cbDirect)?'cloudbeds':'';
         })(),
         antiPct:totalConImpuestos>0?Math.round(anticoFinal/totalConImpuestos*100):0,
         saldo:saldoFinal,
@@ -2035,9 +2056,9 @@ function processImport(rows, preview){
         descuento:0, pagos:[],
         cbWarning:isTriple?'incoherente':missingPayInfo?'sin-pago-info':'',
         hospTotal:Math.round(calcTotal*100)/100,
-        fechaReserva:fechaReservaVal||'', // hospedaje only (no cenas)
-        consumoCena:tieneCena?diffCena:0,
-        consumoCenaCant:tieneCena?Math.round(diffCena/(gd(KP).find(p=>p.cat==='cenas'&&p.nombre==='Cena')?.precio||800)):0
+        fechaReserva:fechaReservaVal||'',
+        consumoCena:tieneCena?montoCenas:0,
+        consumoCenaCant:nCenas
       });
     }catch(e){errores.push(`Fila ${i+2}: ${e.message}`);}
   });
