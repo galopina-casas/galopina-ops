@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.10</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.23</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.10</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.23</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -528,7 +528,8 @@ const KR='KR',KP='KP',KH='KH',KC='KC';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbzF29BvFygv3tDi5isJQCs4DIEwNOte3QEans0Aq7BniJW420kx2xlnNXxeociDET1b/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwFZFlYCivP6Kp-qhJccbCpPhjklHZTgndFrib7l8rxRu8Vn9EhQ6lZE1O9zwwxoKQh/exec';
+const ENV='prod'; // 'dev' | 'prod'
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos'};
 
 // In-memory cache (loaded once at login)
@@ -546,7 +547,7 @@ const sd=(k,v)=>{
   fetch(SCRIPT_URL,{
     method:'POST',
     mode:'no-cors',
-    body:JSON.stringify({action:'write',sheet,data:v})
+    body:JSON.stringify({action:'write',sheet,data:v,env:ENV})
   })
     .catch(e=>console.error('✗ Sheets fetch error:',sheet,e));
 };
@@ -556,7 +557,7 @@ async function loadAllSheets(){
   const keys=['KR','KP','KH','KC'];
   await Promise.all(keys.map(async k=>{
     try{
-      const res=await fetch(SCRIPT_URL+'?action=read&sheet='+SHEET_MAP[k]);
+      const res=await fetch(SCRIPT_URL+'?action=read&sheet='+SHEET_MAP[k]+'&env='+ENV);
       const json=await res.json();
       if(json.ok&&Array.isArray(json.data)&&json.data.length)CACHE[k]=sanitizeDates(json.data);
     }catch(e){console.error('Load error',k,e);}
@@ -597,7 +598,7 @@ function doLogin(){
   errBox.style.display='none';
   const btn=document.querySelector('#login-screen .btn-primary');
   btn.textContent='Verificando...';btn.disabled=true;
-  fetch(SCRIPT_URL+'?action=login&usuario='+encodeURIComponent(usuario)+'&password='+encodeURIComponent(password))
+  fetch(SCRIPT_URL+'?action=login&usuario='+encodeURIComponent(usuario)+'&password='+encodeURIComponent(password)+'&env='+ENV)
   .then(r=>r.json())
   .then(res=>{
     btn.textContent='Entrar';btn.disabled=false;
@@ -2511,6 +2512,7 @@ const CAT_LABELS={
   'Propina':'Propina','Rembolso daño':'Reembolso daño',
   'hospedaje':'Hospedaje'
 };
+const ORDER=['efectivo','transferencia','debito','stripe','cloudbeds','mercadopago','efectivo-nd'];
 const METODOS_LABELS={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe',cloudbeds:'CloudBeds'};
 
 function initCierre(){
@@ -2529,23 +2531,39 @@ function initCierre(){
 function getCierreData(prefix){
   const res=gd(KR),cons=gd(KC),rows=[];
   res.forEach(r=>{
+    // Helper: push hospedaje + cenas rows for a given payment
+    const pushPago=(tipoLabel, monto, fecha, pago)=>{
+      if(!monto||!fecha||!pago||pago==='tbd'||pago==='pendiente')return;
+      const hospT=r.hospTotal||r.total||0;
+      const cenasT=r.consumoCena||0;
+      const totalT=r.total||0;
+      // Hospedaje portion
+      const ratioH=totalT>0?hospT/totalT:1;
+      const montoH=Math.round(monto*ratioH*100)/100;
+      const baseH=Math.round((r.base||0)*ratioH*100)/100;
+      const ishH=Math.round((r.ish||0)*ratioH*100)/100;
+      const ivaH=Math.round((r.iva||0)*ratioH*100)/100;
+      rows.push({tipo:'hospedaje',concepto:tipoLabel+' Hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+        cbId:r.cbId||r.id,fechaReserva:fmtDate(r.fechaReserva)||'',checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
+        fecha,pago,monto:montoH,base:baseH,ish:ishH,iva:ivaH,exento:0,
+        baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:totalT});
+      // Cenas portion (if any)
+      if(cenasT>0){
+        const ratioC=totalT>0?cenasT/totalT:0;
+        const montoC=Math.round(monto*ratioC*100)/100;
+        const baseC=Math.round(montoC/1.16*100)/100;
+        const ivaC=Math.round((montoC-baseC)*100)/100;
+        rows.push({tipo:'consumo',concepto:tipoLabel+' Cena',cat:'cenas',huesped:r.nombre,habitacion:r.habitacion,
+          cbId:r.cbId||r.id,fechaReserva:fmtDate(r.fechaReserva)||'',checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
+          fecha,pago,monto:montoC,base:baseC,ish:0,iva:ivaC,exento:0,
+          baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:totalT});
+      }
+    };
     if((r.anticipo||0)>0&&r.antiFecha&&fmtDate(r.antiFecha).startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd'){
-      const bn=(r.base||0)*(1-(r.descuento||0)/100);
-      const ratio=r.total>0?r.anticipo/r.total:0;
-      rows.push({tipo:'hospedaje',concepto:'Anticipo hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
-        fecha:fmtDate(r.antiFecha),pago:r.antiPago,monto:r.anticipo,
-        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0,
-        baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:r.total||0});
+      pushPago('Anticipo',r.anticipo,fmtDate(r.antiFecha),r.antiPago);
     }
     if((r.saldo||0)>0&&r.saldFecha&&fmtDate(r.saldFecha).startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd'&&r.saldPago!=='pendiente'){
-      const bn=(r.base||0)*(1-(r.descuento||0)/100);
-      const ratio=r.total>0?r.saldo/r.total:0;
-      rows.push({tipo:'hospedaje',concepto:'Saldo hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
-        fecha:fmtDate(r.saldFecha),pago:r.saldPago,monto:r.saldo,
-        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0,
-        baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:r.total||0});
+      pushPago('Saldo',r.saldo,fmtDate(r.saldFecha),r.saldPago);
     }
   });
   cons.forEach(c=>{
@@ -2558,7 +2576,7 @@ function getCierreData(prefix){
       const iva=esEx?0:Math.round((total-base)*100)/100;
       const resC=gd(KR).find(rr=>rr.id===c.reservaId||rr.nombre===c.huesped);
       rows.push({tipo:'consumo',concepto:it.nombre,cat:it.cat||'',huesped:c.huesped,habitacion:c.habitacion,
-        cbId:resC?.cbId||resC?.id||'',checkin:resC?fmtDate(resC.checkin):'',checkout:resC?fmtDate(resC.checkout):'',
+        cbId:resC?.cbId||resC?.id||'',fechaReserva:resC?fmtDate(resC.fechaReserva)||'':'',checkin:resC?fmtDate(resC.checkin):'',checkout:resC?fmtDate(resC.checkout):'',
         fecha:fmtDate(it.fechaPago),pago:it.pago,monto:total,base,ish:0,iva,exento:esEx?total:0,
         baseRes:resC?.base||0,ishRes:resC?.ish||0,ivaRes:resC?.iva||0,totalRes:resC?.total||0});
     });
@@ -2571,12 +2589,12 @@ function renderCierre(){
   const anio=document.getElementById('cm-anio').value;
   if(!mes||!anio)return;
   const prefix=anio+'-'+mes;
+  const mesNombre=MESES[parseInt(mes)-1]+' '+anio;
   const rows=getCierreData(prefix);
   const byPago={};
   rows.forEach(r=>{const p=r.pago||'tbd';if(!byPago[p])byPago[p]=0;byPago[p]+=r.monto;});
   const totalMes=rows.reduce((s,r)=>s+r.monto,0);
   const totalRep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago)).reduce((s,r)=>s+r.monto,0);
-  const ORDER=['efectivo','transferencia','debito','stripe','cloudbeds','mercadopago','efectivo-nd'];
   let resHtml=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Método</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase;width:120px">Contador</th></tr></thead><tbody>`;
   ORDER.forEach(p=>{if(!byPago[p])return;const rep=METODOS_REPORTABLES.includes(p);
     resHtml+=`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${METODOS_LABELS[p]||p}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(byPago[p])}</td><td style="padding:7px 8px;text-align:center">${rep?'<span style="color:#1D9E75;font-weight:700">&#x2713;</span>':'<span style="color:#CCC">&#x2715;</span>'}</td></tr>`;
@@ -2588,8 +2606,14 @@ function renderCierre(){
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
   const consG=rep.filter(r=>r.tipo==='consumo'&&r.exento===0);
   const consE=rep.filter(r=>r.tipo==='consumo'&&r.exento>0);
-  const sv=(arr,f)=>arr.reduce((t,r)=>t+(r[f]||0),0);
-  document.getElementById('cm-fiscal').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Base</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">ISH 4.5%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">IVA 16%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody><tr style="border-bottom:0.5px solid #F0EDE8;color:#1860A5"><td style="padding:7px 8px;font-weight:600">Hospedaje</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'base'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(hospR,'monto'))}</td></tr><tr style="border-bottom:0.5px solid #F0EDE8;color:#1D9E75"><td style="padding:7px 8px;font-weight:600">Consumos</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'base'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consG,'monto'))}</td></tr>${consE.length?`<tr style="border-bottom:0.5px solid #F0EDE8;color:#888"><td style="padding:7px 8px;font-weight:600">Exentos <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#888;color:#fff;font-size:9px;font-weight:700;vertical-align:middle;cursor:help" onmouseover="this.querySelector('span').style.display='block'" onmouseout="this.querySelector('span').style.display='none'">i<span style="display:none;position:absolute;left:20px;top:-4px;background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:400;white-space:nowrap;z-index:99">${EXENTOS_PRODS.join(', ')}</span></span></td><td style="padding:7px 8px;text-align:right">${fmt(sv(consE,'exento'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consE,'monto'))}</td></tr>`:''}<tr style="border-top:2px solid #EEE;font-weight:700;font-size:14px"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'iva')+sv(consG,'iva'))}</td><td style="padding:8px;text-align:right;color:#1A1916;font-size:15px">${fmt(sv(rep,'monto'))}</td></tr></tbody></table>`;
+  const sv=(arr,f)=>Math.round(arr.reduce((t,r)=>t+(r[f]||0),0)*100)/100;
+  document.getElementById('cm-fiscal').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Base</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">ISH 4.5%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">IVA 16%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody><tr style="border-bottom:0.5px solid #F0EDE8;color:#1860A5"><td style="padding:7px 8px;font-weight:600">Hospedaje</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'base'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(hospR,'monto'))}</td></tr><tr style="border-bottom:0.5px solid #F0EDE8;color:#1D9E75"><td style="padding:7px 8px;font-weight:600">Consumos</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'base'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consG,'monto'))}</td></tr>${consE.length?`<tr style="border-bottom:0.5px solid #F0EDE8;color:#888"><td style="padding:7px 8px;font-weight:600">Exentos <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#888;color:#fff;font-size:9px;font-weight:700;vertical-align:middle;cursor:help" onmouseover="this.querySelector('span').style.display='block'" onmouseout="this.querySelector('span').style.display='none'">i<span style="display:none;position:absolute;left:20px;top:-4px;background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:400;white-space:nowrap;z-index:99">${EXENTOS_PRODS.join(', ')}</span></span></td><td style="padding:7px 8px;text-align:right">${fmt(sv(consE,'exento'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consE,'monto'))}</td></tr>`:''}<tr style="border-top:2px solid #EEE;font-weight:700;font-size:14px"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'iva')+sv(consG,'iva'))}</td><td style="padding:8px;text-align:right;color:#1A1916;font-size:15px">${fmt(sv(rep,'monto'))}</td></tr></tbody></table>
+<p style="font-size:12px;color:#666;margin-top:10px;padding:8px 0;border-top:1px solid #EEE">
+  <span style="font-weight:600">ISH Reservas ${mesNombre}:</span> 
+  ${fmt(Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100)}
+  <span style="color:#AAA;font-size:11px">(suma ISH de reservas con fecha de salida en ${mesNombre})</span>
+</p>
+`;
 
   const bancos=['transferencia','debito','stripe','efectivo'];
   let reconHtml=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Método</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">En app</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado de cuenta</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Diferencia</th></tr></thead><tbody>`;
@@ -2619,6 +2643,39 @@ function exportarCierreExcel(){
   if(!rows.length){showAlert('Sin ingresos en este periodo','error');return;}
   const wb=XLSX.utils.book_new();
 
+  // === HOJA 1: RESERVAS ===
+  const GROUP_COLORS_RES={id:'BDD7EE',res:'C6EFCE'};
+  const resHeadersDef=[
+    {v:'Núm. reserva',g:'id'},{v:'Fecha Reserva',g:'id'},{v:'Fecha entrada',g:'id'},
+    {v:'Fecha salida',g:'id'},{v:'Huésped',g:'id'},{v:'Origen',g:'id'},
+    {v:'Base Reserva',g:'res'},{v:'ISH Reserva',g:'res'},{v:'IVA Reserva',g:'res'},{v:'Total Reserva',g:'res'}
+  ];
+  const resRows=[resHeadersDef.map(h=>({v:h.v,s:{font:{bold:true},fill:GROUP_COLORS_RES[h.g]?{fgColor:{rgb:GROUP_COLORS_RES[h.g]}}:{},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
+  const resData=gd(KR).filter(r=>{
+    const co=fmtDate(r.checkout)||'';
+    return co.startsWith(prefix);
+  }).sort((a,b)=>(fmtDate(a.checkin)||'').localeCompare(fmtDate(b.checkin)||''));
+  resData.forEach((r,i)=>{
+    const bg=i%2===0?null:'F2F2F2';
+    const cs=bg=>bg?{fill:{fgColor:{rgb:bg}}}:{};
+    resRows.push([
+      {v:r.cbId||r.id||'',s:cs(bg)},
+      {v:fmtDate(r.fechaReserva)||'',s:cs(bg)},
+      {v:fmtDate(r.checkin)||'',s:cs(bg)},
+      {v:fmtDate(r.checkout)||'',s:cs(bg)},
+      {v:r.nombre||'',s:cs(bg)},
+      {v:r.origen||'',s:cs(bg)},
+      {v:r.base||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+      {v:r.ish||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+      {v:r.iva||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+      {v:r.total||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+    ]);
+  });
+  const wsRes=XLSX.utils.aoa_to_sheet(resRows);
+  wsRes['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,wsRes,'Reservas');
+
+  // === HOJA 2: DETALLE PAGOS ===
   // Sort by checkin then fecha pago
   const rowsSorted=[...rows].sort((a,b)=>{
     const ci=(a.checkin||'').localeCompare(b.checkin||'');
@@ -2628,15 +2685,15 @@ function exportarCierreExcel(){
 
   // Headers with color groups
   const detHeaders=[
-    {v:'Núm. reserva',  g:'id'},{v:'Fecha entrada',g:'id'},{v:'Fecha salida',g:'id'},
-    {v:'Fecha pago',    g:'id'},{v:'Huésped',      g:'id'},{v:'Habitación',  g:'id'},
-    {v:'Concepto',      g:'id'},{v:'Producto',     g:'id'},
+    {v:'Núm. reserva',  g:'id'},{v:'Fecha Reserva',g:'id'},{v:'Fecha entrada',g:'id'},{v:'Fecha salida',g:'id'},
+    {v:'Fecha pago',    g:'id'},{v:'Huésped',      g:'id'},
+    {v:'Concepto',      g:'conc'},{v:'Producto',   g:'conc'},
     {v:'Método pago',   g:'pago'},{v:'Base pago',  g:'pago'},{v:'ISH pago',  g:'pago'},
     {v:'IVA pago',      g:'pago'},{v:'Exento pago',g:'pago'},{v:'Total pago',g:'pago'},
     {v:'Base Reserva',  g:'res'},{v:'ISH Reserva', g:'res'},{v:'IVA Reserva',g:'res'},{v:'Total Reserva',g:'res'},
     {v:'Para contador', g:'cnt'}
   ];
-  const GROUP_COLORS={id:'BDD7EE',pago:'FCE4D6',res:'C6EFCE',cnt:null};
+  const GROUP_COLORS={id:'BDD7EE',pago:'FCE4D6',res:'C6EFCE',cnt:null,conc:'FCE4D6'};
   const hdrStyle=bg=>({font:{bold:true},fill:bg?{fgColor:{rgb:bg}}:{},border:{bottom:{style:'thin',color:{rgb:'888888'}}}});
 
   const detData=[detHeaders.map(h=>({v:h.v,s:hdrStyle(GROUP_COLORS[h.g])}))];
@@ -2647,39 +2704,84 @@ function exportarCierreExcel(){
     const rowBg=_toggle?null:'F2F2F2';
     const cs=bg=>bg?{fill:{fgColor:{rgb:bg}}}:{};
     const rep=METODOS_REPORTABLES.includes(r.pago);
-    const concepto=r.tipo==='hospedaje'?'Hospedaje':(CAT_LABELS[r.cat]||r.cat||r.concepto);
-    const producto=r.tipo==='hospedaje'?'':(r.concepto||'');
+    // Concepto = tipo de pago + categoria; Producto = nombre del producto
+    let concepto, producto;
+    if(r.tipo==='hospedaje'){
+      concepto=r.concepto||'Hospedaje'; // 'Anticipo Hospedaje' | 'Saldo Hospedaje'
+      producto='';
+    } else if(r.cat==='cenas'){
+      concepto=r.concepto||'Cena';      // 'Anticipo Cena' | 'Saldo Cena'
+      producto='Cena';
+    } else {
+      concepto=CAT_LABELS[r.cat]||r.cat||r.concepto;
+      producto=r.concepto||'';
+    }
+    const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
     detData.push([
-      {v:r.cbId||'',s:cs(rowBg)},{v:r.checkin||'',s:cs(rowBg)},{v:r.checkout||'',s:cs(rowBg)},{v:r.fecha||'',s:cs(rowBg)},
-      {v:r.huesped,s:cs(rowBg)},{v:r.habitacion||'',s:cs(rowBg)},{v:concepto,s:cs(rowBg)},{v:producto,s:cs(rowBg)},
-      {v:METODOS_LABELS[r.pago]||r.pago,s:cs(rowBg)},{v:r.base,s:cs(rowBg)},{v:r.ish,s:cs(rowBg)},{v:r.iva,s:cs(rowBg)},{v:r.exento,s:cs(rowBg)},{v:r.monto,s:cs(rowBg)},
-      {v:r.baseRes||0,s:cs(rowBg)},{v:r.ishRes||0,s:cs(rowBg)},{v:r.ivaRes||0,s:cs(rowBg)},{v:r.totalRes||0,s:cs(rowBg)},
+      {v:r.cbId||'',s:cs(rowBg)},{v:r.fechaReserva||'',s:cs(rowBg)},{v:r.checkin||'',s:cs(rowBg)},{v:r.checkout||'',s:cs(rowBg)},{v:r.fecha||'',s:cs(rowBg)},
+      {v:r.huesped,s:cs(rowBg)},{v:concepto,s:cs(rowBg)},{v:producto,s:cs(rowBg)},
+      {v:METODOS_LABELS[r.pago]||r.pago,s:cs(rowBg)},nm(rowBg,r.base),nm(rowBg,r.ish),nm(rowBg,r.iva),nm(rowBg,r.exento),nm(rowBg,r.monto),
+      nm(rowBg,r.baseRes||0),nm(rowBg,r.ishRes||0),nm(rowBg,r.ivaRes||0),nm(rowBg,r.totalRes||0),
       {v:rep?'Sí':'No',s:cs(rowBg)}
     ]);
   });
   const ws1=XLSX.utils.aoa_to_sheet(detData);
   // Column widths
-  ws1['!cols']=[{wch:18},{wch:13},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
-  XLSX.utils.book_append_sheet(wb,ws1,'Detalle');
+  ws1['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:13},{wch:25},{wch:22},{wch:22},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Detalle Pagos');
   const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
   const consG=rep.filter(r=>r.tipo==='consumo'&&r.exento===0);
   const consE=rep.filter(r=>r.tipo==='consumo'&&r.exento>0);
-  const sv=(arr,f)=>arr.reduce((t,r)=>t+(r[f]||0),0);
-  const fis=[['REPORTE FISCAL — '+mesNombre],[''],['Concepto','Base','ISH 4.5%','IVA 16%','Total'],
-    ['Hospedaje',sv(hospR,'base'),sv(hospR,'ish'),sv(hospR,'iva'),sv(hospR,'monto')],
-    ['Consumos gravados',sv(consG,'base'),0,sv(consG,'iva'),sv(consG,'monto')]];
-  if(consE.length)fis.push(['Exentos',sv(consE,'exento'),0,0,sv(consE,'monto')]);
-  fis.push([''],['TOTAL',sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'),sv(hospR,'ish'),sv(hospR,'iva')+sv(consG,'iva'),sv(rep,'monto')]);
+  const sv=(arr,f)=>Math.round(arr.reduce((t,r)=>t+(r[f]||0),0)*100)/100;
+  // CFDI global with design
+  const BLU='BDD7EE',GRN='C6EFCE',GRN2='E2EFDA';
+  const hS=(bg,bold,fmt)=>({font:{bold:!!bold},fill:bg?{fgColor:{rgb:bg}}:{},z:fmt||'@'});
+  const fis=[
+    [{v:'REPORTE FISCAL — '+mesNombre,s:{font:{bold:true,sz:12}}},'','','',''],
+    ['','','','',''],
+    [{v:'Concepto',s:hS(BLU,1)},{v:'Base',s:hS(BLU,1,'#,##0.00')},{v:'ISH 4.5%',s:hS(BLU,1,'#,##0.00')},{v:'IVA 16%',s:hS(BLU,1,'#,##0.00')},{v:'Total',s:hS(BLU,1,'#,##0.00')}],
+    [{v:'Hospedaje'},{v:sv(hospR,'base'),t:'n',z:'#,##0.00'},{v:sv(hospR,'ish'),t:'n',z:'#,##0.00'},{v:sv(hospR,'iva'),t:'n',z:'#,##0.00'},{v:sv(hospR,'monto'),t:'n',z:'#,##0.00'}],
+    [{v:'Consumos'},{v:sv(consG,'base'),t:'n',z:'#,##0.00'},{v:0},{v:sv(consG,'iva'),t:'n',z:'#,##0.00'},{v:sv(consG,'monto'),t:'n',z:'#,##0.00'}]
+  ];
+  if(consE.length)fis.push([{v:'Exentos'},{v:sv(consE,'exento'),t:'n',z:'#,##0.00'},{v:0},{v:0},{v:sv(consE,'monto'),t:'n',z:'#,##0.00'}]);
+  fis.push(['','','','','']);
+  fis.push([
+    {v:'TOTAL',s:hS(GRN2,1)},
+    {v:Math.round((sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},
+    {v:Math.round(sv(hospR,'ish')*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},
+    {v:Math.round((sv(hospR,'iva')+sv(consG,'iva'))*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},
+    {v:Math.round(sv(rep,'monto')*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)}
+  ]);
+  fis.push(['','','','','']);
+  const ishReservas=Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100;
+  fis.push([{v:'ISH Reservas '+mesNombre+':',s:{font:{bold:true}}},{v:ishReservas,t:'n',z:'#,##0.00'},{v:'(suma ISH reservas con salida en '+mesNombre+')'},{v:''},{v:''}]);
   const ws2=XLSX.utils.aoa_to_sheet(fis);
-  XLSX.utils.book_append_sheet(wb,ws2,'Resumen Fiscal');
-  const met=[['TOTALES POR MÉTODO — '+mesNombre],[''],['Método','Monto','Reportar al contador']];
-  ['efectivo','transferencia','debito','stripe','mercadopago','efectivo-nd'].forEach(p=>{
+  ws2['!cols']=[{wch:22},{wch:14},{wch:35},{wch:12},{wch:14}];
+  XLSX.utils.book_append_sheet(wb,ws2,'CFDI global');
+
+  // Por Método with design
+  const met=[
+    [{v:'TOTALES POR MÉTODO — '+mesNombre,s:{font:{bold:true,sz:12}}},'',''],
+    ['','',''],
+    [{v:'Método',s:hS(BLU,1)},{v:'Monto',s:hS(BLU,1,'#,##0.00')},{v:'Contador',s:hS(BLU,1)}]
+  ];
+  let grandTot=0;
+  ORDER.forEach(p=>{
     const t=rows.filter(r=>r.pago===p).reduce((s,r)=>s+r.monto,0);
-    if(t>0)met.push([METODOS_LABELS[p]||p,t,METODOS_REPORTABLES.includes(p)?'Sí':'No']);
+    if(t<=0)return;
+    const rep2=METODOS_REPORTABLES.includes(p);
+    grandTot+=t;
+    met.push([
+      {v:METODOS_LABELS[p]||p},
+      {v:Math.round(t*100)/100,t:'n',z:'#,##0.00',s:{fill:rep2?{fgColor:{rgb:GRN}}:{fgColor:{rgb:'FCE4D6'}}}},
+      {v:rep2?'Sí':'No',s:{font:{bold:true,color:{rgb:rep2?'1B5E20':'B71C1C'}}}}
+    ]);
   });
-  met.push([''],['Total reportable',sv(rep,'monto'),'']);
+  met.push(['','','']);
+  met.push([{v:'Total',s:hS(GRN2,1)},{v:Math.round(grandTot*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},{v:'',s:hS(GRN2,0)}]);
   const ws3=XLSX.utils.aoa_to_sheet(met);
+  ws3['!cols']=[{wch:20},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
   XLSX.writeFile(wb,'Galopina_Cierre_'+mesNombre.replace(' ','_')+'.xlsx');
   showAlert('Excel exportado','success');
