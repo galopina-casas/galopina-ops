@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2028,23 +2028,22 @@ function renderEgresos(){
   const rows=egresos.map(e=>{
     const sinCatStyle=!e.categoria?'background:rgba(250,238,218,0.4);':'';
     const catBadge=e.categoria
-      ?`<span style="background:#f0f0ec;border:0.5px solid #d5d5cf;border-radius:4px;padding:2px 7px;font-size:11px">${e.categoria}</span>`
-      :`<span style="background:#FAEEDA;color:#BA7517;border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer" onclick="openEgModal('${e.uuid}')">⚠ Sin categoría</span>`;
-    return `<div style="display:grid;grid-template-columns:90px 1fr 90px 70px 110px 30px;gap:8px;align-items:center;padding:8px 6px;border-bottom:0.5px solid #f0ede8;font-size:12px;${sinCatStyle}border-radius:${sinCatStyle?'6px':'0'}">
+      ?`<span style="background:#E1F5EE;color:#085041;border:0.5px solid #5DCAA5;border-radius:4px;padding:2px 7px;font-size:11px">${e.categoria}</span>`
+      :`<span style="background:#FAEEDA;color:#BA7517;border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer">⚠ Sin categoría</span>`;
+    return `<div style="display:grid;grid-template-columns:90px 1fr 90px 70px 130px;gap:8px;align-items:center;padding:8px 6px;border-bottom:0.5px solid #f0ede8;font-size:12px;${sinCatStyle}border-radius:${sinCatStyle?'6px':'0'}">
       <span style="color:#888">${e.fecha||''}</span>
       <div>
         <p style="font-weight:500">${e.proveedor||''}</p>
-        <p style="color:#999;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.descripcion||''}</p>
+        <p style="color:#999;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%">${(e.descripcion||'').slice(0,80)+(e.descripcion&&e.descripcion.length>80?'…':'')}</p>
       </div>
       <span style="text-align:right">${fmt(e.total||0)}</span>
       <span style="text-align:right;color:#888">${fmt(e.iva||0)}</span>
-      <span>${catBadge}</span>
-      <button onclick="openEgModal('${e.uuid}')" title="Editar" style="border:none;background:none;cursor:pointer;font-size:14px;opacity:.55">✏️</button>
+      <span onclick="openEgModal('${e.uuid}')" style="cursor:pointer">${catBadge}</span>
     </div>`;
   }).join('');
   document.getElementById('eg-list').innerHTML=`
-    <div style="display:grid;grid-template-columns:90px 1fr 90px 70px 110px 30px;gap:8px;padding:4px 6px 8px;border-bottom:0.5px solid #d5d5cf;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.04em">
-      <span>Fecha</span><span>Proveedor / Descripción</span><span style="text-align:right">Total</span><span style="text-align:right">IVA</span><span>Categoría</span><span></span>
+    <div style="display:grid;grid-template-columns:90px 1fr 90px 70px 130px;gap:8px;padding:4px 6px 8px;border-bottom:0.5px solid #d5d5cf;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.04em">
+      <span>Fecha</span><span>Proveedor / Descripción</span><span style="text-align:right">Total</span><span style="text-align:right">IVA</span><span>Categoría</span>
     </div>${rows}`;
 }
 
