@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.14-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.15-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.14-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.15-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2605,7 +2605,7 @@ function renderCierre(){
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
   const consG=rep.filter(r=>r.tipo==='consumo'&&r.exento===0);
   const consE=rep.filter(r=>r.tipo==='consumo'&&r.exento>0);
-  const sv=(arr,f)=>arr.reduce((t,r)=>t+(r[f]||0),0);
+  const sv=(arr,f)=>Math.round(arr.reduce((t,r)=>t+(r[f]||0),0)*100)/100;
   document.getElementById('cm-fiscal').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Base</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">ISH 4.5%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">IVA 16%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody><tr style="border-bottom:0.5px solid #F0EDE8;color:#1860A5"><td style="padding:7px 8px;font-weight:600">Hospedaje</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'base'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(hospR,'monto'))}</td></tr><tr style="border-bottom:0.5px solid #F0EDE8;color:#1D9E75"><td style="padding:7px 8px;font-weight:600">Consumos</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'base'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consG,'monto'))}</td></tr>${consE.length?`<tr style="border-bottom:0.5px solid #F0EDE8;color:#888"><td style="padding:7px 8px;font-weight:600">Exentos <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#888;color:#fff;font-size:9px;font-weight:700;vertical-align:middle;cursor:help" onmouseover="this.querySelector('span').style.display='block'" onmouseout="this.querySelector('span').style.display='none'">i<span style="display:none;position:absolute;left:20px;top:-4px;background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:400;white-space:nowrap;z-index:99">${EXENTOS_PRODS.join(', ')}</span></span></td><td style="padding:7px 8px;text-align:right">${fmt(sv(consE,'exento'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consE,'monto'))}</td></tr>`:''}<tr style="border-top:2px solid #EEE;font-weight:700;font-size:14px"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'iva')+sv(consG,'iva'))}</td><td style="padding:8px;text-align:right;color:#1A1916;font-size:15px">${fmt(sv(rep,'monto'))}</td></tr></tbody></table>`;
 
   const bancos=['transferencia','debito','stripe','efectivo'];
@@ -2697,8 +2697,18 @@ function exportarCierreExcel(){
     const rowBg=_toggle?null:'F2F2F2';
     const cs=bg=>bg?{fill:{fgColor:{rgb:bg}}}:{};
     const rep=METODOS_REPORTABLES.includes(r.pago);
-    const concepto=r.tipo==='hospedaje'?'Hospedaje':(CAT_LABELS[r.cat]||r.cat||r.concepto);
-    const producto=r.tipo==='hospedaje'?'':(r.concepto||'');
+    // Concepto = tipo de pago + categoria; Producto = nombre del producto
+    let concepto, producto;
+    if(r.tipo==='hospedaje'){
+      concepto=r.concepto||'Hospedaje'; // 'Anticipo Hospedaje' | 'Saldo Hospedaje'
+      producto='';
+    } else if(r.cat==='cenas'){
+      concepto=r.concepto||'Cena';      // 'Anticipo Cena' | 'Saldo Cena'
+      producto='Cena';
+    } else {
+      concepto=CAT_LABELS[r.cat]||r.cat||r.concepto;
+      producto=r.concepto||'';
+    }
     const nm=bg=>({...cs(bg),z:'#,##0.00'});
     detData.push([
       {v:r.cbId||'',s:cs(rowBg)},{v:r.fechaReserva||'',s:cs(rowBg)},{v:r.checkin||'',s:cs(rowBg)},{v:r.checkout||'',s:cs(rowBg)},{v:r.fecha||'',s:cs(rowBg)},
@@ -2716,7 +2726,7 @@ function exportarCierreExcel(){
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
   const consG=rep.filter(r=>r.tipo==='consumo'&&r.exento===0);
   const consE=rep.filter(r=>r.tipo==='consumo'&&r.exento>0);
-  const sv=(arr,f)=>arr.reduce((t,r)=>t+(r[f]||0),0);
+  const sv=(arr,f)=>Math.round(arr.reduce((t,r)=>t+(r[f]||0),0)*100)/100;
   // CFDI global with design
   const BLU='BDD7EE',GRN='C6EFCE',GRN2='E2EFDA';
   const hS=(bg,bold,fmt)=>({font:{bold:!!bold},fill:bg?{fgColor:{rgb:bg}}:{},z:fmt||'@'});
