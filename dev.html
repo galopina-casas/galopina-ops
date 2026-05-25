@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.10-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.11-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.10-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.11-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2530,23 +2530,39 @@ function initCierre(){
 function getCierreData(prefix){
   const res=gd(KR),cons=gd(KC),rows=[];
   res.forEach(r=>{
-    if((r.anticipo||0)>0&&r.antiFecha&&fmtDate(r.antiFecha).startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd'){
-      const bn=(r.base||0)*(1-(r.descuento||0)/100);
-      const ratio=r.total>0?r.anticipo/r.total:0;
-      rows.push({tipo:'hospedaje',concepto:'Anticipo hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+    // Helper: push hospedaje + cenas rows for a given payment
+    const pushPago=(concepto, monto, fecha, pago)=>{
+      if(!monto||!fecha||!pago||pago==='tbd'||pago==='pendiente')return;
+      const hospT=r.hospTotal||r.total||0;
+      const cenasT=r.consumoCena||0;
+      const totalT=r.total||0;
+      // Hospedaje portion
+      const ratioH=totalT>0?hospT/totalT:1;
+      const montoH=Math.round(monto*ratioH*100)/100;
+      const baseH=Math.round((r.base||0)*ratioH*100)/100;
+      const ishH=Math.round((r.ish||0)*ratioH*100)/100;
+      const ivaH=Math.round((r.iva||0)*ratioH*100)/100;
+      rows.push({tipo:'hospedaje',concepto,huesped:r.nombre,habitacion:r.habitacion,
         cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
-        fecha:fmtDate(r.antiFecha),pago:r.antiPago,monto:r.anticipo,
-        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0,
-        baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:r.total||0});
+        fecha,pago,monto:montoH,base:baseH,ish:ishH,iva:ivaH,exento:0,
+        baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:totalT});
+      // Cenas portion (if any)
+      if(cenasT>0){
+        const ratioC=totalT>0?cenasT/totalT:0;
+        const montoC=Math.round(monto*ratioC*100)/100;
+        const baseC=Math.round(montoC/1.16*100)/100;
+        const ivaC=Math.round((montoC-baseC)*100)/100;
+        rows.push({tipo:'consumo',concepto:'Cena',cat:'cenas',huesped:r.nombre,habitacion:r.habitacion,
+          cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
+          fecha,pago,monto:montoC,base:baseC,ish:0,iva:ivaC,exento:0,
+          baseRes:0,ishRes:0,ivaRes:0,totalRes:cenasT});
+      }
+    };
+    if((r.anticipo||0)>0&&r.antiFecha&&fmtDate(r.antiFecha).startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd'){
+      pushPago('Anticipo hospedaje',r.anticipo,fmtDate(r.antiFecha),r.antiPago);
     }
     if((r.saldo||0)>0&&r.saldFecha&&fmtDate(r.saldFecha).startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd'&&r.saldPago!=='pendiente'){
-      const bn=(r.base||0)*(1-(r.descuento||0)/100);
-      const ratio=r.total>0?r.saldo/r.total:0;
-      rows.push({tipo:'hospedaje',concepto:'Saldo hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
-        fecha:fmtDate(r.saldFecha),pago:r.saldPago,monto:r.saldo,
-        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0,
-        baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:r.total||0});
+      pushPago('Saldo hospedaje',r.saldo,fmtDate(r.saldFecha),r.saldPago);
     }
   });
   cons.forEach(c=>{
