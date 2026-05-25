@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2501,8 +2501,8 @@ function closeIngModal(){
 
 
 const EXENTOS_PRODS=['Miel bote','Propina'];
-const METODOS_REPORTABLES=['efectivo','transferencia','debito','stripe'];
-const METODOS_LABELS={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe'};
+const METODOS_REPORTABLES=['efectivo','transferencia','debito','stripe','cloudbeds'];
+const METODOS_LABELS={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe',cloudbeds:'CloudBeds'};
 
 function initCierre(){
   const mesEl=document.getElementById('cm-mes');
@@ -2560,7 +2560,7 @@ function renderCierre(){
   rows.forEach(r=>{const p=r.pago||'tbd';if(!byPago[p])byPago[p]=0;byPago[p]+=r.monto;});
   const totalMes=rows.reduce((s,r)=>s+r.monto,0);
   const totalRep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago)).reduce((s,r)=>s+r.monto,0);
-  const ORDER=['efectivo','transferencia','debito','stripe','mercadopago','efectivo-nd'];
+  const ORDER=['efectivo','transferencia','debito','stripe','cloudbeds','mercadopago','efectivo-nd'];
   let resHtml=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Método</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th><th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Contador</th></tr></thead><tbody>`;
   ORDER.forEach(p=>{if(!byPago[p])return;const rep=METODOS_REPORTABLES.includes(p);
     resHtml+=`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${METODOS_LABELS[p]||p}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(byPago[p])}</td><td style="padding:7px 8px;text-align:center">${rep?'<span style="color:#1D9E75;font-weight:700">&#x2713;</span>':'<span style="color:#CCC">&#x2715;</span>'}</td></tr>`;
