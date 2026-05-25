@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.22-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.23-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.22-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.23-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2748,10 +2748,10 @@ function exportarCierreExcel(){
   fis.push(['','','','','']);
   fis.push([
     {v:'TOTAL',s:hS(GRN2,1)},
-    {v:sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'),s:hS(GRN2,1,'#,##0.00')},
-    {v:sv(hospR,'ish'),s:hS(GRN2,1,'#,##0.00')},
-    {v:sv(hospR,'iva')+sv(consG,'iva'),s:hS(GRN2,1,'#,##0.00')},
-    {v:sv(rep,'monto'),s:hS(GRN2,1,'#,##0.00')}
+    {v:Math.round((sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},
+    {v:Math.round(sv(hospR,'ish')*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},
+    {v:Math.round((sv(hospR,'iva')+sv(consG,'iva'))*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},
+    {v:Math.round(sv(rep,'monto')*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)}
   ]);
   fis.push(['','','','','']);
   const ishReservas=Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100;
