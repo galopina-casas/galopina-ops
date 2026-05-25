@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.2-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.2-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -392,10 +392,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <option value="">Todos los meses</option>
     </select>
     <input type="text" id="eg-search" placeholder="Buscar proveedor..." oninput="renderEgresos()" style="height:32px;font-size:13px;width:200px">
-    <select id="eg-cat-filter" onchange="renderEgresos()" style="height:32px;font-size:13px">
-      <option value="">Todas las categorías</option>
-      <option value="__sin__">Sin categoría</option>
-    </select>
+    <input type="text" id="eg-cat-filter" placeholder="Buscar categoría..." oninput="renderEgresos()" style="height:32px;font-size:13px;width:200px">
     <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
       <input type="checkbox" id="eg-solo-sincat" onchange="renderEgresos()" style="width:15px;height:15px">
       Solo sin categoría
@@ -1979,11 +1976,7 @@ function initEgresos(){
     opt.value=m;opt.textContent=MN[parseInt(mo)-1]+' '+y;
     sel.appendChild(opt);
   });
-  // Populate category filter
-  const catSel=document.getElementById('eg-cat-filter');
-  while(catSel.options.length>2)catSel.remove(2);
-  const cats=[...new Set(gd(KE).map(e=>e.categoria).filter(Boolean))].sort();
-  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});
+
   renderEgresos();
 }
 
@@ -1995,8 +1988,7 @@ function renderEgresos(){
   let egresos=[...gd(KE)];
   if(mes)egresos=egresos.filter(e=>(e.fecha||'').startsWith(mes));
   if(search)egresos=egresos.filter(e=>(e.proveedor||'').toLowerCase().includes(search)||(e.descripcion||'').toLowerCase().includes(search));
-  if(catFilter==='__sin__')egresos=egresos.filter(e=>!e.categoria);
-  else if(catFilter)egresos=egresos.filter(e=>e.categoria===catFilter);
+  if(catFilter)egresos=egresos.filter(e=>(e.categoria||'').toLowerCase().includes(catFilter.toLowerCase()));
   if(soloSin)egresos=egresos.filter(e=>!e.categoria);
   egresos.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
 
@@ -2028,9 +2020,9 @@ function renderEgresos(){
   const rows=egresos.map(e=>{
     const sinCatStyle=!e.categoria?'background:rgba(250,238,218,0.4);':'';
     const catBadge=e.categoria
-      ?`<span style="background:#E1F5EE;color:#085041;border:0.5px solid #5DCAA5;border-radius:4px;padding:2px 7px;font-size:11px">${e.categoria}</span>`
-      :`<span style="background:#FAEEDA;color:#BA7517;border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer">⚠ Sin categoría</span>`;
-    return `<div style="display:grid;grid-template-columns:90px 1fr 90px 70px 130px;gap:8px;align-items:center;padding:8px 6px;border-bottom:0.5px solid #f0ede8;font-size:12px;${sinCatStyle}border-radius:${sinCatStyle?'6px':'0'}">
+      ?`<span style="background:#E1F5EE;color:#085041;border:0.5px solid #5DCAA5;border-radius:4px;padding:3px 7px;font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;cursor:pointer">${e.categoria}</span>`
+      :`<span style="background:#FAEEDA;color:#BA7517;border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer;display:inline-block">⚠ Sin categoría</span>`;
+    return `<div style="display:grid;grid-template-columns:90px 1fr 90px 70px 130px;gap:8px;align-items:start;padding:8px 6px;border-bottom:0.5px solid #f0ede8;font-size:12px;${sinCatStyle}border-radius:${sinCatStyle?'6px':'0'}">
       <span style="color:#888">${e.fecha||''}</span>
       <div>
         <p style="font-weight:500">${e.proveedor||''}</p>
@@ -2918,6 +2910,11 @@ function exportarCierreExcel(){
   const mes=document.getElementById('cm-mes').value;
   const anio=document.getElementById('cm-anio').value;
   const prefix=anio+'-'+mes;
+  const egSinCat=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)&&!e.categoria);
+  if(egSinCat.length){
+    showAlert(`Hay ${egSinCat.length} egreso${egSinCat.length>1?'s':''} sin categoría en este mes. Categorízalos antes de exportar.`,'error');
+    return;
+  }
   const rows=getCierreData(prefix);
   const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const mesNombre=MN[parseInt(mes)-1]+' '+anio;
