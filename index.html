@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.7</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.8</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.7</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.8</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1303,7 +1303,7 @@ function delLinea(id){lineas=lineas.filter(x=>x.id!==id);renderLineas()}
 function updateTotals(){
   const sub=lineas.reduce((s,l)=>s+(l.precio*l.cantidad),0);
   document.getElementById('c-sub').textContent=fmt(sub);
-  document.getElementById('c-iva').textContent=fmt(sub-sub/1.16);
+  const ivaNew=gd(KC).find(x=>x.id===window._editConsId)?.items?.reduce((s,i)=>s+(EXENTOS_PRODS.includes(i.nombre)?0:Math.round((i.precio*i.cantidad-(i.precio*i.cantidad)/1.16)*100)/100),0)||0;document.getElementById('c-iva').textContent=fmt(ivaNew);
   document.getElementById('c-total').textContent=fmt(sub);
 }
 function guardarConsumo(){
@@ -1622,13 +1622,13 @@ function updCI(cid,iid,f,v){
   const cons=gd(KC),c=cons.find(x=>x.id===cid);if(!c)return;
   const it=c.items.find(x=>x.id===iid);if(!it)return;
   it[f]=f==='nombre'?v:(f==='cantidad'?parseInt(v)||1:parseFloat(v)||0);
-  const sub=c.items.reduce((s,i)=>s+(i.precio*i.cantidad),0);c.subtotal=Math.round(sub/1.16*100)/100;c.iva=Math.round((sub-sub/1.16)*100)/100;c.total=sub;
+  const sub=c.items.reduce((s,i)=>s+(i.precio*i.cantidad),0);c.subtotal=Math.round(sub/1.16*100)/100;c.iva=Math.round(c.items.reduce((s,i)=>s+(EXENTOS_PRODS.includes(i.nombre)?0:(i.precio*i.cantidad-(i.precio*i.cantidad)/1.16)),0)*100)/100;c.total=sub;
   sd(KC,cons);renderCI(cid);
 }
 function delCI(cid,iid){
   const cons=gd(KC),c=cons.find(x=>x.id===cid);if(!c)return;
   c.items=c.items.filter(x=>x.id!==iid);
-  const sub=c.items.reduce((s,i)=>s+(i.precio*i.cantidad),0);c.subtotal=Math.round(sub/1.16*100)/100;c.iva=Math.round((sub-sub/1.16)*100)/100;c.total=sub;
+  const sub=c.items.reduce((s,i)=>s+(i.precio*i.cantidad),0);c.subtotal=Math.round(sub/1.16*100)/100;c.iva=Math.round(c.items.reduce((s,i)=>s+(EXENTOS_PRODS.includes(i.nombre)?0:(i.precio*i.cantidad-(i.precio*i.cantidad)/1.16)),0)*100)/100;c.total=sub;
   sd(KC,cons);if(!c.items.length){sd(KC,gd(KC).filter(x=>x.id!==cid));renderHistorial();renderDash()}else renderCI(cid);
 }
 function saveCH(cid){
@@ -2313,7 +2313,7 @@ function ckConfirm(){
     // recalc consumo totals
     const sub=((c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0));
     c.subtotal=Math.round(sub/1.16*100)/100;
-    c.iva=Math.round((sub-sub/1.16)*100)/100;
+    c.iva=Math.round(c.items.reduce((s,i)=>s+(EXENTOS_PRODS.includes(i.nombre)?0:(i.precio*i.cantidad-(i.precio*i.cantidad)/1.16)),0)*100)/100;
     c.total=sub;
   });
   if(CK_EX.length){
