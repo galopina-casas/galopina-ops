@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.2</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.3</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.2</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.3</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2527,13 +2527,13 @@ function getCierreData(prefix){
         fecha:fmtDate(r.antiFecha),pago:r.antiPago,monto:r.anticipo,
         base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0});
     }
-    (r.pagos||[]).filter(p=>p.tipo==='saldo'&&fmtDate(p.fecha).startsWith(prefix)&&p.pago!=='tbd').forEach(p=>{
+    if((r.saldo||0)>0&&r.saldFecha&&fmtDate(r.saldFecha).startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd'&&r.saldPago!=='pendiente'){
       const bn=(r.base||0)*(1-(r.descuento||0)/100);
-      const ratio=r.total>0?p.monto/r.total:0;
+      const ratio=r.total>0?r.saldo/r.total:0;
       rows.push({tipo:'hospedaje',concepto:'Saldo hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        fecha:fmtDate(p.fecha),pago:p.pago,monto:p.monto,
+        fecha:fmtDate(r.saldFecha),pago:r.saldPago,monto:r.saldo,
         base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0});
-    });
+    }
   });
   cons.forEach(c=>{
     (c.items||[]).forEach(it=>{
