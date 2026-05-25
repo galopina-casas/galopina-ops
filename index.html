@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.23</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.27</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.23</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.27</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -528,7 +528,7 @@ const KR='KR',KP='KP',KH='KH',KC='KC';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwFZFlYCivP6Kp-qhJccbCpPhjklHZTgndFrib7l8rxRu8Vn9EhQ6lZE1O9zwwxoKQh/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwUQ_aAVpAxo_w-GGQKWtm04dtZws3x6yi_hE30LcHjbTPN-JoEpcIzYblnr_LPuTWZ/exec';
 const ENV='prod'; // 'dev' | 'prod'
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos'};
 
@@ -1043,7 +1043,7 @@ function guardarRes(){
       habitacion, checkin:ci, checkout:co, noches,
       origen:document.getElementById('r-origen').value,
       estado:document.getElementById('r-estado').value,
-      fuente:'manual',
+      fuente:'manual', fechaCreacion:new Date().toISOString().slice(0,10),
       base:Math.round(base*100)/100, ish:Math.round(ish*100)/100, iva:Math.round(iva*100)/100,
       total:Math.round(total*100)/100, descuento:desc,
       anticipo:Math.round(anti*100)/100, antiPct:total>0?Math.round(anti/total*100):0,
@@ -1155,7 +1155,8 @@ function origenLogo(origen, fuenteOriginal){
 function resHtml(r,i){
   const saldoPend=(r.saldo||0)>0&&!r.saldFecha;
   const eb=r.estado==='checkin'?'b-efectivo':r.estado==='checkout'?'b-transferencia':'b-stripe';
-  return `<div class="res-item">
+  const isManual=!r.cbId;
+  return `<div class="res-item" style="border-color:${isManual?'#C49A6C':'#E0E0DA'};border-width:${isManual?'1.5px':'0.5px'}">
     <div style="flex:1;min-width:0">
       <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:3px">
         ${origenLogo(r.origen, r.fuente)}
@@ -1373,7 +1374,8 @@ function guardarConsumo(){
         subtotal:Math.round(sub/1.16*100)/100,
         iva:Math.round((sub-sub/1.16)*100)/100,
         total:sub,
-        nota:document.getElementById('c-nota').value
+        nota:document.getElementById('c-nota').value,
+        fechaCreacion:new Date().toISOString().slice(0,10)
       });
     }
     window._editConsId=null;
@@ -1641,29 +1643,33 @@ function delCon(cid){sd(KC,gd(KC).filter(x=>x.id!==cid));renderHistorial();rende
 function buildIngresos(){
   const res=gd(KR),cons=gd(KC),rows=[];
   res.forEach(r=>{
+    const resId=String(r.id);
     // Anticipo
     if((r.anticipo||0)>0)
-      rows.push({id:'RA-'+r.id,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+      rows.push({id:'RA-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
         fecha:r.antiFecha,monto:r.anticipo,pago:r.antiPago,
         base:r.base,ish:r.ish,iva:r.iva,descuento:r.descuento,label:'Anticipo hospedaje',noches:r.noches});
     // Saldo pendiente (not yet paid)
     if((r.saldo||0)>0 && !r.saldFecha)
-      rows.push({id:'RSP-'+r.id,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+      rows.push({id:'RSP-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
         fecha:'',monto:r.saldo,pago:'pendiente',label:'Saldo pendiente'});
-    // Saldo paid via manual entry (saldFecha set, saldo still>0 means partially paid edge case)
+    // Saldo paid
     if((r.saldo||0)>0 && r.saldFecha)
-      rows.push({id:'RS-'+r.id,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+      rows.push({id:'RS-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
         fecha:r.saldFecha,monto:r.saldo,pago:r.saldPago,label:'Saldo hospedaje'});
-    // Saldo paid via checkout (r.pagos entries tagged tipo:'saldo')
     (r.pagos||[]).filter(p=>p.tipo==='saldo').forEach((p,i)=>{
-      rows.push({id:'RP-'+r.id+'-'+i,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+      rows.push({id:'RP-'+r.id+'-'+i,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
         fecha:p.fecha,monto:p.monto,pago:p.pago,label:'Saldo hospedaje'});
     });
   });
-  cons.forEach(c=>rows.push({id:'C-'+c.id,tipo:'consumo',huesped:c.huesped,habitacion:c.habitacion,
-    fecha:c.fecha,monto:c.total,
-    pago:c.items&&c.items.length&&c.items.every(i=>i.pago===c.items[0].pago)?c.items[0].pago:'mixto',
-    items:c.items,nota:c.nota,label:'Consumos'}));
+  cons.forEach(c=>{
+    const resC=gd(KR).find(r=>r.id===c.reservaId);
+    const resId=resC?String(resC.id):('cons-'+c.id);
+    rows.push({id:'C-'+c.id,resId,tipo:'consumo',huesped:c.huesped,habitacion:c.habitacion,
+      fecha:c.fecha,monto:c.total,
+      pago:c.items&&c.items.length&&c.items.every(i=>i.pago===c.items[0].pago)?c.items[0].pago:'mixto',
+      items:c.items,nota:c.nota,label:'Consumos'});
+  });
   return rows.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
 }
 
@@ -1677,11 +1683,12 @@ function toggleIngRow(gKey){
     // Render modal content inline (reuse openIngModal logic)
     const inline=document.getElementById('ing-inline-'+gKey);
     if(inline&&!inline.innerHTML){
-      // Temporarily use modal to generate HTML, then copy
-      openIngModal(gKey);
-      const modalBody=document.getElementById('ing-modal-body');
-      if(modalBody)inline.innerHTML=modalBody.innerHTML;
-      closeIngModal();
+      try{
+        openIngModal(gKey);
+        const modalBody=document.getElementById('ing-modal-body');
+        if(modalBody)inline.innerHTML=modalBody.innerHTML;
+      }catch(e){console.error('toggleIngRow error:',e);}
+      finally{closeIngModal();}
     }
   }
 }
@@ -1705,22 +1712,23 @@ function renderIngresos(){
     <div class="ing-sum"><p class="lbl">Consumos</p><p class="val" style="color:#1D9E75">${fmt(totC)}</p></div>
     <div class="ing-sum"><p class="lbl">Pendiente cobro</p><p class="val" style="color:#E24B4A">${fmt(pend)}</p></div>`;
 
-  // Group rows by guest
-  const byGuest={};
-  rows.forEach(r=>{if(!byGuest[r.huesped])byGuest[r.huesped]=[];byGuest[r.huesped].push(r);});
+  // Group rows by reservation id
+  const byRes={};
+  rows.forEach(r=>{if(!byRes[r.resId])byRes[r.resId]=[];byRes[r.resId].push(r);});
   const box=document.getElementById('ing-list');
-  if(!Object.keys(byGuest).length){box.innerHTML='<p class="empty">Sin ingresos</p>';return;}
+  if(!Object.keys(byRes).length){box.innerHTML='<p class="empty">Sin ingresos</p>';return;}
 
-  // For header info, get reservation data per guest
+  // For header info, get reservation data per resId
   const resMap={};
-  gd(KR).forEach(r=>resMap[r.nombre]=r);
+  gd(KR).forEach(r=>resMap[String(r.id)]=r);
 
-  ING_CACHE=byGuest;
-  box.innerHTML=Object.entries(byGuest).map(([nombre,items])=>{
+  ING_CACHE=byRes;
+  box.innerHTML=Object.entries(byRes).map(([resId,items])=>{
+    const nombre=items[0].huesped;
     const tot=items.reduce((s,i)=>s+i.monto,0);
     const pendCount=items.filter(i=>!i.pago||i.pago==='pendiente'||i.pago==='tbd').length;
-    const gKey=nombre.replace(/[^a-zA-Z0-9]/g,'_');
-    const res=resMap[nombre];
+    const gKey=resId.replace(/[^a-zA-Z0-9]/g,'_');
+    const res=resMap[resId];
 
     // Header subtitle: habitacion · checkin → checkout · Saldo
     const subInfo=res
@@ -2035,7 +2043,7 @@ function processImport(rows, preview){
         pais:String(pais).trim(),
         habitacion,
         checkin:ci, checkout:co, noches,
-        origen, estado, fuente:fuenteRaw||'cloudbeds',
+        origen, estado, fuente:fuenteRaw||'cloudbeds', fechaCreacion:new Date().toISOString().slice(0,10),
         tarifaNoche:noches>0?Math.round(tarifaTotal/noches):tarifaTotal,
         base, ish, iva,
         total:Math.round(totalConImpuestos*100)/100,
@@ -2321,7 +2329,7 @@ function ckConfirm(){
     const sub=CK_EX.reduce((s,e)=>s+e.precio*e.cantidad,0);
     cons.push({id:Date.now(),reservaId:CK_ID,huesped:r.nombre,habitacion:r.habitacion,
       items:CK_EX.map(e=>({id:Date.now()+Math.random(),cat:e.cat,nombre:e.nombre,cantidad:e.cantidad,precio:e.precio,pago:e.pago,fechaPago:hoy})),
-      subtotal:Math.round(sub/1.16*100)/100,iva:Math.round((sub-sub/1.16)*100)/100,total:sub,nota:'Extras checkout'});
+      subtotal:Math.round(sub/1.16*100)/100,iva:Math.round((sub-sub/1.16)*100)/100,total:sub,nota:'Extras checkout',fechaCreacion:new Date().toISOString().slice(0,10)});
   }
   r.estado='checkout';sd(KR,res);sd(KC,cons);
   ckCancel();renderDash();showAlert('Check-out completado para '+r.nombre);
@@ -2335,10 +2343,11 @@ function closeIngModal(){
   document.getElementById('ing-modal-overlay').style.display='none';
 }
 function openIngModal(gKey){
-  const nombre=Object.keys(ING_CACHE).find(n=>n.replace(/[^a-zA-Z0-9]/g,'_')===gKey);
+  const resId=Object.keys(ING_CACHE).find(n=>n.replace(/[^a-zA-Z0-9]/g,'_')===gKey);
+  const nombre=ING_CACHE[resId]?.[0]?.huesped||'';
   if(!nombre)return;
-  const items=ING_CACHE[nombre];
-  const res=gd(KR).find(r=>r.nombre===nombre);
+  const items=ING_CACHE[resId];
+  const res=gd(KR).find(r=>String(r.id)===resId)||gd(KR).find(r=>r.nombre===nombre);
   document.getElementById('ing-modal-title').textContent=nombre;
   document.getElementById('ing-modal-sub').textContent=res
     ? res.habitacion+' \u00b7 '+fmtDate(res.checkin)+' \u2192 '+fmtDate(res.checkout) : '';
@@ -2352,7 +2361,7 @@ function openIngModal(gKey){
   const grandTot=totHosp+totCons;
 
   // Fiscal base for hospedaje
-  const rr=gd(KR).find(r=>r.nombre===nombre);
+  const rr=gd(KR).find(r=>String(r.id)===resId)||gd(KR).find(r=>r.nombre===nombre);
   let bnT=0,ishT=0,ivaT=0;
   const grandHosp=hospItems.reduce((s,i)=>s+i.monto,0);
   if(rr&&rr.base){bnT=parseFloat(rr.base)||0;ishT=bnT*0.045;ivaT=bnT*0.16;}
