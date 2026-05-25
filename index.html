@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.3</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.4</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.3</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.4</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -520,7 +520,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
 <script>
 const fmtDate=v=>{if(!v)return'';const s=String(v);return s.includes('T')?s.split('T')[0]:s;};
 function sanitizeDates(arr){return arr.map(r=>{const o={};Object.keys(r).forEach(k=>{const v=r[k];o[k]=(typeof v==='string'&&v.length>10&&v[10]==='T')?v.split('T')[0]:v;});return o;});}
@@ -2524,15 +2524,19 @@ function getCierreData(prefix){
       const bn=(r.base||0)*(1-(r.descuento||0)/100);
       const ratio=r.total>0?r.anticipo/r.total:0;
       rows.push({tipo:'hospedaje',concepto:'Anticipo hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+        cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
         fecha:fmtDate(r.antiFecha),pago:r.antiPago,monto:r.anticipo,
-        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0});
+        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0,
+        baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:r.total||0});
     }
     if((r.saldo||0)>0&&r.saldFecha&&fmtDate(r.saldFecha).startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd'&&r.saldPago!=='pendiente'){
       const bn=(r.base||0)*(1-(r.descuento||0)/100);
       const ratio=r.total>0?r.saldo/r.total:0;
       rows.push({tipo:'hospedaje',concepto:'Saldo hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+        cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
         fecha:fmtDate(r.saldFecha),pago:r.saldPago,monto:r.saldo,
-        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0});
+        base:Math.round(bn*ratio*100)/100,ish:Math.round(bn*ratio*0.045*100)/100,iva:Math.round(bn*ratio*0.16*100)/100,exento:0,
+        baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:r.total||0});
     }
   });
   cons.forEach(c=>{
@@ -2543,8 +2547,11 @@ function getCierreData(prefix){
       const esEx=EXENTOS_PRODS.includes(it.nombre);
       const base=esEx?0:Math.round(total/1.16*100)/100;
       const iva=esEx?0:Math.round((total-base)*100)/100;
+      const resC=gd(KR).find(rr=>rr.id===c.reservaId||rr.nombre===c.huesped);
       rows.push({tipo:'consumo',concepto:it.nombre,huesped:c.huesped,habitacion:c.habitacion,
-        fecha:fmtDate(it.fechaPago),pago:it.pago,monto:total,base,ish:0,iva,exento:esEx?total:0});
+        cbId:resC?.cbId||resC?.id||'',checkin:resC?fmtDate(resC.checkin):'',checkout:resC?fmtDate(resC.checkout):'',
+        fecha:fmtDate(it.fechaPago),pago:it.pago,monto:total,base,ish:0,iva,exento:esEx?total:0,
+        baseRes:resC?.base||0,ishRes:resC?.ish||0,ivaRes:resC?.iva||0,totalRes:resC?.total||0});
     });
   });
   return rows;
@@ -2602,9 +2609,40 @@ function exportarCierreExcel(){
   const mesNombre=MN[parseInt(mes)-1]+' '+anio;
   if(!rows.length){showAlert('Sin ingresos en este periodo','error');return;}
   const wb=XLSX.utils.book_new();
-  const det=[['Fecha','Huésped','Habitación','Concepto','Método','Base','ISH','IVA','Exento','Total','Para contador']];
-  rows.forEach(r=>det.push([r.fecha,r.huesped,r.habitacion||'',r.concepto,METODOS_LABELS[r.pago]||r.pago,r.base,r.ish,r.iva,r.exento,r.monto,METODOS_REPORTABLES.includes(r.pago)?'Sí':'No']));
-  const ws1=XLSX.utils.aoa_to_sheet(det);
+
+  // Sort by checkin then fecha pago
+  const rowsSorted=[...rows].sort((a,b)=>{
+    const ci=(a.checkin||'').localeCompare(b.checkin||'');
+    if(ci!==0)return ci;
+    return (a.fecha||'').localeCompare(b.fecha||'');
+  });
+
+  // Headers with color groups
+  const detHeaders=[
+    {v:'Núm. reserva',  g:'id'},{v:'Fecha entrada',g:'id'},{v:'Fecha salida',g:'id'},
+    {v:'Fecha pago',    g:'id'},{v:'Huésped',      g:'id'},{v:'Habitación',  g:'id'},{v:'Concepto',g:'id'},
+    {v:'Método pago',   g:'pago'},{v:'Base pago',  g:'pago'},{v:'ISH pago',  g:'pago'},
+    {v:'IVA pago',      g:'pago'},{v:'Exento pago',g:'pago'},{v:'Total pago',g:'pago'},
+    {v:'Base Reserva',  g:'res'},{v:'ISH Reserva', g:'res'},{v:'IVA Reserva',g:'res'},{v:'Total Reserva',g:'res'},
+    {v:'Para contador', g:'cnt'}
+  ];
+  const GROUP_COLORS={id:'BDD7EE',pago:'FCE4D6',res:'C6EFCE',cnt:null};
+  const hdrStyle=bg=>({font:{bold:true},fill:bg?{fgColor:{rgb:bg}}:{},border:{bottom:{style:'thin',color:{rgb:'888888'}}}});
+
+  const detData=[detHeaders.map(h=>({v:h.v,s:hdrStyle(GROUP_COLORS[h.g])}))];
+  rowsSorted.forEach(r=>{
+    const rep=METODOS_REPORTABLES.includes(r.pago);
+    detData.push([
+      {v:r.cbId||''},  {v:r.checkin||''},{v:r.checkout||''},{v:r.fecha||''},
+      {v:r.huesped},{v:r.habitacion||''},{v:r.concepto},
+      {v:METODOS_LABELS[r.pago]||r.pago},{v:r.base},{v:r.ish},{v:r.iva},{v:r.exento},{v:r.monto},
+      {v:r.baseRes||0},{v:r.ishRes||0},{v:r.ivaRes||0},{v:r.totalRes||0},
+      {v:rep?'Sí':'No'}
+    ]);
+  });
+  const ws1=XLSX.utils.aoa_to_sheet(detData);
+  // Column widths
+  ws1['!cols']=[{wch:18},{wch:13},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
   XLSX.utils.book_append_sheet(wb,ws1,'Detalle');
   const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
