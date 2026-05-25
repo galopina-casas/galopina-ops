@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.18-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.19-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.18-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.19-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2589,6 +2589,7 @@ function renderCierre(){
   const anio=document.getElementById('cm-anio').value;
   if(!mes||!anio)return;
   const prefix=anio+'-'+mes;
+  const mesNombre=MESES[parseInt(mes)-1]+' '+anio;
   const rows=getCierreData(prefix);
   const byPago={};
   rows.forEach(r=>{const p=r.pago||'tbd';if(!byPago[p])byPago[p]=0;byPago[p]+=r.monto;});
@@ -2739,18 +2740,18 @@ function exportarCierreExcel(){
   const fis=[
     [{v:'REPORTE FISCAL — '+mesNombre,s:{font:{bold:true,sz:12}}},'','','',''],
     ['','','','',''],
-    [{v:'Concepto',s:hS(BLU,1)},{v:'Base',t:'n',z:'#,##0.00',s:hS(BLU,1)},{v:'ISH 4.5%',t:'n',z:'#,##0.00',s:hS(BLU,1)},{v:'IVA 16%',t:'n',z:'#,##0.00',s:hS(BLU,1)},{v:'Total',t:'n',z:'#,##0.00',s:hS(BLU,1)}],
-    [{v:'Hospedaje'},{v:sv(hospR,'base'),s:{z:'#,##0.00'}},{v:sv(hospR,'ish'),s:{z:'#,##0.00'}},{v:sv(hospR,'iva'),s:{z:'#,##0.00'}},{v:sv(hospR,'monto'),s:{z:'#,##0.00'}}],
-    [{v:'Consumos'},{v:sv(consG,'base'),s:{z:'#,##0.00'}},{v:0},{v:sv(consG,'iva'),s:{z:'#,##0.00'}},{v:sv(consG,'monto'),s:{z:'#,##0.00'}}]
+    [{v:'Concepto',s:hS(BLU,1)},{v:'Base',s:hS(BLU,1)},{v:'ISH 4.5%',s:hS(BLU,1)},{v:'IVA 16%',s:hS(BLU,1)},{v:'Total',s:hS(BLU,1)}],
+    [{v:'Hospedaje'},{v:sv(hospR,'base'),s:{numFmt:'#,##0.00'}},{v:sv(hospR,'ish'),s:{numFmt:'#,##0.00'}},{v:sv(hospR,'iva'),s:{numFmt:'#,##0.00'}},{v:sv(hospR,'monto'),s:{numFmt:'#,##0.00'}}],
+    [{v:'Consumos'},{v:sv(consG,'base'),s:{numFmt:'#,##0.00'}},{v:0},{v:sv(consG,'iva'),s:{numFmt:'#,##0.00'}},{v:sv(consG,'monto'),s:{numFmt:'#,##0.00'}}]
   ];
-  if(consE.length)fis.push([{v:'Exentos'},{v:sv(consE,'exento'),s:{z:'#,##0.00'}},{v:0},{v:0},{v:sv(consE,'monto'),s:{z:'#,##0.00'}}]);
+  if(consE.length)fis.push([{v:'Exentos'},{v:sv(consE,'exento'),s:{numFmt:'#,##0.00'}},{v:0},{v:0},{v:sv(consE,'monto'),s:{numFmt:'#,##0.00'}}]);
   fis.push(['','','','','']);
   fis.push([
     {v:'TOTAL',s:hS(GRN2,1)},
-    {v:sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'),t:'n',z:'#,##0.00',s:hS(GRN2,1)},
-    {v:sv(hospR,'ish'),t:'n',z:'#,##0.00',s:hS(GRN2,1)},
-    {v:sv(hospR,'iva')+sv(consG,'iva'),t:'n',z:'#,##0.00',s:hS(GRN2,1)},
-    {v:sv(rep,'monto'),t:'n',z:'#,##0.00',s:hS(GRN2,1)}
+    {v:sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'),s:{numFmt:'#,##0.00',font:{bold:true},fill:{fgColor:{rgb:GRN2}}}},
+    {v:sv(hospR,'ish'),s:{numFmt:'#,##0.00',font:{bold:true},fill:{fgColor:{rgb:GRN2}}}},
+    {v:sv(hospR,'iva')+sv(consG,'iva'),s:{numFmt:'#,##0.00',font:{bold:true},fill:{fgColor:{rgb:GRN2}}}},
+    {v:sv(rep,'monto'),s:{numFmt:'#,##0.00',font:{bold:true},fill:{fgColor:{rgb:GRN2}}}}
   ]);
   const ws2=XLSX.utils.aoa_to_sheet(fis);
   ws2['!cols']=[{wch:22},{wch:14},{wch:12},{wch:12},{wch:14}];
@@ -2760,7 +2761,7 @@ function exportarCierreExcel(){
   const met=[
     [{v:'TOTALES POR MÉTODO — '+mesNombre,s:{font:{bold:true,sz:12}}},'',''],
     ['','',''],
-    [{v:'Método',s:hS(BLU,1)},{v:'Monto',t:'n',z:'#,##0.00',s:hS(BLU,1)},{v:'Contador',s:hS(BLU,1)}]
+    [{v:'Método',s:hS(BLU,1)},{v:'Monto',s:hS(BLU,1)},{v:'Contador',s:hS(BLU,1)}]
   ];
   let grandTot=0;
   ORDER.forEach(p=>{
@@ -2770,12 +2771,12 @@ function exportarCierreExcel(){
     grandTot+=t;
     met.push([
       {v:METODOS_LABELS[p]||p},
-      {v:t,t:'n',z:'#,##0.00',s:{fill:rep2?{fgColor:{rgb:GRN}}:{fgColor:{rgb:'FCE4D6'}}}},
+      {v:t,s:{numFmt:'#,##0.00',fill:rep2?{fgColor:{rgb:GRN}}:{fgColor:{rgb:'FCE4D6'}}}},
       {v:rep2?'Sí':'No',s:{font:{bold:true,color:{rgb:rep2?'1B5E20':'B71C1C'}}}}
     ]);
   });
   met.push(['','','']);
-  met.push([{v:'Total',s:hS(GRN2,1)},{v:grandTot,t:'n',z:'#,##0.00',s:hS(GRN2,1)},{v:'',s:hS(GRN2,0)}]);
+  met.push([{v:'Total',s:hS(GRN2,1)},{v:grandTot,s:{numFmt:'#,##0.00',font:{bold:true},fill:{fgColor:{rgb:GRN2}}}},{v:'',s:hS(GRN2,0)}]);
   const ws3=XLSX.utils.aoa_to_sheet(met);
   ws3['!cols']=[{wch:20},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
