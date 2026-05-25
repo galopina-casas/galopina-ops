@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.15-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.16-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.15-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.16-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2658,10 +2658,10 @@ function exportarCierreExcel(){
       {v:fmtDate(r.checkout)||'',s:cs(bg)},
       {v:r.nombre||'',s:cs(bg)},
       {v:r.origen||'',s:cs(bg)},
-      {v:r.base||0,s:{...cs(bg),z:'#,##0.00'}},
-      {v:r.ish||0,s:{...cs(bg),z:'#,##0.00'}},
-      {v:r.iva||0,s:{...cs(bg),z:'#,##0.00'}},
-      {v:r.total||0,s:{...cs(bg),z:'#,##0.00'}},
+      {v:r.base||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+      {v:r.ish||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+      {v:r.iva||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+      {v:r.total||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
     ]);
   });
   const wsRes=XLSX.utils.aoa_to_sheet(resRows);
@@ -2709,12 +2709,12 @@ function exportarCierreExcel(){
       concepto=CAT_LABELS[r.cat]||r.cat||r.concepto;
       producto=r.concepto||'';
     }
-    const nm=bg=>({...cs(bg),z:'#,##0.00'});
+    const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
     detData.push([
       {v:r.cbId||'',s:cs(rowBg)},{v:r.fechaReserva||'',s:cs(rowBg)},{v:r.checkin||'',s:cs(rowBg)},{v:r.checkout||'',s:cs(rowBg)},{v:r.fecha||'',s:cs(rowBg)},
       {v:r.huesped,s:cs(rowBg)},{v:concepto,s:cs(rowBg)},{v:producto,s:cs(rowBg)},
-      {v:METODOS_LABELS[r.pago]||r.pago,s:cs(rowBg)},{v:r.base,s:nm(rowBg)},{v:r.ish,s:nm(rowBg)},{v:r.iva,s:nm(rowBg)},{v:r.exento,s:nm(rowBg)},{v:r.monto,s:nm(rowBg)},
-      {v:r.baseRes||0,s:nm(rowBg)},{v:r.ishRes||0,s:nm(rowBg)},{v:r.ivaRes||0,s:nm(rowBg)},{v:r.totalRes||0,s:nm(rowBg)},
+      {v:METODOS_LABELS[r.pago]||r.pago,s:cs(rowBg)},nm(rowBg,r.base),nm(rowBg,r.ish),nm(rowBg,r.iva),nm(rowBg,r.exento),nm(rowBg,r.monto),
+      nm(rowBg,r.baseRes||0),nm(rowBg,r.ishRes||0),nm(rowBg,r.ivaRes||0),nm(rowBg,r.totalRes||0),
       {v:rep?'Sí':'No',s:cs(rowBg)}
     ]);
   });
