@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.27-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.27-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -149,6 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <button class="tab" onclick="showTab('ingresos')">Resumen Ingresos</button>
     <button class="tab" id="tcierre" onclick="showTab('cierre')">📊 Cierre Mensual</button>
   <button class="tab" id="tchk" style="display:none" onclick="showTab('checkout')">&#x1F3C1; Checkout</button>
+  <button class="tab" id="tab-egresos" onclick="showTab('egresos')">Egresos</button>
   <button class="tab" id="tab-admin" onclick="showTab('admin')">Catálogos</button>
   </div>
 
@@ -381,7 +382,41 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <div id="ing-list"></div>
   </div>
 
-  <div class="sec" id="sec-admin">
+  <div class="sec" id="sec-egresos">
+  <div class="sh"><h2>Egresos</h2>
+    <button class="btn btn-primary btn-sm" id="btn-import-zip" onclick="importarZipSAT()">⬆ Importar ZIP del SAT</button>
+    <input type="file" id="zip-input" accept=".zip" style="display:none" onchange="procesarZip(this)">
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
+    <select id="eg-mes" onchange="renderEgresos()" style="height:32px;font-size:13px">
+      <option value="">Todos los meses</option>
+    </select>
+    <input type="text" id="eg-search" placeholder="Buscar proveedor..." oninput="renderEgresos()" style="height:32px;font-size:13px;width:200px">
+    <select id="eg-cat-filter" onchange="renderEgresos()" style="height:32px;font-size:13px">
+      <option value="">Todas las categorías</option>
+      <option value="__sin__">Sin categoría</option>
+    </select>
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+      <input type="checkbox" id="eg-solo-sincat" onchange="renderEgresos()" style="width:15px;height:15px">
+      Solo sin categoría
+    </label>
+  </div>
+  <div id="eg-metrics" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
+  <div id="eg-progress" style="margin-bottom:12px"></div>
+  <div class="card"><p class="ctitle" style="margin-bottom:8px">Facturas del mes</p><div id="eg-list"></div></div>
+  <!-- Categoria modal -->
+  <div id="eg-modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeEgModal()">
+    <div style="background:#fff;border-radius:12px;padding:1.2rem;width:96%;max-width:500px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 id="eg-modal-title" style="font-size:15px;font-weight:600"></h3>
+        <button onclick="closeEgModal()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#888">✕</button>
+      </div>
+      <div id="eg-modal-body"></div>
+    </div>
+  </div>
+</div>
+
+<div class="sec" id="sec-admin">
     <div class="card">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
         <p class="ctitle" style="margin-bottom:0">Catálogo de productos</p>
@@ -524,16 +559,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <script>
 const fmtDate=v=>{if(!v)return'';const s=String(v);return s.includes('T')?s.split('T')[0]:s;};
 function sanitizeDates(arr){return arr.map(r=>{const o={};Object.keys(r).forEach(k=>{const v=r[k];o[k]=(typeof v==='string'&&v.length>10&&v[10]==='T')?v.split('T')[0]:v;});return o;});}
-const KR='KR',KP='KP',KH='KH',KC='KC';
+const KR='KR',KP='KP',KH='KH',KC='KC',KE='KE',KRE='KRE',KCE='KCE';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwUQ_aAVpAxo_w-GGQKWtm04dtZws3x6yi_hE30LcHjbTPN-JoEpcIzYblnr_LPuTWZ/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx4jh-3AuqLXZ8BQmuRHSD0j2mogjJvCwiqmzQ4kH6vQ5U7c6HfguTbw5Ntj9qs8akg/exec';
 const ENV='dev'; // 'dev' | 'prod'
-const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos'};
+const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos'};
 
 // In-memory cache (loaded once at login)
-const CACHE={KR:[],KP:[],KH:[],KC:[]};
+const CACHE={KR:[],KP:[],KH:[],KC:[],KE:[],KRE:[],KCE:[]};
 
 // Sync read from cache (same API as before — no code changes needed)
 const gd=(k,d=[])=>CACHE[k]&&CACHE[k].length?CACHE[k]:(d||[]);
@@ -554,7 +589,7 @@ const sd=(k,v)=>{
 
 // Load all sheets into cache
 async function loadAllSheets(){
-  const keys=['KR','KP','KH','KC'];
+  const keys=['KR','KP','KH','KC','KE','KRE','KCE'];
   await Promise.all(keys.map(async k=>{
     try{
       const res=await fetch(SCRIPT_URL+'?action=read&sheet='+SHEET_MAP[k]+'&env='+ENV);
@@ -678,6 +713,7 @@ function showTab(t){
   if(t==='consumos'){initConsList();renderConsList();}
   if(t==='ingresos'){populateIngMeses();renderIngresos()}
   if(t==='admin')renderAdmin();
+  if(t==='egresos')initEgresos();
   if(t==='nuevo-consumo'){populateAll();}
   if(t==='nueva-reserva'){populateAll();}
 }
@@ -1834,6 +1870,243 @@ function clearFiltros(){
   document.getElementById('ing-mes').value='';document.getElementById('ing-cli').value='';document.getElementById('ing-tipo').value='';renderIngresos();
 }
 
+
+// ============================================================
+// EGRESOS MODULE
+// ============================================================
+const FORMA_PAGO_MAP={'01':'Efectivo','02':'Cheque','03':'Transferencia','04':'Tarjeta crédito',
+  '28':'T. débito','99':'Por definir'};
+const METODO_PAGO_MAP={'PUE':'Pago en una exhibición','PPD':'Pago en parcialidades'};
+
+function importarZipSAT(){document.getElementById('zip-input').click();}
+
+async function procesarZip(input){
+  const file=input.files[0];
+  if(!file)return;
+  input.value='';
+  showAlert('Procesando ZIP...','info');
+  try{
+    const JSZip=await loadJSZip();
+    const zip=await JSZip.loadAsync(file);
+    const xmlFiles=Object.keys(zip.files).filter(n=>n.toLowerCase().endsWith('.xml'));
+    if(!xmlFiles.length){showAlert('No se encontraron XMLs en el ZIP','error');return;}
+    const egresos=[...gd(KE)];
+    const reglas=gd(KRE);
+    let nuevas=0,duplicadas=0;
+    for(const fname of xmlFiles){
+      const xmlStr=await zip.files[fname].async('string');
+      const egreso=parseCFDI(xmlStr);
+      if(!egreso)continue;
+      if(egresos.find(e=>e.uuid===egreso.uuid)){duplicadas++;continue;}
+      // Apply rules
+      const regla=reglas.find(r=>r.rfc===egreso.rfc);
+      if(regla)egreso.categoria=regla.categoria;
+      egresos.push(egreso);
+      nuevas++;
+    }
+    sd(KE,egresos);
+    renderEgresos();
+    showAlert(`${nuevas} facturas importadas${duplicadas?' · '+duplicadas+' duplicadas omitidas':''}`, 'success');
+  }catch(e){
+    console.error(e);
+    showAlert('Error al procesar ZIP: '+e.message,'error');
+  }
+}
+
+async function loadJSZip(){
+  if(window.JSZip)return window.JSZip;
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload=()=>res(window.JSZip);
+    s.onerror=()=>rej(new Error('No se pudo cargar JSZip'));
+    document.head.appendChild(s);
+  });
+}
+
+function parseCFDI(xmlStr){
+  try{
+    const parser=new DOMParser();
+    const doc=parser.parseFromString(xmlStr,'text/xml');
+    const comp=doc.querySelector('Comprobante');
+    if(!comp)return null;
+    // Only process received invoices (Ingreso type from 3rd party = egresos for us)
+    const tipo=comp.getAttribute('TipoDeComprobante');
+    if(tipo!=='I'&&tipo!=='E')return null;
+    const emisor=doc.querySelector('Emisor');
+    const receptor=doc.querySelector('Receptor');
+    const tfd=doc.querySelector('TimbreFiscalDigital');
+    // Get IVA from Traslados
+    let iva=0;
+    doc.querySelectorAll('Traslados Traslado').forEach(t=>{
+      if(t.getAttribute('Impuesto')==='002')iva+=parseFloat(t.getAttribute('Importe')||0);
+    });
+    // Get first concepto description
+    const concepto=doc.querySelector('Concepto');
+    const desc=concepto?concepto.getAttribute('Descripcion'):'';
+    const uuid=tfd?tfd.getAttribute('UUID'):'';
+    if(!uuid)return null;
+    return {
+      uuid,
+      fecha:(comp.getAttribute('Fecha')||'').slice(0,10),
+      proveedor:emisor?emisor.getAttribute('Nombre'):'',
+      rfc:emisor?emisor.getAttribute('Rfc'):'',
+      descripcion:desc,
+      formaPago:comp.getAttribute('FormaPago')||'',
+      metodoPago:comp.getAttribute('MetodoPago')||'',
+      subtotal:parseFloat(comp.getAttribute('SubTotal')||0),
+      descuento:parseFloat(comp.getAttribute('Descuento')||0),
+      iva:Math.round(iva*100)/100,
+      total:parseFloat(comp.getAttribute('Total')||0),
+      moneda:comp.getAttribute('Moneda')||'MXN',
+      usoCFDI:receptor?receptor.getAttribute('UsoCFDI'):'',
+      categoria:'',
+      nota:'',
+      fechaImportacion:new Date().toISOString().slice(0,10)
+    };
+  }catch(e){console.error('parseCFDI error:',e);return null;}
+}
+
+function initEgresos(){
+  // Populate month selector
+  const sel=document.getElementById('eg-mes');
+  const meses=new Set(gd(KE).map(e=>(e.fecha||'').slice(0,7)).filter(Boolean));
+  while(sel.options.length>1)sel.remove(1);
+  [...meses].sort().reverse().forEach(m=>{
+    const [y,mo]=m.split('-');
+    const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    const opt=document.createElement('option');
+    opt.value=m;opt.textContent=MN[parseInt(mo)-1]+' '+y;
+    sel.appendChild(opt);
+  });
+  // Populate category filter
+  const catSel=document.getElementById('eg-cat-filter');
+  while(catSel.options.length>2)catSel.remove(2);
+  const cats=[...new Set(gd(KE).map(e=>e.categoria).filter(Boolean))].sort();
+  cats.forEach(c=>{const o=document.createElement('option');o.value=c;o.textContent=c;catSel.appendChild(o);});
+  renderEgresos();
+}
+
+function renderEgresos(){
+  const mes=document.getElementById('eg-mes')?.value||'';
+  const search=(document.getElementById('eg-search')?.value||'').toLowerCase();
+  const catFilter=document.getElementById('eg-cat-filter')?.value||'';
+  const soloSin=document.getElementById('eg-solo-sincat')?.checked||false;
+  let egresos=[...gd(KE)];
+  if(mes)egresos=egresos.filter(e=>(e.fecha||'').startsWith(mes));
+  if(search)egresos=egresos.filter(e=>(e.proveedor||'').toLowerCase().includes(search)||(e.descripcion||'').toLowerCase().includes(search));
+  if(catFilter==='__sin__')egresos=egresos.filter(e=>!e.categoria);
+  else if(catFilter)egresos=egresos.filter(e=>e.categoria===catFilter);
+  if(soloSin)egresos=egresos.filter(e=>!e.categoria);
+  egresos.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+
+  // Metrics
+  const total=Math.round(egresos.reduce((s,e)=>s+(e.total||0),0)*100)/100;
+  const totalIva=Math.round(egresos.reduce((s,e)=>s+(e.iva||0),0)*100)/100;
+  const sinCat=egresos.filter(e=>!e.categoria).length;
+  const conCat=egresos.length-sinCat;
+  document.getElementById('eg-metrics').innerHTML=`
+    <div class="metric"><p class="mlabel">Facturas</p><p class="mval">${egresos.length}</p></div>
+    <div class="metric"><p class="mlabel">Total egresos</p><p class="mval">${fmt(total)}</p></div>
+    <div class="metric"><p class="mlabel">IVA acreditable</p><p class="mval" style="color:#185FA5">${fmt(totalIva)}</p></div>
+    <div class="metric"><p class="mlabel">Sin categoría</p><p class="mval" style="color:${sinCat>0?'#BA7517':'#1D9E75'}">${sinCat}</p></div>`;
+
+  // Progress
+  const pct=egresos.length?Math.round(conCat/egresos.length*100):0;
+  document.getElementById('eg-progress').innerHTML=egresos.length?`
+    <div style="display:flex;justify-content:space-between;font-size:11px;color:#888;margin-bottom:4px">
+      <span>${conCat} de ${egresos.length} categorizadas</span><span>${pct}%</span>
+    </div>
+    <div style="height:5px;background:#f0ede8;border-radius:3px;overflow:hidden">
+      <div style="width:${pct}%;height:100%;background:#1D9E75;border-radius:3px"></div>
+    </div>`:'';
+
+  // List
+  if(!egresos.length){
+    document.getElementById('eg-list').innerHTML='<p class="empty">Sin egresos registrados</p>';return;
+  }
+  const rows=egresos.map(e=>{
+    const sinCatStyle=!e.categoria?'background:rgba(250,238,218,0.4);':'';
+    const catBadge=e.categoria
+      ?`<span style="background:#f0f0ec;border:0.5px solid #d5d5cf;border-radius:4px;padding:2px 7px;font-size:11px">${e.categoria}</span>`
+      :`<span style="background:#FAEEDA;color:#BA7517;border-radius:4px;padding:2px 7px;font-size:11px;cursor:pointer" onclick="openEgModal('${e.uuid}')">⚠ Sin categoría</span>`;
+    return `<div style="display:grid;grid-template-columns:90px 1fr 90px 70px 110px 30px;gap:8px;align-items:center;padding:8px 6px;border-bottom:0.5px solid #f0ede8;font-size:12px;${sinCatStyle}border-radius:${sinCatStyle?'6px':'0'}">
+      <span style="color:#888">${e.fecha||''}</span>
+      <div>
+        <p style="font-weight:500">${e.proveedor||''}</p>
+        <p style="color:#999;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.descripcion||''}</p>
+      </div>
+      <span style="text-align:right">${fmt(e.total||0)}</span>
+      <span style="text-align:right;color:#888">${fmt(e.iva||0)}</span>
+      <span>${catBadge}</span>
+      <button onclick="openEgModal('${e.uuid}')" title="Editar" style="border:none;background:none;cursor:pointer;font-size:14px;opacity:.55">✏️</button>
+    </div>`;
+  }).join('');
+  document.getElementById('eg-list').innerHTML=`
+    <div style="display:grid;grid-template-columns:90px 1fr 90px 70px 110px 30px;gap:8px;padding:4px 6px 8px;border-bottom:0.5px solid #d5d5cf;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.04em">
+      <span>Fecha</span><span>Proveedor / Descripción</span><span style="text-align:right">Total</span><span style="text-align:right">IVA</span><span>Categoría</span><span></span>
+    </div>${rows}`;
+}
+
+function openEgModal(uuid){
+  const e=gd(KE).find(x=>x.uuid===uuid);
+  if(!e)return;
+  const cats=gd(KCE);
+  const grupos=[...new Set(cats.map(c=>c.grupo).filter(Boolean))];
+  const optsHtml=grupos.map(g=>`
+    <optgroup label="${g}">
+      ${cats.filter(c=>c.grupo===g).map(c=>`<option value="${c.nombre}" ${c.nombre===e.categoria?'selected':''}>${c.nombre}</option>`).join('')}
+    </optgroup>`).join('');
+  document.getElementById('eg-modal-title').textContent=e.proveedor||'Factura';
+  document.getElementById('eg-modal-body').innerHTML=`
+    <p style="font-size:12px;color:#888;margin-bottom:4px">RFC: ${e.rfc} · ${e.fecha} · ${fmt(e.total)}</p>
+    <p style="font-size:12px;color:#888;margin-bottom:14px;font-style:italic">${e.descripcion||''}</p>
+    <p style="font-size:11px;color:#AAA;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Categoría</p>
+    <select id="eg-cat-sel" style="width:100%;margin-bottom:10px">
+      <option value="">— Sin categoría —</option>${optsHtml}
+    </select>
+    <textarea id="eg-nota-inp" placeholder="Nota opcional..." style="width:100%;height:54px;font-size:12px;resize:none;margin-bottom:12px">${e.nota||''}</textarea>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#666;margin-bottom:14px;cursor:pointer">
+      <input type="checkbox" id="eg-save-rule" style="width:14px;height:14px">
+      Guardar como regla para ${e.proveedor} (RFC: ${e.rfc})
+    </label>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn" onclick="closeEgModal()">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveEgCategoria('${uuid}')">Guardar</button>
+    </div>`;
+  document.getElementById('eg-modal-overlay').style.display='flex';
+}
+
+function closeEgModal(){
+  document.getElementById('eg-modal-overlay').style.display='none';
+}
+
+function saveEgCategoria(uuid){
+  const cat=document.getElementById('eg-cat-sel').value;
+  const nota=document.getElementById('eg-nota-inp').value;
+  const saveRule=document.getElementById('eg-save-rule').checked;
+  const egresos=gd(KE);
+  const e=egresos.find(x=>x.uuid===uuid);
+  if(!e)return;
+  e.categoria=cat;
+  e.nota=nota;
+  sd(KE,egresos);
+  if(saveRule&&cat){
+    const reglas=gd(KRE);
+    const idx=reglas.findIndex(r=>r.rfc===e.rfc);
+    if(idx>-1)reglas[idx].categoria=cat;
+    else reglas.push({id:Date.now(),rfc:e.rfc,proveedor:e.proveedor,categoria:cat});
+    sd(KRE,reglas);
+  }
+  closeEgModal();
+  renderEgresos();
+  showAlert('Categoría guardada','success');
+}
+
+// ============================================================
+// END EGRESOS MODULE
+// ============================================================
+
 function renderAdmin(){
   const q=(document.getElementById('admin-search').value||'').toLowerCase();
   const cf=document.getElementById('admin-cat-filter').value;
@@ -2792,6 +3065,25 @@ function exportarCierreExcel(){
   const ws3=XLSX.utils.aoa_to_sheet(met);
   ws3['!cols']=[{wch:20},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
+  // === HOJA EGRESOS ===
+  const egMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const egHdrs=['Fecha','RFC','Nombre','Descripción','Moneda','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
+  const egData=[egHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
+  egMes.forEach((e,i)=>{
+    const bg=i%2===0?null:'F2F2F2';
+    const cs=bg=>bg?{fill:{fgColor:{rgb:bg}}}:{};
+    const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
+    egData.push([
+      {v:e.fecha||'',s:cs(bg)},{v:e.rfc||'',s:cs(bg)},{v:e.proveedor||'',s:cs(bg)},
+      {v:e.descripcion||'',s:cs(bg)},{v:e.moneda||'MXN',s:cs(bg)},
+      {v:e.formaPago||'',s:cs(bg)},{v:e.metodoPago||'',s:cs(bg)},
+      nm(bg,e.subtotal||0),nm(bg,e.descuento||0),nm(bg,e.iva||0),nm(bg,e.total||0),
+      {v:e.categoria||'',s:cs(bg)},{v:e.nota||'',s:cs(bg)}
+    ]);
+  });
+  const wsEg=XLSX.utils.aoa_to_sheet(egData);
+  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
+  XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
   XLSX.writeFile(wb,'Galopina_Cierre_'+mesNombre.replace(' ','_')+'.xlsx');
   showAlert('Excel exportado','success');
 }
