@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.23-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.24-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.23-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.24-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -528,7 +528,7 @@ const KR='KR',KP='KP',KH='KH',KC='KC';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwFZFlYCivP6Kp-qhJccbCpPhjklHZTgndFrib7l8rxRu8Vn9EhQ6lZE1O9zwwxoKQh/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbwUQ_aAVpAxo_w-GGQKWtm04dtZws3x6yi_hE30LcHjbTPN-JoEpcIzYblnr_LPuTWZ/exec';
 const ENV='dev'; // 'dev' | 'prod'
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos'};
 
@@ -1043,7 +1043,7 @@ function guardarRes(){
       habitacion, checkin:ci, checkout:co, noches,
       origen:document.getElementById('r-origen').value,
       estado:document.getElementById('r-estado').value,
-      fuente:'manual',
+      fuente:'manual', fechaCreacion:new Date().toISOString().slice(0,10),
       base:Math.round(base*100)/100, ish:Math.round(ish*100)/100, iva:Math.round(iva*100)/100,
       total:Math.round(total*100)/100, descuento:desc,
       anticipo:Math.round(anti*100)/100, antiPct:total>0?Math.round(anti/total*100):0,
@@ -1373,7 +1373,8 @@ function guardarConsumo(){
         subtotal:Math.round(sub/1.16*100)/100,
         iva:Math.round((sub-sub/1.16)*100)/100,
         total:sub,
-        nota:document.getElementById('c-nota').value
+        nota:document.getElementById('c-nota').value,
+        fechaCreacion:new Date().toISOString().slice(0,10)
       });
     }
     window._editConsId=null;
@@ -2035,7 +2036,7 @@ function processImport(rows, preview){
         pais:String(pais).trim(),
         habitacion,
         checkin:ci, checkout:co, noches,
-        origen, estado, fuente:fuenteRaw||'cloudbeds',
+        origen, estado, fuente:fuenteRaw||'cloudbeds', fechaCreacion:new Date().toISOString().slice(0,10),
         tarifaNoche:noches>0?Math.round(tarifaTotal/noches):tarifaTotal,
         base, ish, iva,
         total:Math.round(totalConImpuestos*100)/100,
@@ -2321,7 +2322,7 @@ function ckConfirm(){
     const sub=CK_EX.reduce((s,e)=>s+e.precio*e.cantidad,0);
     cons.push({id:Date.now(),reservaId:CK_ID,huesped:r.nombre,habitacion:r.habitacion,
       items:CK_EX.map(e=>({id:Date.now()+Math.random(),cat:e.cat,nombre:e.nombre,cantidad:e.cantidad,precio:e.precio,pago:e.pago,fechaPago:hoy})),
-      subtotal:Math.round(sub/1.16*100)/100,iva:Math.round((sub-sub/1.16)*100)/100,total:sub,nota:'Extras checkout'});
+      subtotal:Math.round(sub/1.16*100)/100,iva:Math.round((sub-sub/1.16)*100)/100,total:sub,nota:'Extras checkout',fechaCreacion:new Date().toISOString().slice(0,10)});
   }
   r.estado='checkout';sd(KR,res);sd(KC,cons);
   ckCancel();renderDash();showAlert('Check-out completado para '+r.nombre);
