@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.16-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.17-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.16-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.17-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2544,7 +2544,7 @@ function getCierreData(prefix){
       const ishH=Math.round((r.ish||0)*ratioH*100)/100;
       const ivaH=Math.round((r.iva||0)*ratioH*100)/100;
       rows.push({tipo:'hospedaje',concepto:tipoLabel+' Hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
+        cbId:r.cbId||r.id,fechaReserva:fmtDate(r.fechaReserva)||'',checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
         fecha,pago,monto:montoH,base:baseH,ish:ishH,iva:ivaH,exento:0,
         baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:totalT});
       // Cenas portion (if any)
@@ -2554,7 +2554,7 @@ function getCierreData(prefix){
         const baseC=Math.round(montoC/1.16*100)/100;
         const ivaC=Math.round((montoC-baseC)*100)/100;
         rows.push({tipo:'consumo',concepto:tipoLabel+' Cena',cat:'cenas',huesped:r.nombre,habitacion:r.habitacion,
-          cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
+          cbId:r.cbId||r.id,fechaReserva:fmtDate(r.fechaReserva)||'',checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
           fecha,pago,monto:montoC,base:baseC,ish:0,iva:ivaC,exento:0,
           baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:totalT});
       }
@@ -2576,7 +2576,7 @@ function getCierreData(prefix){
       const iva=esEx?0:Math.round((total-base)*100)/100;
       const resC=gd(KR).find(rr=>rr.id===c.reservaId||rr.nombre===c.huesped);
       rows.push({tipo:'consumo',concepto:it.nombre,cat:it.cat||'',huesped:c.huesped,habitacion:c.habitacion,
-        cbId:resC?.cbId||resC?.id||'',checkin:resC?fmtDate(resC.checkin):'',checkout:resC?fmtDate(resC.checkout):'',
+        cbId:resC?.cbId||resC?.id||'',fechaReserva:resC?fmtDate(resC.fechaReserva)||'':'',checkin:resC?fmtDate(resC.checkin):'',checkout:resC?fmtDate(resC.checkout):'',
         fecha:fmtDate(it.fechaPago),pago:it.pago,monto:total,base,ish:0,iva,exento:esEx?total:0,
         baseRes:resC?.base||0,ishRes:resC?.ish||0,ivaRes:resC?.iva||0,totalRes:resC?.total||0});
     });
@@ -2606,7 +2606,13 @@ function renderCierre(){
   const consG=rep.filter(r=>r.tipo==='consumo'&&r.exento===0);
   const consE=rep.filter(r=>r.tipo==='consumo'&&r.exento>0);
   const sv=(arr,f)=>Math.round(arr.reduce((t,r)=>t+(r[f]||0),0)*100)/100;
-  document.getElementById('cm-fiscal').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Base</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">ISH 4.5%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">IVA 16%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody><tr style="border-bottom:0.5px solid #F0EDE8;color:#1860A5"><td style="padding:7px 8px;font-weight:600">Hospedaje</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'base'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(hospR,'monto'))}</td></tr><tr style="border-bottom:0.5px solid #F0EDE8;color:#1D9E75"><td style="padding:7px 8px;font-weight:600">Consumos</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'base'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consG,'monto'))}</td></tr>${consE.length?`<tr style="border-bottom:0.5px solid #F0EDE8;color:#888"><td style="padding:7px 8px;font-weight:600">Exentos <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#888;color:#fff;font-size:9px;font-weight:700;vertical-align:middle;cursor:help" onmouseover="this.querySelector('span').style.display='block'" onmouseout="this.querySelector('span').style.display='none'">i<span style="display:none;position:absolute;left:20px;top:-4px;background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:400;white-space:nowrap;z-index:99">${EXENTOS_PRODS.join(', ')}</span></span></td><td style="padding:7px 8px;text-align:right">${fmt(sv(consE,'exento'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consE,'monto'))}</td></tr>`:''}<tr style="border-top:2px solid #EEE;font-weight:700;font-size:14px"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'iva')+sv(consG,'iva'))}</td><td style="padding:8px;text-align:right;color:#1A1916;font-size:15px">${fmt(sv(rep,'monto'))}</td></tr></tbody></table>`;
+  document.getElementById('cm-fiscal').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Base</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">ISH 4.5%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">IVA 16%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody><tr style="border-bottom:0.5px solid #F0EDE8;color:#1860A5"><td style="padding:7px 8px;font-weight:600">Hospedaje</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'base'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(hospR,'monto'))}</td></tr><tr style="border-bottom:0.5px solid #F0EDE8;color:#1D9E75"><td style="padding:7px 8px;font-weight:600">Consumos</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'base'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consG,'monto'))}</td></tr>${consE.length?`<tr style="border-bottom:0.5px solid #F0EDE8;color:#888"><td style="padding:7px 8px;font-weight:600">Exentos <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#888;color:#fff;font-size:9px;font-weight:700;vertical-align:middle;cursor:help" onmouseover="this.querySelector('span').style.display='block'" onmouseout="this.querySelector('span').style.display='none'">i<span style="display:none;position:absolute;left:20px;top:-4px;background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:400;white-space:nowrap;z-index:99">${EXENTOS_PRODS.join(', ')}</span></span></td><td style="padding:7px 8px;text-align:right">${fmt(sv(consE,'exento'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consE,'monto'))}</td></tr>`:''}<tr style="border-top:2px solid #EEE;font-weight:700;font-size:14px"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'iva')+sv(consG,'iva'))}</td><td style="padding:8px;text-align:right;color:#1A1916;font-size:15px">${fmt(sv(rep,'monto'))}</td></tr></tbody></table>
+<p style="font-size:12px;color:#666;margin-top:10px;padding:8px 0;border-top:1px solid #EEE">
+  <span style="font-weight:600">ISH Reservas ${mesNombre}:</span> 
+  ${fmt(Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100)}
+  <span style="color:#AAA;font-size:11px">(suma ISH de reservas con fecha de salida en ${mesNombre})</span>
+</p>
+`;
 
   const bancos=['transferencia','debito','stripe','efectivo'];
   let reconHtml=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Método</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">En app</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado de cuenta</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Diferencia</th></tr></thead><tbody>`;
@@ -2733,7 +2739,7 @@ function exportarCierreExcel(){
   const fis=[
     [{v:'REPORTE FISCAL — '+mesNombre,s:{font:{bold:true,sz:12}}},'','','',''],
     ['','','','',''],
-    [{v:'Concepto',s:hS(BLU,1)},{v:'Base',s:hS(BLU,1,'#,##0.00')},{v:'ISH 4.5%',s:hS(BLU,1,'#,##0.00')},{v:'IVA 16%',s:hS(BLU,1,'#,##0.00')},{v:'Total',s:hS(BLU,1,'#,##0.00')}],
+    [{v:'Concepto',s:hS(BLU,1)},{v:'Base',t:'n',z:'#,##0.00',s:hS(BLU,1)},{v:'ISH 4.5%',t:'n',z:'#,##0.00',s:hS(BLU,1)},{v:'IVA 16%',t:'n',z:'#,##0.00',s:hS(BLU,1)},{v:'Total',t:'n',z:'#,##0.00',s:hS(BLU,1)}],
     [{v:'Hospedaje'},{v:sv(hospR,'base'),s:{z:'#,##0.00'}},{v:sv(hospR,'ish'),s:{z:'#,##0.00'}},{v:sv(hospR,'iva'),s:{z:'#,##0.00'}},{v:sv(hospR,'monto'),s:{z:'#,##0.00'}}],
     [{v:'Consumos'},{v:sv(consG,'base'),s:{z:'#,##0.00'}},{v:0},{v:sv(consG,'iva'),s:{z:'#,##0.00'}},{v:sv(consG,'monto'),s:{z:'#,##0.00'}}]
   ];
@@ -2741,10 +2747,10 @@ function exportarCierreExcel(){
   fis.push(['','','','','']);
   fis.push([
     {v:'TOTAL',s:hS(GRN2,1)},
-    {v:sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'),s:hS(GRN2,1,'#,##0.00')},
-    {v:sv(hospR,'ish'),s:hS(GRN2,1,'#,##0.00')},
-    {v:sv(hospR,'iva')+sv(consG,'iva'),s:hS(GRN2,1,'#,##0.00')},
-    {v:sv(rep,'monto'),s:hS(GRN2,1,'#,##0.00')}
+    {v:sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'),t:'n',z:'#,##0.00',s:hS(GRN2,1)},
+    {v:sv(hospR,'ish'),t:'n',z:'#,##0.00',s:hS(GRN2,1)},
+    {v:sv(hospR,'iva')+sv(consG,'iva'),t:'n',z:'#,##0.00',s:hS(GRN2,1)},
+    {v:sv(rep,'monto'),t:'n',z:'#,##0.00',s:hS(GRN2,1)}
   ]);
   const ws2=XLSX.utils.aoa_to_sheet(fis);
   ws2['!cols']=[{wch:22},{wch:14},{wch:12},{wch:12},{wch:14}];
@@ -2754,7 +2760,7 @@ function exportarCierreExcel(){
   const met=[
     [{v:'TOTALES POR MÉTODO — '+mesNombre,s:{font:{bold:true,sz:12}}},'',''],
     ['','',''],
-    [{v:'Método',s:hS(BLU,1)},{v:'Monto',s:hS(BLU,1,'#,##0.00')},{v:'Contador',s:hS(BLU,1)}]
+    [{v:'Método',s:hS(BLU,1)},{v:'Monto',t:'n',z:'#,##0.00',s:hS(BLU,1)},{v:'Contador',s:hS(BLU,1)}]
   ];
   let grandTot=0;
   ORDER.forEach(p=>{
@@ -2764,12 +2770,12 @@ function exportarCierreExcel(){
     grandTot+=t;
     met.push([
       {v:METODOS_LABELS[p]||p},
-      {v:t,s:{z:'#,##0.00',fill:rep2?{fgColor:{rgb:GRN}}:{fgColor:{rgb:'FCE4D6'}}}},
+      {v:t,t:'n',z:'#,##0.00',s:{fill:rep2?{fgColor:{rgb:GRN}}:{fgColor:{rgb:'FCE4D6'}}}},
       {v:rep2?'Sí':'No',s:{font:{bold:true,color:{rgb:rep2?'1B5E20':'B71C1C'}}}}
     ]);
   });
   met.push(['','','']);
-  met.push([{v:'Total',s:hS(GRN2,1)},{v:grandTot,s:hS(GRN2,1,'#,##0.00')},{v:'',s:hS(GRN2,0)}]);
+  met.push([{v:'Total',s:hS(GRN2,1)},{v:grandTot,t:'n',z:'#,##0.00',s:hS(GRN2,1)},{v:'',s:hS(GRN2,0)}]);
   const ws3=XLSX.utils.aoa_to_sheet(met);
   ws3['!cols']=[{wch:20},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
