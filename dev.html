@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.21-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.22-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.21-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.22-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2544,7 +2544,7 @@ function getCierreData(prefix){
       const ishH=Math.round((r.ish||0)*ratioH*100)/100;
       const ivaH=Math.round((r.iva||0)*ratioH*100)/100;
       rows.push({tipo:'hospedaje',concepto:tipoLabel+' Hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
+        cbId:r.cbId||r.id,fechaReserva:fmtDate(r.fechaReserva)||'',checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
         fecha,pago,monto:montoH,base:baseH,ish:ishH,iva:ivaH,exento:0,
         baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:totalT});
       // Cenas portion (if any)
@@ -2554,7 +2554,7 @@ function getCierreData(prefix){
         const baseC=Math.round(montoC/1.16*100)/100;
         const ivaC=Math.round((montoC-baseC)*100)/100;
         rows.push({tipo:'consumo',concepto:tipoLabel+' Cena',cat:'cenas',huesped:r.nombre,habitacion:r.habitacion,
-          cbId:r.cbId||r.id,checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
+          cbId:r.cbId||r.id,fechaReserva:fmtDate(r.fechaReserva)||'',checkin:fmtDate(r.checkin),checkout:fmtDate(r.checkout),
           fecha,pago,monto:montoC,base:baseC,ish:0,iva:ivaC,exento:0,
           baseRes:r.base||0,ishRes:r.ish||0,ivaRes:r.iva||0,totalRes:totalT});
       }
@@ -2576,7 +2576,7 @@ function getCierreData(prefix){
       const iva=esEx?0:Math.round((total-base)*100)/100;
       const resC=gd(KR).find(rr=>rr.id===c.reservaId||rr.nombre===c.huesped);
       rows.push({tipo:'consumo',concepto:it.nombre,cat:it.cat||'',huesped:c.huesped,habitacion:c.habitacion,
-        cbId:resC?.cbId||resC?.id||'',checkin:resC?fmtDate(resC.checkin):'',checkout:resC?fmtDate(resC.checkout):'',
+        cbId:resC?.cbId||resC?.id||'',fechaReserva:resC?fmtDate(resC.fechaReserva)||'':'',checkin:resC?fmtDate(resC.checkin):'',checkout:resC?fmtDate(resC.checkout):'',
         fecha:fmtDate(it.fechaPago),pago:it.pago,monto:total,base,ish:0,iva,exento:esEx?total:0,
         baseRes:resC?.base||0,ishRes:resC?.ish||0,ivaRes:resC?.iva||0,totalRes:resC?.total||0});
     });
@@ -2741,10 +2741,10 @@ function exportarCierreExcel(){
     [{v:'REPORTE FISCAL — '+mesNombre,s:{font:{bold:true,sz:12}}},'','','',''],
     ['','','','',''],
     [{v:'Concepto',s:hS(BLU,1)},{v:'Base',s:hS(BLU,1,'#,##0.00')},{v:'ISH 4.5%',s:hS(BLU,1,'#,##0.00')},{v:'IVA 16%',s:hS(BLU,1,'#,##0.00')},{v:'Total',s:hS(BLU,1,'#,##0.00')}],
-    [{v:'Hospedaje'},{v:sv(hospR,'base'),s:{z:'#,##0.00'}},{v:sv(hospR,'ish'),s:{z:'#,##0.00'}},{v:sv(hospR,'iva'),s:{z:'#,##0.00'}},{v:sv(hospR,'monto'),s:{z:'#,##0.00'}}],
-    [{v:'Consumos'},{v:sv(consG,'base'),s:{z:'#,##0.00'}},{v:0},{v:sv(consG,'iva'),s:{z:'#,##0.00'}},{v:sv(consG,'monto'),s:{z:'#,##0.00'}}]
+    [{v:'Hospedaje'},{v:sv(hospR,'base'),t:'n',z:'#,##0.00'},{v:sv(hospR,'ish'),t:'n',z:'#,##0.00'},{v:sv(hospR,'iva'),t:'n',z:'#,##0.00'},{v:sv(hospR,'monto'),t:'n',z:'#,##0.00'}],
+    [{v:'Consumos'},{v:sv(consG,'base'),t:'n',z:'#,##0.00'},{v:0},{v:sv(consG,'iva'),t:'n',z:'#,##0.00'},{v:sv(consG,'monto'),t:'n',z:'#,##0.00'}]
   ];
-  if(consE.length)fis.push([{v:'Exentos'},{v:sv(consE,'exento'),s:{z:'#,##0.00'}},{v:0},{v:0},{v:sv(consE,'monto'),s:{z:'#,##0.00'}}]);
+  if(consE.length)fis.push([{v:'Exentos'},{v:sv(consE,'exento'),t:'n',z:'#,##0.00'},{v:0},{v:0},{v:sv(consE,'monto'),t:'n',z:'#,##0.00'}]);
   fis.push(['','','','','']);
   fis.push([
     {v:'TOTAL',s:hS(GRN2,1)},
@@ -2774,12 +2774,12 @@ function exportarCierreExcel(){
     grandTot+=t;
     met.push([
       {v:METODOS_LABELS[p]||p},
-      {v:t,s:{z:'#,##0.00',fill:rep2?{fgColor:{rgb:GRN}}:{fgColor:{rgb:'FCE4D6'}}}},
+      {v:Math.round(t*100)/100,t:'n',z:'#,##0.00',s:{fill:rep2?{fgColor:{rgb:GRN}}:{fgColor:{rgb:'FCE4D6'}}}},
       {v:rep2?'Sí':'No',s:{font:{bold:true,color:{rgb:rep2?'1B5E20':'B71C1C'}}}}
     ]);
   });
   met.push(['','','']);
-  met.push([{v:'Total',s:hS(GRN2,1)},{v:grandTot,s:hS(GRN2,1,'#,##0.00')},{v:'',s:hS(GRN2,0)}]);
+  met.push([{v:'Total',s:hS(GRN2,1)},{v:Math.round(grandTot*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},{v:'',s:hS(GRN2,0)}]);
   const ws3=XLSX.utils.aoa_to_sheet(met);
   ws3['!cols']=[{wch:20},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
