@@ -115,7 +115,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.9</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +138,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v28.9</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v29.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1988,13 +1988,21 @@ function processImport(rows, preview){
 
       // Validation flags
       const near=(a,b)=>Math.abs(a-b)<=(Math.max(a,b)*0.01+1);
-      const isTriple=deposito>0&&saldoPend>0&&near(deposito,saldoPend)&&near(deposito,totalConImpuestos);
-      const missingPayInfo=deposito>0&&!isTriple;
-      const anticoFinal=isTriple?0:deposito;
-      const saldoFinal=isTriple?0:saldoPend;
+      const fuenteRaw=get(['Fuente','fuente','source'])||'';
+      const cbDirect=fuenteRaw.toLowerCase().includes('sitio web')||fuenteRaw.toLowerCase().includes('motor de reservas');
 
-      // Incoherent saldo check — placed here after all required vars are declared
-      {
+      // Motor de reservas: anticipo siempre = 50% del total (Cloudbeds acumula pagos en Depósito)
+      const isTriple=!cbDirect&&deposito>0&&saldoPend>0&&near(deposito,saldoPend)&&near(deposito,totalConImpuestos);
+      const missingPayInfo=!cbDirect&&deposito>0&&!isTriple;
+      const anticoFinal=cbDirect
+        ? Math.round(totalConImpuestos*0.5*100)/100
+        : isTriple?0:deposito;
+      const saldoFinal=cbDirect
+        ? Math.round(totalConImpuestos*0.5*100)/100
+        : isTriple?0:saldoPend;
+
+      // Incoherent saldo check — only for non-motor reservations
+      if(!cbDirect){
         const _sumaAS=anticoFinal+saldoFinal;
         const _incoher=!isTriple&&saldoFinal>0&&anticoFinal>0&&Math.abs(_sumaAS-totalConImpuestos)>2;
         if(_incoher){
@@ -2005,7 +2013,7 @@ function processImport(rows, preview){
         }
       }
 
-      const origen=mapOrigen(get(['Fuente','fuente','source']));
+      const origen=mapOrigen(fuenteRaw);
       const estado=mapEstado(get(['Estado ','estado ','Estado','estado','status']));
       if(estado==='cancelado'){skipped.push({fila:i+2,nombre:String(nombre||'?').trim(),cbId:cbIdClean,razon:'Cancelada'});return;}
       const pais=get(['País','pais','país','country'])||'';
@@ -2025,26 +2033,18 @@ function processImport(rows, preview){
         pais:String(pais).trim(),
         habitacion,
         checkin:ci, checkout:co, noches,
-        origen, estado, fuente:get(['Fuente','fuente','source'])||'cloudbeds',
+        origen, estado, fuente:fuenteRaw||'cloudbeds',
         tarifaNoche:noches>0?Math.round(tarifaTotal/noches):tarifaTotal,
         base, ish, iva,
         total:Math.round(totalConImpuestos*100)/100,
         anticipo:anticoFinal,
-        antiFecha:(()=>{
-          const fuente2=get(['Fuente','fuente','source'])||'';
-          const cbDirect=fuente2.toLowerCase().includes('sitio web')||fuente2.toLowerCase().includes('motor de reservas');
-          return (!isTriple&&cbDirect&&fechaReservaVal)?fechaReservaVal:'';
-        })(),
-        antiPago:(()=>{
-          const fuente2=get(['Fuente','fuente','source'])||'';
-          const cbDirect=fuente2.toLowerCase().includes('sitio web')||fuente2.toLowerCase().includes('motor de reservas');
-          return (!isTriple&&missingPayInfo&&cbDirect)?'cloudbeds':'';
-        })(),
-        antiPct:totalConImpuestos>0?Math.round(anticoFinal/totalConImpuestos*100):0,
+        antiFecha:cbDirect?fechaReservaVal:'',
+        antiPago:cbDirect?'cloudbeds':(missingPayInfo?'':''),
+        antiPct:cbDirect?50:(totalConImpuestos>0?Math.round(anticoFinal/totalConImpuestos*100):0),
         saldo:saldoFinal,
         saldFecha:'', saldPago:'',
         descuento:0, pagos:[],
-        cbWarning:isTriple?'incoherente':missingPayInfo?'sin-pago-info':'',
+        cbWarning:cbDirect?'':isTriple?'incoherente':missingPayInfo?'sin-pago-info':'',
         hospTotal:Math.round(calcTotal*100)/100,
         fechaReserva:fechaReservaVal||'',
         consumoCena:tieneCena?montoCenas:0,
