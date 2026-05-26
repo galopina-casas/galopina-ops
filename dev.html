@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.17-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.18-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.17-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.18-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2478,56 +2478,43 @@ function mostrarPreviewNoCFDI(){
   const grupos=[...new Set(cats.map(c=>c.grupo).filter(Boolean))];
   const optsHtml='<option value="">— Sin categoría —</option>'+grupos.map(g=>`<optgroup label="${g}">${cats.filter(c=>c.grupo===g).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}</optgroup>`).join('');
 
+  const lbl='font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px';
   const rows=_nocfdiPending.map((e,i)=>`
-    <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;margin-bottom:8px;${e.error?'border-color:#E24B4A':''}">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-        <div style="font-size:11px;color:var(--color-text-secondary)">${e.archivo}</div>
-        ${e.error?'<span style="background:#FCE4D6;color:#C0392B;border-radius:4px;padding:2px 6px;font-size:10px">Error extracción</span>':''}
+    <div style="background:var(--color-background-primary);border:0.5px solid ${e.error?'var(--color-border-danger)':'var(--color-border-tertiary)'};border-radius:var(--border-radius-lg);padding:1rem;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <i class="ti ti-file-invoice" style="font-size:16px;color:var(--color-text-secondary)" aria-hidden="true"></i>
+          <span style="font-size:12px;font-weight:500">${e.archivo}</span>
+        </div>
+        <span style="background:var(--color-background-${e.error?'danger':'success'});color:var(--color-text-${e.error?'danger':'success'});border-radius:var(--border-radius-md);padding:2px 8px;font-size:11px">${e.error?'Error extracción':'Extraído'}</span>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-        <div>
-          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">PROVEEDOR</p>
-          <input value="${e.proveedor||''}" onchange="_nocfdiPending[${i}].proveedor=this.value" style="width:100%;font-size:12px;padding:4px 6px">
-        </div>
-        <div>
-          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">N° FACTURA</p>
-          <input value="${e.nFactura||''}" onchange="_nocfdiPending[${i}].nFactura=this.value" style="width:100%;font-size:12px;padding:4px 6px">
-        </div>
-        <div>
-          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">FECHA</p>
-          <input type="date" value="${e.fecha||''}" onchange="_nocfdiPending[${i}].fecha=this.value" style="width:100%;font-size:12px;padding:4px 6px">
-        </div>
-        <div>
-          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">MONEDA · MONTO ORIGINAL</p>
-          <div style="display:flex;gap:4px">
-            <select onchange="_nocfdiPending[${i}].monedaOriginal=this.value;actualizarMontoMXN(${i})" style="font-size:12px;padding:4px;width:80px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div><label style="${lbl}">Proveedor</label><input value="${e.proveedor||''}" onchange="_nocfdiPending[${i}].proveedor=this.value" style="width:100%;font-size:13px"></div>
+        <div><label style="${lbl}">N° factura</label><input value="${e.nFactura||''}" onchange="_nocfdiPending[${i}].nFactura=this.value" style="width:100%;font-size:13px"></div>
+        <div><label style="${lbl}">Fecha</label><input type="date" value="${e.fecha||''}" onchange="_nocfdiPending[${i}].fecha=this.value" style="width:100%;font-size:13px"></div>
+        <div><label style="${lbl}">Moneda · Monto original</label>
+          <div style="display:flex;gap:6px">
+            <select onchange="_nocfdiPending[${i}].monedaOriginal=this.value;actualizarMontoMXN(${i})" style="width:80px;font-size:13px">
               ${['MXN','USD','EUR','GBP','CAD'].map(m=>`<option${m===e.monedaOriginal?' selected':''}>${m}</option>`).join('')}
             </select>
-            <input type="number" value="${e.montoOriginal||''}" onchange="_nocfdiPending[${i}].montoOriginal=parseFloat(this.value);actualizarMontoMXN(${i})" style="flex:1;font-size:12px;padding:4px 6px">
+            <input type="number" value="${e.montoOriginal||''}" onchange="_nocfdiPending[${i}].montoOriginal=parseFloat(this.value);actualizarMontoMXN(${i})" style="flex:1;font-size:13px">
           </div>
         </div>
-        ${e.monedaOriginal!=='MXN'?`
-        <div style="grid-column:span 2">
-          <p style="font-size:10px;color:#BA7517;margin-bottom:2px">⚠ MONTO EN MXN (captura manual)</p>
-          <input type="number" id="mxn-${i}" value="${e.montoMXN||''}" onchange="_nocfdiPending[${i}].montoMXN=parseFloat(this.value)" style="width:100%;font-size:12px;padding:4px 6px;border-color:#BA7517">
-        </div>`:''}
+        ${e.monedaOriginal!=='MXN'?`<div style="grid-column:span 2"><label style="font-size:10px;color:var(--color-text-warning);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">⚠ Monto en MXN (captura manual)</label><input type="number" id="mxn-${i}" value="${e.montoMXN||''}" onchange="_nocfdiPending[${i}].montoMXN=parseFloat(this.value)" style="width:100%;font-size:13px;border-color:var(--color-border-warning)"></div>`:''}
       </div>
-      <div style="margin-bottom:8px">
-        <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">DESCRIPCIÓN</p>
-        <input value="${e.descripcion||''}" onchange="_nocfdiPending[${i}].descripcion=this.value" style="width:100%;font-size:12px;padding:4px 6px">
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div>
-          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">CATEGORÍA</p>
-          <select onchange="_nocfdiPending[${i}].categoria=this.value" style="width:100%;font-size:12px;padding:4px 6px">
+      <div style="margin-bottom:10px"><label style="${lbl}">Descripción</label><input value="${e.descripcion||''}" onchange="_nocfdiPending[${i}].descripcion=this.value" style="width:100%;font-size:13px"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div><label style="${lbl}">Categoría</label>
+          <select onchange="_nocfdiPending[${i}].categoria=this.value" style="width:100%;font-size:13px">
             ${optsHtml.replace(`value="${e.categoria}"`,`value="${e.categoria}" selected`)}
           </select>
         </div>
-        <div>
-          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">NOTA</p>
-          <input value="${e.nota||''}" onchange="_nocfdiPending[${i}].nota=this.value" style="width:100%;font-size:12px;padding:4px 6px">
-        </div>
+        <div><label style="${lbl}">Nota</label><input value="${e.nota||''}" onchange="_nocfdiPending[${i}].nota=this.value" style="width:100%;font-size:13px"></div>
       </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;padding:8px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+        <input type="checkbox" id="regla-${i}" style="width:15px;height:15px;flex-shrink:0">
+        Guardar como regla automática para <strong style="color:var(--color-text-primary);margin-left:4px">${e.proveedor||'este proveedor'}</strong>
+      </label>
     </div>`).join('');
 
   document.getElementById('nocfdi-preview-body').innerHTML=rows;
@@ -2548,12 +2535,19 @@ function confirmarNoCFDI(){
   const egresos=gd(KE);
   const reglas=gd(KRE);
   let guardadas=0;
-  _nocfdiPending.forEach(e=>{
-    if(!e.proveedor&&!e.monto)return;
+  _nocfdiPending.forEach((e,i)=>{
+    if(!e.proveedor&&!e.montoOriginal)return;
     // Apply rules if no category
     if(!e.categoria){
       const regla=reglas.find(r=>r.proveedor&&e.proveedor&&e.proveedor.toLowerCase().includes(r.proveedor.toLowerCase()));
       if(regla)e.categoria=regla.categoria;
+    }
+    // Save rule if checkbox checked
+    const saveRule=document.getElementById('regla-'+i)?.checked;
+    if(saveRule&&e.proveedor){
+      const idx=reglas.findIndex(r=>r.proveedor===e.proveedor);
+      if(idx>-1)reglas[idx].categoria=e.categoria;
+      else reglas.push({id:Date.now()+i,rfc:'',proveedor:e.proveedor,categoria:e.categoria});
     }
     // Build egreso object compatible with CFDI schema
     const montoMXN=e.monedaOriginal==='MXN'?e.montoOriginal:(e.montoMXN||e.montoOriginal||0);
@@ -2584,6 +2578,7 @@ function confirmarNoCFDI(){
     guardadas++;
   });
   sd(KE,egresos);
+  if(reglas.length)sd(KRE,reglas);
   cerrarPreviewNoCFDI();
   initEgresos();
   showAlert(`${guardadas} factura(s) noCFDI guardadas`,'success');
