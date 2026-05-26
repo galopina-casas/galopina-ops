@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.15-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.16-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.15-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.16-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -611,7 +611,7 @@ const KR='KR',KP='KP',KH='KH',KC='KC',KE='KE',KRE='KRE',KCE='KCE';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx4jh-3AuqLXZ8BQmuRHSD0j2mogjJvCwiqmzQ4kH6vQ5U7c6HfguTbw5Ntj9qs8akg/exec';
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycby6msOKCOZKekM2QVkkwJe1R6P7hnQTN1V6-_fyJXUo7Udzfm1Bq_AbEGmPEjQg9QTQ/exec';
 const ENV='dev'; // 'dev' | 'prod'
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos'};
 
@@ -2441,32 +2441,13 @@ async function procesarPDFsNoCFDI(input){
       const b64=await fileToBase64(file);
       const isImg=file.type.startsWith('image/');
       const mediaType=isImg?file.type:'application/pdf';
-      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      const resp=await fetch(SCRIPT_URL,{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          model:'claude-sonnet-4-20250514',
-          max_tokens:1000,
-          messages:[{role:'user',content:[
-            {type:isImg?'image':'document',source:{type:'base64',media_type:mediaType,data:b64}},
-            {type:'text',text:`Extrae los siguientes campos de esta factura y responde SOLO con un objeto JSON sin markdown ni texto adicional:
-{
-  "proveedor": "nombre del emisor/proveedor",
-  "nFactura": "número de factura o referencia",
-  "fecha": "YYYY-MM-DD",
-  "descripcion": "descripción o concepto principal del servicio",
-  "monedaOriginal": "MXN|USD|EUR|GBP|otro",
-  "montoOriginal": número,
-  "iva": 0
-}
-Si la moneda no es MXN pon montoOriginal en la moneda original. Fecha debe ser YYYY-MM-DD.`}
-          ]}]
-        })
+        body:JSON.stringify({action:'extractPDF',fileBase64:b64,mediaType,fileName:file.name,env:ENV})
       });
       const data=await resp.json();
-      const text=data.content?.map(c=>c.text||'').join('');
-      const clean=text.replace(/```json|```/g,'').trim();
-      const parsed=JSON.parse(clean);
+      if(!data.ok||data.data?.error)throw new Error(data.data?.error||'Error en extracción');
+      const parsed=data.data.extracted;
       parsed.archivo=file.name;
       parsed.montoMXN=parsed.monedaOriginal==='MXN'?parsed.montoOriginal:null;
       parsed.categoria='';
