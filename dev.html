@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.28-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.29-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.28-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.29-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -3222,12 +3222,14 @@ function openIngModal(gKey){
     ? res.habitacion+' \u00b7 '+fmtDate(res.checkin)+' \u2192 '+fmtDate(res.checkout) : '';
 
   const hospItems=items.filter(i=>i.tipo==='hospedaje');
-  const consItems=items.filter(i=>i.tipo==='consumo');
+  const cenasItems=items.filter(i=>i.tipo==='consumo'&&i.cat==='cenas');
+  const consItems=items.filter(i=>i.tipo==='consumo'&&i.cat!=='cenas');
 
   // Header totals
   const totHosp=hospItems.filter(i=>i.pago!=='pendiente'&&i.pago!=='tbd').reduce((s,i)=>s+i.monto,0);
+  const totCenas=cenasItems.reduce((s,i)=>s+i.monto,0);
   const totCons=consItems.reduce((s,g)=>(g.items||[]).reduce((ss,ci)=>ss+ci.precio*ci.cantidad,s),0);
-  const grandTot=totHosp+totCons;
+  const grandTot=totHosp+totCenas+totCons;
 
   // Fiscal base for hospedaje
   const rr=gd(KR).find(r=>String(r.id)===resId)||gd(KR).find(r=>r.nombre===nombre);
@@ -3235,6 +3237,28 @@ function openIngModal(gKey){
   const grandHosp=hospItems.reduce((s,i)=>s+i.monto,0);
   if(rr&&rr.base){bnT=parseFloat(rr.base)||0;ishT=bnT*0.045;ivaT=bnT*0.16;}
   else{bnT=grandHosp/1.205;ishT=bnT*0.045;ivaT=bnT*0.16;}
+
+  // Build cenas rows
+  let cenasRows='';
+  let sumCenBase=0,sumCenIva=0,sumCenTot=0;
+  const cenasItemsSorted=[...cenasItems].sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  cenasItemsSorted.forEach(it=>{
+    const monto=it.monto||0;
+    const base=Math.round(monto/1.16*100)/100;
+    const iva=Math.round((monto-base)*100)/100;
+    const isPend=it.pago==='pendiente'||it.pago==='tbd';
+    sumCenBase+=base;sumCenIva+=iva;sumCenTot+=monto;
+    cenasRows+=`<tr>
+      <td style="${tdL};border-left:3px solid #1D9E75${isPend?';color:#E24B4A':''}">${it.label||it.concepto||'Cena'}</td>
+      <td style="${td};${muted}">—</td>
+      <td style="${td}">${fmt(base)}</td>
+      <td style="${td};${muted}">—</td>
+      <td style="${td}">${fmt(iva)}</td>
+      <td style="${td};font-weight:700${isPend?';color:#E24B4A':''}">${fmt(monto)}</td>
+      <td style="${td}"><span class="badge ${pagoBadge(it.pago)}">${pagoLabel(it.pago||'')}</span></td>
+      <td style="${td};${muted}">${it.fecha||'—'}</td>
+    </tr>`;
+  });
 
   // Collect consumo rows
   const consRows=[];
@@ -3326,12 +3350,7 @@ function openIngModal(gKey){
         ${hospItems.length?`
         <tr><td colspan="8" style="padding:10px 8px 4px;font-size:10px;font-weight:500;color:#185FA5;text-transform:uppercase;letter-spacing:.07em;border-bottom:none;border-left:3px solid #185FA5;padding-left:10px;border-bottom:none">Hospedaje</td></tr>
         ${hospRows}
-        ${(rr&&(rr.consumoCena||0)>0)?`<tr><td colspan="8" style="padding:4px 8px 6px 9px;border-left:3px solid #185FA5;border-bottom:none">
-          <div style="background:#F5F4F0;border-radius:6px;padding:5px 10px;font-size:11px;color:#888">
-            <span style="font-weight:500;color:#1A1916">🍽 Incluye ${rr.consumoCenaCant||0} cena${(rr.consumoCenaCant||0)>1?'s':''} · ${fmt(rr.consumoCena)}</span>
-            <span style="margin-left:10px">Hosp: ${fmt(rr.hospTotal||(rr.total||0)-(rr.consumoCena||0))} · Cenas: ${fmt(rr.consumoCena)}</span>
-          </div>
-        </td></tr>`:''}
+
         <tr style="color:#185FA5;border-top:0.5px solid #B5D4F4">
           <td style="${tdL};font-weight:500;color:#185FA5;border-top:0.5px solid #B5D4F4;border-left:3px solid #185FA5">Total hospedaje</td>
           <td style="${td};border-top:0.5px solid #B5D4F4"></td>
@@ -3340,6 +3359,18 @@ function openIngModal(gKey){
           <td style="${td};color:#185FA5;font-weight:500;border-top:0.5px solid #B5D4F4">${fmt(sumHIva)}</td>
           <td style="${td};color:#185FA5;font-weight:700;border-top:0.5px solid #B5D4F4">${fmt(sumHTot)}</td>
           <td style="${td};border-top:0.5px solid #B5D4F4" colspan="2"></td>
+        </tr>`:''}
+        ${cenasItems.length?`
+        <tr><td colspan="8" style="padding:10px 8px 4px;font-size:10px;font-weight:500;color:#1D9E75;text-transform:uppercase;letter-spacing:.07em;border-bottom:none;border-left:3px solid #1D9E75;padding-left:10px">Cenas incluidas</td></tr>
+        ${cenasRows}
+        <tr>
+          <td style="${tdL};font-weight:500;color:#1D9E75;border-top:0.5px solid #9FE1CB;border-left:3px solid #1D9E75">Total cenas incluidas</td>
+          <td style="${td};border-top:0.5px solid #9FE1CB"></td>
+          <td style="${td};color:#1D9E75;font-weight:500;border-top:0.5px solid #9FE1CB">${fmt(sumCenBase)}</td>
+          <td style="${td};${muted};border-top:0.5px solid #9FE1CB">—</td>
+          <td style="${td};color:#1D9E75;font-weight:500;border-top:0.5px solid #9FE1CB">${fmt(sumCenIva)}</td>
+          <td style="${td};color:#1D9E75;font-weight:700;border-top:0.5px solid #9FE1CB">${fmt(sumCenTot)}</td>
+          <td style="${td};border-top:0.5px solid #9FE1CB" colspan="2"></td>
         </tr>`:''}
         ${consItems.length?`
         <tr><td colspan="8" style="padding:10px 8px 4px;font-size:10px;font-weight:500;color:#1D9E75;text-transform:uppercase;letter-spacing:.07em;border-bottom:none;border-left:3px solid #1D9E75;padding-left:10px">Consumos</td></tr>
@@ -3356,10 +3387,10 @@ function openIngModal(gKey){
         <tr>
           <td style="padding:10px 8px;text-align:left;font-weight:700;font-size:13px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">TOTAL</td>
           <td style="${td};border-top:1.5px solid #CCC;border-bottom:none;padding-top:10px"></td>
-          <td style="padding:10px 8px;text-align:right;font-size:12px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(sumHBase+sumCBase)}</td>
+          <td style="padding:10px 8px;text-align:right;font-size:12px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(sumHBase+sumCenBase+sumCBase)}</td>
           <td style="padding:10px 8px;text-align:right;font-size:12px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(sumHIsh)}</td>
-          <td style="padding:10px 8px;text-align:right;font-size:12px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(sumHIva+sumCIva)}</td>
-          <td style="padding:10px 8px;text-align:right;font-size:13px;font-weight:700;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(grandTot)}</td>
+          <td style="padding:10px 8px;text-align:right;font-size:12px;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(sumHIva+sumCenIva+sumCIva)}</td>
+          <td style="padding:10px 8px;text-align:right;font-size:13px;font-weight:700;color:#1A1916;border-top:1.5px solid #CCC;border-bottom:none">${fmt(totHosp+totCenas+totCons)}</td>
           <td style="${td};border-top:1.5px solid #CCC;border-bottom:none;padding-top:10px" colspan="2">${pend>0?`<span style="font-size:11px;color:#E24B4A">+${fmt(pend)} pend.</span>`:''}</td>
         </tr>
       </tbody>
