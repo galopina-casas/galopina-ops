@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.22-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.23-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.22-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.23-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -441,14 +441,14 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <!-- noCFDI preview modal -->
   <div id="nocfdi-preview-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:12px;padding:1.2rem;width:96%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.18)">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
         <h3 style="font-size:15px;font-weight:600">Vista previa — facturas extraídas</h3>
         <button onclick="cerrarPreviewNoCFDI()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#888">✕</button>
       </div>
       <div id="nocfdi-preview-body"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
         <button class="btn" onclick="cerrarPreviewNoCFDI()">Cancelar</button>
-        <button class="btn btn-primary" onclick="confirmarNoCFDI()">Guardar todas</button>
+        <button class="btn btn-primary" onclick="confirmarNoCFDI()" id="btn-guardar-nocfdi">Guardar todas</button>
       </div>
     </div>
   </div>
@@ -2452,7 +2452,8 @@ async function procesarPDFsNoCFDI(input){
       const parsed=data.data.extracted;
       // Check duplicate nFactura
       const nfact=parsed.nFactura||'';
-      if(nfact&&(gd(KE).find(e=>e.nFactura===nfact)||_nocfdiPending.find(e=>e.nFactura===nfact))){duplicadas++;continue;}
+      const isDup=nfact&&(gd(KE).find(e=>e.nFactura===nfact)||_nocfdiPending.find(e=>e.nFactura===nfact&&!e._dup));
+      if(isDup){duplicadas++;parsed._dup=true;}
       parsed.archivo=file.name;
       parsed.montoMXN=parsed.monedaOriginal==='MXN'?parsed.montoOriginal:null;
       // Apply existing rules
@@ -2468,7 +2469,7 @@ async function procesarPDFsNoCFDI(input){
       _nocfdiPending.push({archivo:file.name,proveedor:'',nFactura:'',fecha:'',descripcion:'',monedaOriginal:'MXN',montoOriginal:0,montoMXN:0,categoria:'',nota:'',fuente:'noCFDI',uuid:'NC-'+Date.now(),error:true});
     }
   }
-  if(!_nocfdiPending.length){
+  if(!_nocfdiPending.filter(e=>!e._dup).length&&duplicadas>0){
     showAlert(`Todas las facturas ya estaban importadas (${duplicadas} duplicada(s) omitida(s))`,'error');
     return;
   }
@@ -2490,8 +2491,23 @@ function mostrarPreviewNoCFDI(){
   const grupos=[...new Set(cats.map(c=>c.grupo).filter(Boolean))];
   const optsHtml='<option value="">— Sin categoría —</option>'+grupos.map(g=>`<optgroup label="${g}">${cats.filter(c=>c.grupo===g).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}</optgroup>`).join('');
 
+  const nuevasCount=_nocfdiPending.filter(e=>!e._dup).length;
+  const dupCount=_nocfdiPending.filter(e=>e._dup).length;
   const lbl='font-size:10px;color:#888780;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px';
-  const rows=_nocfdiPending.map((e,i)=>`
+  const rows=_nocfdiPending.map((e,i)=>e._dup?`
+    <div style="background:#fff;border:0.5px solid #E24B4A;border-radius:10px;padding:1rem;margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="display:flex;align-items:center;gap:8px">
+          <i class="ti ti-file-invoice" style="font-size:15px;color:#888780" aria-hidden="true"></i>
+          <span style="font-size:12px;font-weight:500">${e.archivo}</span>
+        </div>
+        <span style="background:#FCE4D6;color:#C0392B;border-radius:5px;padding:2px 8px;font-size:11px">Duplicada</span>
+      </div>
+      <p style="font-size:12px;color:#C0392B;margin-top:8px;display:flex;align-items:center;gap:6px">
+        <i class="ti ti-alert-circle" style="font-size:15px;flex-shrink:0" aria-hidden="true"></i>
+        N° factura <strong style="margin:0 3px">${e.nFactura||'desconocido'}</strong> ya fue importada — no se guardará.
+      </p>
+    </div>`:`
     <div style="background:#fff;border:0.5px solid ${e.error?'#E24B4A':'#E0E0DA'};border-radius:10px;padding:1rem;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:8px">
@@ -2529,7 +2545,11 @@ function mostrarPreviewNoCFDI(){
       </label>
     </div>`).join('');
 
-  document.getElementById('nocfdi-preview-body').innerHTML=rows;
+  document.getElementById('nocfdi-preview-body').innerHTML=
+    `<p style="font-size:12px;color:#888780;margin:0 0 14px">${_nocfdiPending.length} archivo(s) · ${nuevasCount} nueva(s)${dupCount?' · '+dupCount+' duplicada(s)':''}</p>`
+    +rows;
+  const btn=document.getElementById('btn-guardar-nocfdi');
+  if(btn)btn.textContent='Guardar '+nuevasCount+' factura'+(nuevasCount!==1?'s':'')+' nueva'+(nuevasCount!==1?'s':'');
   document.getElementById('nocfdi-preview-overlay').style.display='flex';
 }
 
@@ -2548,6 +2568,7 @@ function confirmarNoCFDI(){
   const reglas=gd(KRE);
   let guardadas=0;
   _nocfdiPending.forEach((e,i)=>{
+    if(e._dup)return;
     if(!e.proveedor&&!e.montoOriginal)return;
     // Apply rules if no category
     if(!e.categoria){
