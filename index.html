@@ -70,8 +70,11 @@ input[readonly]{background:#f5f5f3;color:#555}
 .linea-row{display:grid;grid-template-columns:2fr 1fr 50px 70px 90px 28px;gap:5px;align-items:center;padding:3px 4px;border-radius:4px}
 .linea-row:hover{background:#f5f5f3}
 .linea-row input,.linea-row select{font-size:12px;height:29px;padding:4px 6px}
-.dot-cb{width:6px;height:6px;border-radius:50%;background:#1D9E75;display:inline-block;margin-right:3px;vertical-align:middle}
-.dot-m{width:6px;height:6px;border-radius:50%;background:#888;display:inline-block;margin-right:3px;vertical-align:middle}
+.dot-cb{width:18px;height:12px;border-radius:3px;border:0.5px solid #C8C6BE;display:inline-block;margin-right:4px;vertical-align:middle}
+.dot-m{width:18px;height:12px;border-radius:3px;border:1.5px solid #C49A6C;display:inline-block;margin-right:4px;vertical-align:middle}
+.dseg{display:flex;background:var(--color-background-secondary);border-radius:6px;padding:2px;gap:2px}
+.dsb{border:none;background:none;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;color:var(--color-text-secondary);white-space:nowrap}
+.dsb.on{background:var(--color-background-primary);color:var(--color-text-primary);font-weight:500;border:0.5px solid var(--color-border-tertiary)}
 .res-item{padding:9px 10px;border:0.5px solid #e0e0da;border-radius:6px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .import-zone{border:1.5px dashed #d5d5cf;border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer}
 .import-zone:hover{border-color:#1D9E75}
@@ -115,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.4</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.13</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -138,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.4</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.13</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -154,8 +157,27 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </div>
 
   <div class="sec active" id="sec-dashboard">
-    <div class="metrics" id="metrics-box"></div>
-    <div class="card"><p class="ctitle">Actividad reciente</p><div id="dash-rec"></div></div>
+    <div id="dash-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:1rem"></div>
+    <p style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Reservas</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div id="dash-g4" class="card"></div>
+      <div id="dash-g6" class="card"></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem">
+      <div id="dash-g7" class="card"></div>
+      <div id="dash-g12" class="card"></div>
+    </div>
+    <div id="dash-gres" class="card" style="margin-bottom:12px"></div>
+    <input type="hidden" id="gres-fecha-toggle" value="reserva">
+    <p style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Finanzas</p>
+    <div id="dash-g1" class="card" style="margin-bottom:12px"></div>
+    <div id="dash-g8" class="card" style="margin-bottom:12px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem">
+      <div id="dash-g9" class="card"></div>
+      <div id="dash-g10" class="card"></div>
+    </div>
+    <p style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Consumos</p>
+    <div id="dash-g11" class="card" style="margin-bottom:12px"></div>
   </div>
 
   <div class="sec" id="sec-reservas">
@@ -400,7 +422,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </div>
   <div id="eg-metrics" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
   <div id="eg-progress" style="margin-bottom:12px"></div>
-  <div class="card"><p class="ctitle" style="margin-bottom:8px">Facturas del mes</p><div id="eg-list"></div></div>
+  <div class="card"><p class="ctitle" style="margin-bottom:8px" id="eg-list-title">Facturas</p><div id="eg-list"></div></div>
   <!-- Categoria modal -->
   <div id="eg-modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeEgModal()">
     <div style="background:#fff;border-radius:12px;padding:1.2rem;width:96%;max-width:500px;max-height:90vh;overflow-y:auto">
@@ -715,22 +737,255 @@ function showTab(t){
   if(t==='nueva-reserva'){populateAll();}
 }
 
-function renderDash(){
-  const cons=gd(KC),res=gd(KR),m=new Date().getMonth(),y=new Date().getFullYear();
-  const tm=cons.filter(c=>{const d=new Date(c.fecha||'');return d.getMonth()===m&&d.getFullYear()===y});
-  const totCons=tm.reduce((s,c)=>s+(c.total||0),0);
-  const pendHosp=res.filter(r=>!r.saldFecha&&(r.saldo||0)>0).reduce((s,r)=>s+(r.saldo||0),0);
-  const totAnti=res.filter(r=>{const d=new Date(r.antiFecha||'');return d.getMonth()===m&&d.getFullYear()===y&&r.antiPago}).reduce((s,r)=>s+(r.anticipo||0),0);
-  document.getElementById('metrics-box').innerHTML=`
-    <div class="metric"><p class="mlabel">Anticipos cobrados mes</p><p class="mval" style="color:#185FA5">${fmt(totAnti)}</p></div>
-    <div class="metric"><p class="mlabel">Consumos mes</p><p class="mval" style="color:#1D9E75">${fmt(totCons)}</p></div>
-    <div class="metric"><p class="mlabel">Saldos pendientes</p><p class="mval" style="color:#E24B4A">${fmt(pendHosp)}</p></div>
-    <div class="metric"><p class="mlabel">Reservas activas</p><p class="mval">${res.filter(r=>r.estado==='checkin').length}</p></div>`;
-  const rec=res.filter(r=>r.estado==='checkin').slice(0,5);
-  document.getElementById('dash-rec').innerHTML=rec.length?rec.map(r=>`<div class="litem"><div><p style="font-size:13px;font-weight:500">${r.nombre} <span class="tag">${r.habitacion}</span></p><p style="font-size:11px;color:#888">${fmtDate(r.checkin)} → ${fmtDate(r.checkout)}${(r.saldo||0)>0?' · <span style="color:#E24B4A">Saldo '+fmt(r.saldo)+'</span>':''}</p></div><button class="btn btn-checkout btn-sm" onclick="ckOpen('${r.id}')">🏁 Check-out</button></div>`).join(''):'<p class="empty">Sin huéspedes en casa</p>';
+// ============================================================
+// DASHBOARD
+// ============================================================
+let _dashCharts={};
+const DASH_MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+
+function dashSeg(gId,btn,n){
+  document.querySelectorAll('#seg-'+gId+' .dsb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  dashRenderChart(gId,n);
 }
 
+function dashSegHdr(gId,opts,def){
+  return `<div class="dseg" id="seg-${gId}">${opts.map(o=>`<button class="dsb${o.v===def?' on':''}" onclick="dashSeg('${gId}',this,${o.v})">${o.l}</button>`).join('')}</div>`;
+}
 
+function getMonthlyData(months){
+  const res=gd(KR),cons=gd(KC),egr=gd(KE);
+  const now=new Date();
+  const result=[];
+  for(let i=months-1;i>=0;i--){
+    const d=new Date(now.getFullYear(),now.getMonth()-i,1);
+    const prefix=d.getFullYear()+'-'+(String(d.getMonth()+1).padStart(2,'0'));
+    const label=DASH_MESES[d.getMonth()]+(i>=12?' '+d.getFullYear():'');
+    // Hospedaje cobrado (con IVA)
+    const hospRes=res.filter(r=>(r.antiFecha||'').startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd');
+    const hospResSald=res.filter(r=>(r.saldFecha||'').startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd');
+    const hosp=hospRes.reduce((s,r)=>s+(r.anticipo||0),0)+hospResSald.reduce((s,r)=>s+(r.saldo||0),0);
+    // Hospedaje base (sin IVA, sin ISH) - proporcional al pago
+    const hospBase=hospRes.reduce((s,r)=>s+Math.round((r.base||0)*(r.total>0?(r.anticipo||0)/r.total:0)*100)/100,0)
+      +hospResSald.reduce((s,r)=>s+Math.round((r.base||0)*(r.total>0?(r.saldo||0)/r.total:0)*100)/100,0);
+    // Consumos (con IVA)
+    const consumos=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+(c.total||0),0);
+    // Consumos base (sin IVA)
+    const consumosBase=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+Math.round((c.subtotal||c.total/1.16||0)*100)/100,0);
+    // Egresos (con IVA)
+    const egresos=egr.filter(e=>(e.fecha||'').startsWith(prefix)).reduce((s,e)=>s+(e.total||0),0);
+    // Egresos base (sin IVA)
+    const egresosBase=egr.filter(e=>(e.fecha||'').startsWith(prefix)).reduce((s,e)=>s+(e.subtotal||0),0);
+    const ivaEgr=egr.filter(e=>(e.fecha||'').startsWith(prefix)).reduce((s,e)=>s+(e.iva||0),0);
+    const ivaIng=res.filter(r=>(r.antiFecha||'').startsWith(prefix)).reduce((s,r)=>s+(r.iva||0),0);
+    // Noches
+    const resM=res.filter(r=>(r.checkin||'').startsWith(prefix));
+    const noches=resM.reduce((s,r)=>s+(r.noches||0),0);
+    const nRes=resM.length;
+    result.push({prefix,label,hosp,hospBase,consumos,consumosBase,egresos,egresosBase,ivaEgr,ivaIng,noches,nRes});
+  }
+  return result;
+}
+
+function destroyChart(id){if(_dashCharts[id]){_dashCharts[id].destroy();delete _dashCharts[id];}}
+
+function mkChart(id,cfg){destroyChart(id);const c=document.getElementById(id);if(c){_dashCharts[id]=new Chart(c,cfg);}}
+
+function dashRenderChart(gId,months){
+  const d=getMonthlyData(months);
+  const labels=d.map(x=>x.label);
+  if(gId==='g1'){
+    const neto=d.map(x=>Math.round((x.hospBase+x.consumosBase-x.egresosBase)*100)/100);
+    mkChart('cv-g1',{type:'bar',data:{labels,datasets:[
+      {label:'Hospedaje',data:d.map(x=>Math.round(x.hospBase)),backgroundColor:'#185FA5',stack:'ing',order:2},
+      {label:'Consumos',data:d.map(x=>Math.round(x.consumosBase)),backgroundColor:'#1D9E75',stack:'ing',order:2},
+      {label:'Egresos',data:d.map(x=>Math.round(x.egresosBase)),backgroundColor:'#F5C4B3',stack:'egr',order:2},
+      {label:'Neto',data:neto,type:'line',borderColor:'#0C447C',backgroundColor:'transparent',
+       tension:.3,pointRadius:3,pointBackgroundColor:'#0C447C',order:1,borderWidth:2}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+Math.round(ctx.parsed.y).toLocaleString()}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>(v<0?'-$':'$')+Math.abs(Math.round(v/1000))+'K',font:{size:11}},border:{display:false}}}}});
+  }
+  if(gId==='g4'){
+    const origenCnt={};gd(KR).filter(r=>(r.checkin||'').slice(0,7)>=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})()).forEach(r=>{const o=r.origen||'otro';origenCnt[o]=(origenCnt[o]||0)+1;});
+    const entries=Object.entries(origenCnt).sort((a,b)=>b[1]-a[1]);
+    const cols=['#185FA5','#1D9E75','#D85A30','#7F77DD','#EF9F27','#B4B2A9'];
+    mkChart('cv-g4',{type:'pie',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols.slice(0,entries.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.parsed}}}}});
+  }
+  if(gId==='g6'){
+    mkChart('cv-g6',{type:'bar',data:{labels,datasets:[{label:'Noches',data:d.map(x=>x.nRes>0?Math.round(x.noches/x.nRes*10)/10:0),backgroundColor:'#85B7EB',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.y.toFixed(1)+' noches'}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{font:{size:11}},border:{display:false}}}}});
+  }
+  if(gId==='g7'){
+    const paisCnt={};const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
+    gd(KR).filter(r=>(r.checkin||'').slice(0,7)>=cutoff&&r.pais).forEach(r=>{paisCnt[r.pais]=(paisCnt[r.pais]||0)+1;});
+    const top=Object.entries(paisCnt).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const totPaises=top.reduce((s,e)=>s+e[1],0);
+    mkChart('cv-g7',{type:'bar',data:{
+      labels:top.map(e=>paisFlag(e[0])+' '+e[0]),
+      datasets:[{label:'Reservas',data:top.map(e=>e[1]),backgroundColor:top.map((_,i)=>i===0?'#185FA5':i<3?'#378ADD':'#85B7EB'),borderRadius:4,borderSkipped:false}]
+    },options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},
+        datalabels:{display:false},
+        tooltip:{callbacks:{label:ctx=>ctx.parsed.x+' reservas · '+Math.round(ctx.parsed.x/totPaises*100)+'%'}}},
+      scales:{
+        x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{font:{size:11}},border:{display:false},
+           afterDataLimits:scale=>{scale.max=scale.max*1.25;}},
+        y:{grid:{display:false},ticks:{font:{size:11}}}
+      },
+      animation:{onComplete:function(){
+        const chart=this;
+        const ctx=chart.ctx;
+        ctx.save();
+        ctx.font='500 11px sans-serif';
+        ctx.fillStyle='#444441';
+        chart.data.datasets[0].data.forEach((val,i)=>{
+          const meta=chart.getDatasetMeta(0);
+          const bar=meta.data[i];
+          const pct=Math.round(val/totPaises*100)+'%';
+          ctx.fillText(pct,bar.x+6,bar.y+4);
+        });
+        ctx.restore();
+      }}
+    }});
+  }
+  if(gId==='g12'){
+    const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
+    const leads=gd(KR).filter(r=>r.fechaReserva&&r.checkin&&(r.checkin||'').slice(0,7)>=cutoff).map(r=>Math.max(0,Math.round((new Date(r.checkin)-new Date(r.fechaReserva))/86400000)));
+    const bins=[0,0,0,0,0,0];
+    leads.forEach(v=>{if(v<=7)bins[0]++;else if(v<=14)bins[1]++;else if(v<=30)bins[2]++;else if(v<=60)bins[3]++;else if(v<=90)bins[4]++;else bins[5]++;});
+    mkChart('cv-g12',{type:'bar',data:{labels:['0-7d','8-14d','15-30d','31-60d','61-90d','+90d'],datasets:[{label:'Reservas',data:bins,backgroundColor:['#E24B4A','#F09595','#85B7EB','#378ADD','#185FA5','#0C447C'],borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{stepSize:2,font:{size:11}},border:{display:false}}}}});
+  }
+
+  if(gId==='g9'){
+    const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
+    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);});
+    const top=Object.entries(catTot).sort((a,b)=>b[1]-a[1]).slice(0,8);
+    const tot=top.reduce((s,e)=>s+e[1],0);
+    mkChart('cv-g9',{type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{label:'Monto',data:top.map(e=>Math.round(e[1])),backgroundColor:top.map((_,i)=>i===0?'#185FA5':i<3?'#378ADD':i<6?'#85B7EB':'#B5D4F4'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.x.toLocaleString()+' · '+Math.round(ctx.parsed.x/tot*100)+'%'}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+  }
+  if(gId==='g10'){
+    mkChart('cv-g10',{type:'bar',data:{labels,datasets:[
+      {label:'IVA cobrado',data:d.map(x=>Math.round(x.ivaIng)),backgroundColor:'#9FE1CB',borderRadius:3,order:2},
+      {label:'IVA acreditable',data:d.map(x=>Math.round(x.ivaEgr)),backgroundColor:'#F5C4B3',borderRadius:3,order:2},
+      {label:'Diferencia',data:d.map(x=>Math.round(x.ivaIng-x.ivaEgr)),type:'line',borderColor:'#185FA5',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#185FA5',order:1,borderWidth:2}
+    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+Math.round(ctx.parsed.y).toLocaleString()}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}}}}});
+  }
+  if(gId==='gres'){
+    const useFechaRes=document.getElementById('gres-fecha-toggle')?.value==='reserva';
+    const origenCnt={};
+    const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
+    gd(KR).forEach(r=>{
+      const fecha=useFechaRes?(r.fechaReserva||''):(r.checkin||'');
+      if(fecha.slice(0,7)<cutoff)return;
+      const mo=fecha.slice(0,7);
+      const o=r.origen||'otro';
+      if(!origenCnt[mo])origenCnt[mo]={};
+      origenCnt[mo][o]=(origenCnt[mo][o]||0)+1;
+    });
+    const allMonths=[];
+    const now=new Date();
+    for(let i=months-1;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);allMonths.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}
+    const labels=allMonths.map(m=>DASH_MESES[parseInt(m.split('-')[1])-1]+(months>12?' '+m.split('-')[0]:''));
+    const origenKeys=[...new Set(gd(KR).map(r=>r.origen||'otro'))].filter(Boolean);
+    const datasets=origenKeys.map(o=>({
+      label:o.charAt(0).toUpperCase()+o.slice(1),
+      data:allMonths.map(m=>(origenCnt[m]||{})[o]||0),
+      backgroundColor:ORIGEN_COLORS[o]||ORIGEN_COLORS.otro,
+      stack:'s'
+    }));
+    mkChart('cv-gres',{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>ctx[0].label,label:ctx=>ctx.dataset.label+': '+ctx.parsed.y,footer:items=>'Total: '+items.reduce((s,i)=>s+i.parsed.y,0)}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{stepSize:2,font:{size:11}},border:{display:false}}}}});
+  }
+  if(gId==='g11'){
+    const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
+    const catTot={};
+    gd(KC).filter(c=>(c.fecha||'').slice(0,7)>=cutoff).forEach(c=>{(c.items||[]).forEach(it=>{const cat=it.cat||'otro';catTot[cat]=(catTot[cat]||0)+(it.precio*it.cantidad);});});
+    const entries=Object.entries(catTot).sort((a,b)=>b[1]-a[1]);
+    const cols=['#185FA5','#1D9E75','#D85A30','#EF9F27','#7F77DD','#B4B2A9'];
+    mkChart('cv-g11',{type:'doughnut',data:{labels:entries.map(e=>catLabel(e[0])),datasets:[{data:entries.map(e=>Math.round(e[1])),backgroundColor:cols.slice(0,entries.length),borderWidth:2,borderColor:'#fff',hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{font:{size:11},boxWidth:10,padding:8}},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()}}}}});
+  }
+}
+
+function renderDash(){
+  const res=gd(KR),cons=gd(KC);
+  const m=new Date().getMonth(),y=new Date().getFullYear();
+  const prefix=y+'-'+String(m+1).padStart(2,'0');
+  const anti=res.filter(r=>(r.antiFecha||'').startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd').reduce((s,r)=>s+(r.anticipo||0),0);
+  const saldos=res.filter(r=>(r.saldFecha||'').startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd').reduce((s,r)=>s+(r.saldo||0),0);
+  const totCons=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+(c.total||0),0);
+  const pendHosp=res.filter(r=>!r.saldFecha&&(r.saldo||0)>0).reduce((s,r)=>s+(r.saldo||0),0);
+  const enCasa=res.filter(r=>r.estado==='checkin').length;
+  document.getElementById('dash-metrics').innerHTML=`
+    <div class="metric"><p class="mlabel">Cobrado este mes</p><p class="mval" style="color:#185FA5">${fmt(anti+saldos)}</p></div>
+    <div class="metric"><p class="mlabel">Consumos este mes</p><p class="mval" style="color:#1D9E75">${fmt(totCons)}</p></div>
+    <div class="metric"><p class="mlabel">Saldos pendientes</p><p class="mval" style="color:#E24B4A">${fmt(pendHosp)}</p></div>
+    <div class="metric"><p class="mlabel">En casa ahora</p><p class="mval">${enCasa}</p></div>`;
+
+  const seg12=(gId)=>dashSegHdr(gId,[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12);
+  const seg12mes=(gId)=>dashSegHdr(gId,[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12);
+  const segMes=(gId)=>dashSegHdr(gId,[{l:'Mes',v:1},{l:'3m',v:3},{l:'12m',v:12}],12);
+
+  document.getElementById('dash-g1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos vs egresos</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Con resultado neto</p></div><div style="display:flex;align-items:center;gap:12px"><div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-secondary)">${[['#185FA5','Hospedaje'],['#1D9E75','Consumos'],['#F5C4B3','Egresos']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}<span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#0C447C;display:inline-block"></span>Neto</span></div>${seg12('g1')}</div></div><div style="position:relative;height:240px"><canvas id="cv-g1" role="img" aria-label="Ingresos vs egresos mensuales">Ingresos vs egresos mensuales.</canvas></div>`;
+
+  document.getElementById('dash-g4').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Orígenes</p>${seg12('g4')}</div><div style="position:relative;height:180px"><canvas id="cv-g4" role="img" aria-label="Orígenes de reservas">Orígenes de reservas.</canvas></div>`;
+
+  document.getElementById('dash-g6').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Estancia promedio</p>${seg12('g6')}</div><div style="position:relative;height:180px"><canvas id="cv-g6" role="img" aria-label="Duración promedio estancia">Duración promedio estancia.</canvas></div>`;
+
+  document.getElementById('dash-g7').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Nacionalidades</p>${seg12('g7')}</div><div style="position:relative;height:220px"><canvas id="cv-g7" role="img" aria-label="Nacionalidad huéspedes">Top países.</canvas></div>`;
+
+  document.getElementById('dash-g12').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Lead time</p>${seg12('g12')}</div><div style="position:relative;height:220px"><canvas id="cv-g12" role="img" aria-label="Lead time reservas">Lead time reservas.</canvas></div>`;
+
+  document.getElementById('dash-g8').style.display='none';
+
+  document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Base sin IVA</p></div>${segMes('g9')}</div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
+
+  document.getElementById('dash-g10').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">IVA cobrado vs acreditable</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Solo IVA</p></div>${seg12('g10')}</div><div style="position:relative;height:260px"><canvas id="cv-g10" role="img" aria-label="IVA cobrado vs acreditable">IVA cobrado vs acreditable.</canvas></div>`;
+
+  const ORIGEN_LABELS={directo:'Directo',booking:'Booking',airbnb:'Airbnb',whatsapp:'WhatsApp',agencia:'Agencia',tablet:'Tablet',otro:'Otro'};
+  const legendHtml=Object.entries(ORIGEN_COLORS).map(([k,c])=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${ORIGEN_LABELS[k]||k}</span>`).join('');
+  document.getElementById('dash-gres').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+    <div><p style="font-size:13px;font-weight:500;margin:0">Reservas recibidas por mes</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Detalle por origen</p></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <div style="display:flex;gap:6px">
+        <div class="dseg" id="seg-gres-f">
+          <button class="dsb on" onclick="setGresToggle(this,'reserva')">Fecha reserva</button>
+          <button class="dsb" onclick="setGresToggle(this,'llegada')">Fecha llegada</button>
+        </div>
+        ${dashSegHdr('gres',[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12)}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${legendHtml}</div>
+    </div>
+  </div>
+  <div style="position:relative;height:220px"><canvas id="cv-gres" role="img" aria-label="Reservas por mes y origen">Reservas por mes y origen.</canvas></div>`;
+  document.getElementById('dash-g11').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Consumos por categoría</p>${seg12('g11')}</div><div style="position:relative;height:200px"><canvas id="cv-g11" role="img" aria-label="Consumos por categoría">Consumos por categoría.</canvas></div>`;
+
+  const _renderAll=()=>requestAnimationFrame(()=>['g1','g4','g6','g7','g12','gres','g9','g10','g11'].forEach(g=>dashRenderChart(g,12)));
+  if(!window.Chart){
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
+    s.onload=_renderAll;
+    document.head.appendChild(s);
+  } else {
+    _renderAll();
+  }
+}
+function setGresToggle(btn,tipo){
+  document.querySelectorAll('#seg-gres-f .dsb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('gres-fecha-toggle').value=tipo;
+  dashRenderChart('gres',parseInt(document.querySelector('#seg-gres .dsb.on')?.textContent)||12);
+}
+// ── NUEVA RESERVA: multiple habitaciones ──
+
+
+function setGresToggle(btn,tipo){
+  document.querySelectorAll('#seg-gres-f .dsb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('gres-fecha-toggle').value=tipo;
+  dashRenderChart('gres',parseInt(document.querySelector('#seg-gres .dsb.on')?.textContent)||12);
+}
 // ── NUEVA RESERVA: multiple habitaciones ──
 var habRows=[];
 var habRowId=0;
@@ -1889,11 +2144,12 @@ async function procesarZip(input){
     if(!xmlFiles.length){showAlert('No se encontraron XMLs en el ZIP','error');return;}
     const egresos=[...gd(KE)];
     const reglas=gd(KRE);
-    let nuevas=0,duplicadas=0;
+    let nuevas=0,duplicadas=0,cp01=0;
     for(const fname of xmlFiles){
       const xmlStr=await zip.files[fname].async('string');
       const egreso=parseCFDI(xmlStr);
       if(!egreso)continue;
+      if(egreso._skip==='cp01'){cp01++;continue;}
       if(egresos.find(e=>e.uuid===egreso.uuid)){duplicadas++;continue;}
       // Apply rules
       const regla=reglas.find(r=>r.rfc===egreso.rfc);
@@ -1902,8 +2158,8 @@ async function procesarZip(input){
       nuevas++;
     }
     sd(KE,egresos);
-    renderEgresos();
-    showAlert(`${nuevas} facturas importadas${duplicadas?' · '+duplicadas+' duplicadas omitidas':''}`, 'success');
+    initEgresos();
+    showAlert(`${nuevas} importadas${duplicadas?' · '+duplicadas+' duplicadas':''}${cp01?' · '+cp01+' omitidas (pagos CP01)':''}`, 'success');
   }catch(e){
     console.error(e);
     showAlert('Error al procesar ZIP: '+e.message,'error');
@@ -1927,11 +2183,14 @@ function parseCFDI(xmlStr){
     const doc=parser.parseFromString(xmlStr,'text/xml');
     const comp=doc.querySelector('Comprobante');
     if(!comp)return null;
-    // Only process received invoices (Ingreso type from 3rd party = egresos for us)
+    // Only process received invoices
     const tipo=comp.getAttribute('TipoDeComprobante');
     if(tipo!=='I'&&tipo!=='E')return null;
-    const emisor=doc.querySelector('Emisor');
+    // Exclude CP01 (complement payments, not invoices)
     const receptor=doc.querySelector('Receptor');
+    const usoCFDI=receptor?receptor.getAttribute('UsoCFDI'):'';
+    if(usoCFDI==='CP01')return {_skip:'cp01'};
+    const emisor=doc.querySelector('Emisor');
     const tfd=doc.querySelector('TimbreFiscalDigital');
     // Get IVA from root Impuestos element (TotalImpuestosTrasladados is the official rounded value)
     let iva=0;
@@ -1951,20 +2210,23 @@ function parseCFDI(xmlStr){
     const desc=concepto?concepto.getAttribute('Descripcion'):'';
     const uuid=tfd?tfd.getAttribute('UUID'):'';
     if(!uuid)return null;
+    const esNotaCredito=tipo==='E';
+    const totalVal=parseFloat(comp.getAttribute('Total')||0);
     return {
       uuid,
       fecha:(comp.getAttribute('Fecha')||'').slice(0,10),
       proveedor:emisor?emisor.getAttribute('Nombre'):'',
       rfc:emisor?emisor.getAttribute('Rfc'):'',
       descripcion:desc,
+      tipoDoc:esNotaCredito?'Nota de crédito':'Factura',
       formaPago:comp.getAttribute('FormaPago')||'',
       metodoPago:comp.getAttribute('MetodoPago')||'',
-      subtotal:parseFloat(comp.getAttribute('SubTotal')||0),
+      subtotal:esNotaCredito?-parseFloat(comp.getAttribute('SubTotal')||0):parseFloat(comp.getAttribute('SubTotal')||0),
       descuento:parseFloat(comp.getAttribute('Descuento')||0),
-      iva:Math.round(iva*100)/100,
-      total:parseFloat(comp.getAttribute('Total')||0),
+      iva:esNotaCredito?-Math.round(iva*100)/100:Math.round(iva*100)/100,
+      total:esNotaCredito?-totalVal:totalVal,
       moneda:comp.getAttribute('Moneda')||'MXN',
-      usoCFDI:receptor?receptor.getAttribute('UsoCFDI'):'',
+      usoCFDI,
       categoria:'',
       nota:'',
       fechaImportacion:new Date().toISOString().slice(0,10)
@@ -1985,6 +2247,15 @@ function initEgresos(){
     sel.appendChild(opt);
   });
 
+  // Set current month as default if available
+  const now=new Date();
+  const curPrefix=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const sel2=document.getElementById('eg-mes');
+  if(sel2){
+    const hasCurrentMonth=[...sel2.options].some(o=>o.value===curPrefix);
+    if(hasCurrentMonth)sel2.value=curPrefix;
+    else sel2.value='';
+  }
   renderEgresos();
 }
 
@@ -1998,7 +2269,7 @@ function renderEgresos(){
   if(search)egresos=egresos.filter(e=>(e.proveedor||'').toLowerCase().includes(search)||(e.descripcion||'').toLowerCase().includes(search));
   if(catFilter)egresos=egresos.filter(e=>(e.categoria||'').toLowerCase().includes(catFilter.toLowerCase()));
   if(soloSin)egresos=egresos.filter(e=>!e.categoria);
-  egresos.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  egresos.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
 
   // Metrics
   const total=Math.round(egresos.reduce((s,e)=>s+(e.total||0),0)*100)/100;
@@ -2022,18 +2293,29 @@ function renderEgresos(){
     </div>`:'';
 
   // List
+  // Update title
+  const mesVal=document.getElementById('eg-mes')?.value;
+  const titleEl=document.getElementById('eg-list-title');
+  if(titleEl){
+    if(mesVal){const[y,mo]=mesVal.split('-');const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];titleEl.textContent='Facturas de '+MN[parseInt(mo)-1]+' '+y;}
+    else titleEl.textContent='Facturas — todos los meses';
+  }
   if(!egresos.length){
     document.getElementById('eg-list').innerHTML='<p class="empty">Sin egresos registrados</p>';return;
   }
   const rows=egresos.map(e=>{
-    const sinCatStyle=!e.categoria?'background:rgba(250,238,218,0.4);':'';
+    const esNC=e.tipoDoc==='Nota de crédito';
+    const sinCatStyle=esNC&&!e.categoria?'background:rgba(250,238,218,0.4);border-radius:6px;':esNC?'background:var(--color-background-secondary);border-radius:6px;':!e.categoria?'background:rgba(250,238,218,0.4);border-radius:6px;':'';
     const catBadge=e.categoria
       ?`<span style="background:#E1F5EE;color:#085041;border:0.5px solid #5DCAA5;border-radius:4px;padding:3px 7px;font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;cursor:pointer">${e.categoria}</span>`
       :`<span style="background:#FAEEDA;color:#BA7517;border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer;display:inline-block">⚠ Sin categoría</span>`;
     return `<div style="display:grid;grid-template-columns:90px 1fr 90px 70px 130px;gap:8px;align-items:start;padding:8px 6px;border-bottom:0.5px solid #f0ede8;font-size:12px;${sinCatStyle}border-radius:${sinCatStyle?'6px':'0'}">
       <span style="color:#888">${e.fecha||''}</span>
       <div style="min-width:0;overflow:hidden">
-        <p style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.proveedor||''}</p>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0">
+          <p style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${e.proveedor||''}</p>
+          ${esNC?'<span style="background:#FFF3CD;color:#856404;border:0.5px solid #FFEAA0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Nota de crédito</span>':''}
+        </div>
         <p style="color:#999;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.descripcion||''}</p>
       </div>
       <span style="text-align:right">${fmt(e.total||0)}</span>
@@ -2793,6 +3075,7 @@ const CAT_LABELS={
   'Propina':'Propina','Rembolso daño':'Reembolso daño',
   'hospedaje':'Hospedaje'
 };
+const ORIGEN_COLORS={directo:'#1D9E75',booking:'#003580',airbnb:'#FF5A5F',whatsapp:'#25D366',agencia:'#888780',tablet:'#8B6914',otro:'#B4B2A9'};
 const ORDER=['efectivo','transferencia','debito','stripe','cloudbeds','mercadopago','efectivo-nd'];
 const METODOS_LABELS={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe',cloudbeds:'CloudBeds'};
 
@@ -3071,7 +3354,7 @@ function exportarCierreExcel(){
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
   // === HOJA EGRESOS ===
   const egMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  const egHdrs=['Fecha','RFC','Nombre','Descripción','Moneda','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
+  const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Moneda','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
   const egData=[egHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
   egMes.forEach((e,i)=>{
     const bg=i%2===0?null:'F2F2F2';
@@ -3079,14 +3362,14 @@ function exportarCierreExcel(){
     const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
     egData.push([
       {v:e.fecha||'',s:cs(bg)},{v:e.rfc||'',s:cs(bg)},{v:e.proveedor||'',s:cs(bg)},
-      {v:e.descripcion||'',s:cs(bg)},{v:e.moneda||'MXN',s:cs(bg)},
+      {v:e.descripcion||'',s:cs(bg)},{v:e.tipoDoc||'Factura',s:cs(bg)},{v:e.moneda||'MXN',s:cs(bg)},
       {v:e.formaPago||'',s:cs(bg)},{v:e.metodoPago||'',s:cs(bg)},
       nm(bg,e.subtotal||0),nm(bg,e.descuento||0),nm(bg,e.iva||0),nm(bg,e.total||0),
       {v:e.categoria||'',s:cs(bg)},{v:e.nota||'',s:cs(bg)}
     ]);
   });
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
-  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
+  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
   XLSX.writeFile(wb,'Galopina_Cierre_'+mesNombre.replace(' ','_')+'.xlsx');
   showAlert('Excel exportado','success');
