@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.29-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.30-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.29-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.30-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -3238,28 +3238,6 @@ function openIngModal(gKey){
   if(rr&&rr.base){bnT=parseFloat(rr.base)||0;ishT=bnT*0.045;ivaT=bnT*0.16;}
   else{bnT=grandHosp/1.205;ishT=bnT*0.045;ivaT=bnT*0.16;}
 
-  // Build cenas rows
-  let cenasRows='';
-  let sumCenBase=0,sumCenIva=0,sumCenTot=0;
-  const cenasItemsSorted=[...cenasItems].sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  cenasItemsSorted.forEach(it=>{
-    const monto=it.monto||0;
-    const base=Math.round(monto/1.16*100)/100;
-    const iva=Math.round((monto-base)*100)/100;
-    const isPend=it.pago==='pendiente'||it.pago==='tbd';
-    sumCenBase+=base;sumCenIva+=iva;sumCenTot+=monto;
-    cenasRows+=`<tr>
-      <td style="${tdL};border-left:3px solid #1D9E75${isPend?';color:#E24B4A':''}">${it.label||it.concepto||'Cena'}</td>
-      <td style="${td};${muted}">—</td>
-      <td style="${td}">${fmt(base)}</td>
-      <td style="${td};${muted}">—</td>
-      <td style="${td}">${fmt(iva)}</td>
-      <td style="${td};font-weight:700${isPend?';color:#E24B4A':''}">${fmt(monto)}</td>
-      <td style="${td}"><span class="badge ${pagoBadge(it.pago)}">${pagoLabel(it.pago||'')}</span></td>
-      <td style="${td};${muted}">${it.fecha||'—'}</td>
-    </tr>`;
-  });
-
   // Collect consumo rows
   const consRows=[];
   consItems.forEach(group=>{
@@ -3275,15 +3253,32 @@ function openIngModal(gKey){
   const hospSorted=[...hospItems].sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
   consRows.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
 
+  // Split hospedaje vs cenas if reservation has included cenas
+  const cenasTotal=rr?(rr.consumoCena||0):0;
+  const hospTotalR=rr?(rr.hospTotal||(rr.total||0)-cenasTotal):grandHosp;
+  const totalR=rr?(rr.total||grandHosp):grandHosp;
+  const hospRatio=totalR>0?hospTotalR/totalR:1;
+  const cenasRatio=totalR>0?cenasTotal/totalR:0;
+
+  // Hospedaje base/ish/iva based on hospTotal only
+  const bnH=hospTotalR/1.205;
+  const ishH=bnH*0.045;
+  const ivaH=bnH*0.16;
+
+  // Cenas base/iva
+  const bnCenas=cenasTotal/1.16;
+  const ivaCenas=cenasTotal-bnCenas;
+
   // Column sums
   let sumHBase=0,sumHIsh=0,sumHIva=0,sumHTot=0;
   hospSorted.forEach(it=>{
     const monto=it.monto||0;
+    const montoH=Math.round(monto*hospRatio*100)/100;
     const ratio=grandHosp>0?monto/grandHosp:0;
-    const base=Math.round(bnT*ratio*100)/100;
-    const ish=Math.round(ishT*ratio*100)/100;
-    const iva=Math.round(ivaT*ratio*100)/100;
-    if(it.pago!=='pendiente'&&it.pago!=='tbd'){sumHBase+=base;sumHIsh+=ish;sumHIva+=iva;sumHTot+=monto;}
+    const base=Math.round(bnH*ratio*100)/100;
+    const ish=Math.round(ishH*ratio*100)/100;
+    const iva=Math.round(ivaH*ratio*100)/100;
+    if(it.pago!=='pendiente'&&it.pago!=='tbd'){sumHBase+=base;sumHIsh+=ish;sumHIva+=iva;sumHTot+=montoH;}
   });
   let sumCBase=0,sumCIva=0,sumCTot=0;
   consRows.forEach(ci=>{sumCBase+=ci.base;sumCIva+=ci.iva;sumCTot+=ci.tot;});
@@ -3294,25 +3289,46 @@ function openIngModal(gKey){
   const tdL='padding:6px 8px;font-size:12px;text-align:left;border-bottom:0.5px solid #F0EDE8;vertical-align:middle';
   const muted='color:#AAA';
 
-  // Build hosp rows
+  // Build hosp rows (split hospedaje and cenas)
   let hospRows='';
+  let cenasRows='';
+  let sumCenBase=0,sumCenIva=0,sumCenTot=0;
   hospSorted.forEach(it=>{
     const monto=it.monto||0;
+    const montoH=Math.round(monto*hospRatio*100)/100;
+    const montoC=Math.round(monto*cenasRatio*100)/100;
     const ratio=grandHosp>0?monto/grandHosp:0;
-    const base=Math.round(bnT*ratio*100)/100;
-    const ish=Math.round(ishT*ratio*100)/100;
-    const iva=Math.round(ivaT*ratio*100)/100;
+    const base=Math.round(bnH*ratio*100)/100;
+    const ish=Math.round(ishH*ratio*100)/100;
+    const iva=Math.round(ivaH*ratio*100)/100;
     const isPend=it.pago==='pendiente'||it.pago==='tbd';
+    const pct=grandHosp>0?Math.round(monto/grandHosp*100)+'%':'';
     hospRows+=`<tr>
-      <td style="${tdL};border-left:3px solid #185FA5${isPend?';color:#E24B4A':''}">${it.label}<span style="font-size:10px;color:#AAA;margin-left:6px">${grandHosp>0?Math.round(monto/grandHosp*100)+'%':''}</span></td>
+      <td style="${tdL};border-left:3px solid #185FA5${isPend?';color:#E24B4A':''}">${it.label}<span style="font-size:10px;color:#AAA;margin-left:6px">${pct}</span></td>
       <td style="${td};${muted}">—</td>
       <td style="${td}">${fmt(base)}</td>
       <td style="${td}">${fmt(ish)}</td>
       <td style="${td}">${fmt(iva)}</td>
-      <td style="${td};font-weight:700${isPend?';color:#E24B4A':''}">${fmt(monto)}</td>
+      <td style="${td};font-weight:700${isPend?';color:#E24B4A':''}">${fmt(montoH)}</td>
       <td style="${td}"><span class="badge ${pagoBadge(it.pago)}">${pagoLabel(it.pago||'')}</span></td>
       <td style="${td};${muted}">${it.fecha||'—'}</td>
     </tr>`;
+    // Build cenas row if reservation has cenas
+    if(cenasTotal>0){
+      const cbase=Math.round(montoC/1.16*100)/100;
+      const civa=Math.round((montoC-cbase)*100)/100;
+      sumCenBase+=cbase;sumCenIva+=civa;sumCenTot+=montoC;
+      cenasRows+=`<tr>
+        <td style="${tdL};border-left:3px solid #1D9E75${isPend?';color:#E24B4A':''}">${it.label.replace('hospedaje','cena').replace('Hospedaje','Cena')}<span style="font-size:10px;color:#AAA;margin-left:6px">${pct}</span></td>
+        <td style="${td};${muted}">—</td>
+        <td style="${td}">${fmt(cbase)}</td>
+        <td style="${td};${muted}">—</td>
+        <td style="${td}">${fmt(civa)}</td>
+        <td style="${td};font-weight:700${isPend?';color:#E24B4A':''}">${fmt(montoC)}</td>
+        <td style="${td}"><span class="badge ${pagoBadge(it.pago)}">${pagoLabel(it.pago||'')}</span></td>
+        <td style="${td};${muted}">${it.fecha||'—'}</td>
+      </tr>`;
+    }
   });
 
   // Build cons rows
@@ -3357,10 +3373,10 @@ function openIngModal(gKey){
           <td style="${td};color:#185FA5;font-weight:500;border-top:0.5px solid #B5D4F4">${fmt(sumHBase)}</td>
           <td style="${td};color:#185FA5;font-weight:500;border-top:0.5px solid #B5D4F4">${fmt(sumHIsh)}</td>
           <td style="${td};color:#185FA5;font-weight:500;border-top:0.5px solid #B5D4F4">${fmt(sumHIva)}</td>
-          <td style="${td};color:#185FA5;font-weight:700;border-top:0.5px solid #B5D4F4">${fmt(sumHTot)}</td>
+          <td style="${td};color:#185FA5;font-weight:700;border-top:0.5px solid #B5D4F4">${fmt(Math.round(sumHTot*100)/100)}</td>
           <td style="${td};border-top:0.5px solid #B5D4F4" colspan="2"></td>
         </tr>`:''}
-        ${cenasItems.length?`
+        ${cenasTotal>0?`
         <tr><td colspan="8" style="padding:10px 8px 4px;font-size:10px;font-weight:500;color:#1D9E75;text-transform:uppercase;letter-spacing:.07em;border-bottom:none;border-left:3px solid #1D9E75;padding-left:10px">Cenas incluidas</td></tr>
         ${cenasRows}
         <tr>
