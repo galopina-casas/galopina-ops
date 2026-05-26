@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.9-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.10-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.9-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.10-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -953,13 +953,14 @@ function renderDash(){
   <div style="position:relative;height:220px"><canvas id="cv-gres" role="img" aria-label="Reservas por mes y origen">Reservas por mes y origen.</canvas></div>`;
   document.getElementById('dash-g11').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Consumos por categoría</p>${seg12('g11')}</div><div style="position:relative;height:200px"><canvas id="cv-g11" role="img" aria-label="Consumos por categoría">Consumos por categoría.</canvas></div>`;
 
+  const _renderAll=()=>requestAnimationFrame(()=>['g1','g4','g6','g7','g12','gres','g9','g10','g11'].forEach(g=>dashRenderChart(g,12)));
   if(!window.Chart){
     const s=document.createElement('script');
     s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
-    s.onload=()=>['g1','g4','g6','g7','g12','gres','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
+    s.onload=_renderAll;
     document.head.appendChild(s);
   } else {
-    ['g1','g4','g6','g7','g12','gres','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
+    _renderAll();
   }
 }
 function setGresToggle(btn,tipo){
