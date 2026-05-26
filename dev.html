@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.7-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.8-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.7-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.8-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -785,10 +785,17 @@ function dashRenderChart(gId,months){
   const d=getMonthlyData(months);
   const labels=d.map(x=>x.label);
   if(gId==='g1'){
+    const neto=d.map(x=>x.hosp+x.consumos-x.egresos);
     mkChart('cv-g1',{type:'bar',data:{labels,datasets:[
-      {label:'Hospedaje',data:d.map(x=>x.hosp),backgroundColor:'#185FA5',stack:'s'},
-      {label:'Consumos',data:d.map(x=>x.consumos),backgroundColor:'#1D9E75',stack:'s'}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+Math.round(ctx.parsed.y).toLocaleString()}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}}}}});
+      {label:'Hospedaje',data:d.map(x=>x.hosp),backgroundColor:'#185FA5',stack:'ing',order:2},
+      {label:'Consumos',data:d.map(x=>x.consumos),backgroundColor:'#1D9E75',stack:'ing',order:2},
+      {label:'Egresos',data:d.map(x=>x.egresos),backgroundColor:'#F5C4B3',stack:'egr',order:2},
+      {label:'Neto',data:neto,type:'line',borderColor:'#0C447C',backgroundColor:'transparent',
+       tension:.3,pointRadius:3,pointBackgroundColor:'#0C447C',order:1,borderWidth:2}
+    ]},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+Math.round(ctx.parsed.y).toLocaleString()}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:11}}},
+        y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>(v<0?'-$':'$')+Math.abs(Math.round(v/1000))+'K',font:{size:11}},border:{display:false}}}}});
   }
   if(gId==='g4'){
     const origenCnt={};gd(KR).filter(r=>(r.checkin||'').slice(0,7)>=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})()).forEach(r=>{const o=r.origen||'otro';origenCnt[o]=(origenCnt[o]||0)+1;});
@@ -839,14 +846,7 @@ function dashRenderChart(gId,months){
     leads.forEach(v=>{if(v<=7)bins[0]++;else if(v<=14)bins[1]++;else if(v<=30)bins[2]++;else if(v<=60)bins[3]++;else if(v<=90)bins[4]++;else bins[5]++;});
     mkChart('cv-g12',{type:'bar',data:{labels:['0-7d','8-14d','15-30d','31-60d','61-90d','+90d'],datasets:[{label:'Reservas',data:bins,backgroundColor:['#E24B4A','#F09595','#85B7EB','#378ADD','#185FA5','#0C447C'],borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{stepSize:2,font:{size:11}},border:{display:false}}}}});
   }
-  if(gId==='g8'){
-    const neto=d.map(x=>x.hosp+x.consumos-x.egresos);
-    mkChart('cv-g8',{type:'bar',data:{labels,datasets:[
-      {label:'Ingresos',data:d.map(x=>x.hosp+x.consumos),backgroundColor:'#9FE1CB',borderRadius:3,order:2},
-      {label:'Egresos',data:d.map(x=>x.egresos),backgroundColor:'#F5C4B3',borderRadius:3,order:2},
-      {label:'Neto',data:neto,type:'line',borderColor:'#185FA5',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#185FA5',order:1,borderWidth:2}
-    ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+Math.round(ctx.parsed.y).toLocaleString()}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}}}}});
-  }
+
   if(gId==='g9'){
     const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
     const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.total||0);});
@@ -890,7 +890,7 @@ function renderDash(){
   const seg12mes=(gId)=>dashSegHdr(gId,[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12);
   const segMes=(gId)=>dashSegHdr(gId,[{l:'Mes',v:1},{l:'3m',v:3},{l:'12m',v:12}],12);
 
-  document.getElementById('dash-g1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos mensuales</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Hospedaje + consumos cobrados</p></div><div style="display:flex;align-items:center;gap:12px">${[['#185FA5','Hospedaje'],['#1D9E75','Consumos']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}${seg12('g1')}</div></div><div style="position:relative;height:220px"><canvas id="cv-g1" role="img" aria-label="Ingresos mensuales">Ingresos mensuales hospedaje y consumos.</canvas></div>`;
+  document.getElementById('dash-g1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos vs egresos</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Con resultado neto</p></div><div style="display:flex;align-items:center;gap:12px"><div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-secondary)">${[['#185FA5','Hospedaje'],['#1D9E75','Consumos'],['#F5C4B3','Egresos']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}<span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#0C447C;display:inline-block"></span>Neto</span></div>${seg12('g1')}</div></div><div style="position:relative;height:240px"><canvas id="cv-g1" role="img" aria-label="Ingresos vs egresos mensuales">Ingresos vs egresos mensuales.</canvas></div>`;
 
   document.getElementById('dash-g4').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Orígenes</p>${seg12('g4')}</div><div style="position:relative;height:180px"><canvas id="cv-g4" role="img" aria-label="Orígenes de reservas">Orígenes de reservas.</canvas></div>`;
 
@@ -900,7 +900,7 @@ function renderDash(){
 
   document.getElementById('dash-g12').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Lead time</p>${seg12('g12')}</div><div style="position:relative;height:220px"><canvas id="cv-g12" role="img" aria-label="Lead time reservas">Lead time reservas.</canvas></div>`;
 
-  document.getElementById('dash-g8').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos vs egresos</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Con resultado neto</p></div><div style="display:flex;align-items:center;gap:12px">${[['#9FE1CB','Ingresos'],['#F5C4B3','Egresos'],['#185FA5','Neto']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}${seg12('g8')}</div></div><div style="position:relative;height:220px"><canvas id="cv-g8" role="img" aria-label="Ingresos vs egresos">Ingresos vs egresos mensuales.</canvas></div>`;
+  document.getElementById('dash-g8').style.display='none';
 
   document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p>${segMes('g9')}</div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
 
@@ -911,10 +911,10 @@ function renderDash(){
   if(!window.Chart){
     const s=document.createElement('script');
     s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
-    s.onload=()=>['g1','g4','g6','g7','g12','g8','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
+    s.onload=()=>['g1','g4','g6','g7','g12','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
     document.head.appendChild(s);
   } else {
-    ['g1','g4','g6','g7','g12','g8','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
+    ['g1','g4','g6','g7','g12','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
   }
 }
 // ── NUEVA RESERVA: multiple habitaciones ──
