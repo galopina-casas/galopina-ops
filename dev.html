@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.18-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.19-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.18-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.19-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -430,7 +430,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div class="card"><p class="ctitle" style="margin-bottom:8px" id="eg-list-title">Facturas</p><div id="eg-list"></div></div>
   <!-- noCFDI form modal -->
   <div id="nocfdi-modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)cerrarFormNoCFDI()">
-    <div style="background:var(--color-background-primary);border-radius:12px;padding:1.2rem;width:96%;max-width:560px;max-height:90vh;overflow-y:auto">
+    <div style="background:#fff;border-radius:12px;padding:1.2rem;width:96%;max-width:560px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.18)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h3 id="nocfdi-modal-title" style="font-size:15px;font-weight:600">Agregar factura noCFDI</h3>
         <button onclick="cerrarFormNoCFDI()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#888">✕</button>
@@ -440,7 +440,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </div>
   <!-- noCFDI preview modal -->
   <div id="nocfdi-preview-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center">
-    <div style="background:var(--color-background-primary);border-radius:12px;padding:1.2rem;width:96%;max-width:700px;max-height:90vh;overflow-y:auto">
+    <div style="background:#fff;border-radius:12px;padding:1.2rem;width:96%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.18)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <h3 style="font-size:15px;font-weight:600">Vista previa — facturas extraídas</h3>
         <button onclick="cerrarPreviewNoCFDI()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#888">✕</button>
@@ -2478,15 +2478,15 @@ function mostrarPreviewNoCFDI(){
   const grupos=[...new Set(cats.map(c=>c.grupo).filter(Boolean))];
   const optsHtml='<option value="">— Sin categoría —</option>'+grupos.map(g=>`<optgroup label="${g}">${cats.filter(c=>c.grupo===g).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}</optgroup>`).join('');
 
-  const lbl='font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px';
+  const lbl='font-size:10px;color:#888780;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px';
   const rows=_nocfdiPending.map((e,i)=>`
-    <div style="background:var(--color-background-primary);border:0.5px solid ${e.error?'var(--color-border-danger)':'var(--color-border-tertiary)'};border-radius:var(--border-radius-lg);padding:1rem;margin-bottom:10px">
+    <div style="background:#fff;border:0.5px solid ${e.error?'#E24B4A':'#E0E0DA'};border-radius:10px;padding:1rem;margin-bottom:10px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:8px">
           <i class="ti ti-file-invoice" style="font-size:16px;color:var(--color-text-secondary)" aria-hidden="true"></i>
           <span style="font-size:12px;font-weight:500">${e.archivo}</span>
         </div>
-        <span style="background:var(--color-background-${e.error?'danger':'success'});color:var(--color-text-${e.error?'danger':'success'});border-radius:var(--border-radius-md);padding:2px 8px;font-size:11px">${e.error?'Error extracción':'Extraído'}</span>
+        <span style="background:${e.error?'#FCE4D6':'#E1F5EE'};color:${e.error?'#C0392B':'#085041'};border-radius:var(--border-radius-md);padding:2px 8px;font-size:11px">${e.error?'Error extracción':'Extraído'}</span>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div><label style="${lbl}">Proveedor</label><input value="${e.proveedor||''}" onchange="_nocfdiPending[${i}].proveedor=this.value" style="width:100%;font-size:13px"></div>
@@ -2500,7 +2500,7 @@ function mostrarPreviewNoCFDI(){
             <input type="number" value="${e.montoOriginal||''}" onchange="_nocfdiPending[${i}].montoOriginal=parseFloat(this.value);actualizarMontoMXN(${i})" style="flex:1;font-size:13px">
           </div>
         </div>
-        ${e.monedaOriginal!=='MXN'?`<div style="grid-column:span 2"><label style="font-size:10px;color:var(--color-text-warning);text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">⚠ Monto en MXN (captura manual)</label><input type="number" id="mxn-${i}" value="${e.montoMXN||''}" onchange="_nocfdiPending[${i}].montoMXN=parseFloat(this.value)" style="width:100%;font-size:13px;border-color:var(--color-border-warning)"></div>`:''}
+        ${e.monedaOriginal!=='MXN'?`<div style="grid-column:span 2"><label style="font-size:10px;color:#BA7517;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">⚠ Monto en MXN (captura manual)</label><input type="number" id="mxn-${i}" value="${e.montoMXN||''}" onchange="_nocfdiPending[${i}].montoMXN=parseFloat(this.value)" style="width:100%;font-size:13px;border-color:#BA7517"></div>`:''}
       </div>
       <div style="margin-bottom:10px"><label style="${lbl}">Descripción</label><input value="${e.descripcion||''}" onchange="_nocfdiPending[${i}].descripcion=this.value" style="width:100%;font-size:13px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
@@ -2511,9 +2511,9 @@ function mostrarPreviewNoCFDI(){
         </div>
         <div><label style="${lbl}">Nota</label><input value="${e.nota||''}" onchange="_nocfdiPending[${i}].nota=this.value" style="width:100%;font-size:13px"></div>
       </div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-secondary);cursor:pointer;padding:8px 10px;background:var(--color-background-secondary);border-radius:var(--border-radius-md)">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#5F5E5A;cursor:pointer;padding:8px 10px;background:#F5F5F2;border-radius:6px">
         <input type="checkbox" id="regla-${i}" style="width:15px;height:15px;flex-shrink:0">
-        Guardar como regla automática para <strong style="color:var(--color-text-primary);margin-left:4px">${e.proveedor||'este proveedor'}</strong>
+        Guardar como regla automática para <strong style="color:#2C2C2A;margin-left:4px">${e.proveedor||'este proveedor'}</strong>
       </label>
     </div>`).join('');
 
@@ -2591,21 +2591,21 @@ function abrirFormNoCFDI(){
   document.getElementById('nocfdi-modal-title').textContent='Agregar factura noCFDI';
   document.getElementById('nocfdi-modal-body').innerHTML=`
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
-      <div><label style="font-size:11px;color:var(--color-text-tertiary)">PROVEEDOR</label><input id="nc-proveedor" style="width:100%;font-size:13px;margin-top:2px"></div>
-      <div><label style="font-size:11px;color:var(--color-text-tertiary)">N° FACTURA</label><input id="nc-nfactura" style="width:100%;font-size:13px;margin-top:2px"></div>
-      <div><label style="font-size:11px;color:var(--color-text-tertiary)">FECHA</label><input type="date" id="nc-fecha" value="${new Date().toISOString().slice(0,10)}" style="width:100%;font-size:13px;margin-top:2px"></div>
-      <div><label style="font-size:11px;color:var(--color-text-tertiary)">MONEDA ORIGINAL</label>
+      <div><label style="font-size:11px;color:#888780">PROVEEDOR</label><input id="nc-proveedor" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div><label style="font-size:11px;color:#888780">N° FACTURA</label><input id="nc-nfactura" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div><label style="font-size:11px;color:#888780">FECHA</label><input type="date" id="nc-fecha" value="${new Date().toISOString().slice(0,10)}" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div><label style="font-size:11px;color:#888780">MONEDA ORIGINAL</label>
         <select id="nc-moneda" onchange="toggleMXNField()" style="width:100%;font-size:13px;margin-top:2px">
           ${['MXN','USD','EUR','GBP','CAD'].map(m=>`<option>${m}</option>`).join('')}
         </select>
       </div>
-      <div><label style="font-size:11px;color:var(--color-text-tertiary)">MONTO ORIGINAL</label><input type="number" id="nc-monto-orig" oninput="autoFillMXN()" style="width:100%;font-size:13px;margin-top:2px"></div>
-      <div id="nc-mxn-div"><label style="font-size:11px;color:var(--color-text-tertiary)">MONTO MXN</label><input type="number" id="nc-monto-mxn" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div><label style="font-size:11px;color:#888780">MONTO ORIGINAL</label><input type="number" id="nc-monto-orig" oninput="autoFillMXN()" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div id="nc-mxn-div"><label style="font-size:11px;color:#888780">MONTO MXN</label><input type="number" id="nc-monto-mxn" style="width:100%;font-size:13px;margin-top:2px"></div>
     </div>
-    <div style="margin-bottom:10px"><label style="font-size:11px;color:var(--color-text-tertiary)">DESCRIPCIÓN</label><input id="nc-desc" style="width:100%;font-size:13px;margin-top:2px"></div>
+    <div style="margin-bottom:10px"><label style="font-size:11px;color:#888780">DESCRIPCIÓN</label><input id="nc-desc" style="width:100%;font-size:13px;margin-top:2px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div><label style="font-size:11px;color:var(--color-text-tertiary)">CATEGORÍA</label><select id="nc-cat" style="width:100%;font-size:13px;margin-top:2px">${optsHtml}</select></div>
-      <div><label style="font-size:11px;color:var(--color-text-tertiary)">NOTA</label><input id="nc-nota" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div><label style="font-size:11px;color:#888780">CATEGORÍA</label><select id="nc-cat" style="width:100%;font-size:13px;margin-top:2px">${optsHtml}</select></div>
+      <div><label style="font-size:11px;color:#888780">NOTA</label><input id="nc-nota" style="width:100%;font-size:13px;margin-top:2px"></div>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px">
       <button class="btn" onclick="cerrarFormNoCFDI()">Cancelar</button>
