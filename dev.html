@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.34-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.35-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.34-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.35-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2267,7 +2267,9 @@ function parseCFDI(xmlStr){
       categoria:'',
       nota:'',
       fuente:'cfdi',
-      fechaImportacion:new Date().toISOString().slice(0,10)
+      fechaImportacion:new Date().toISOString().slice(0,10),
+      gastoPersonal:false,
+      deducibleAnual:false
     };
   }catch(e){console.error('parseCFDI error:',e);return null;}
 }
@@ -2314,17 +2316,34 @@ function renderEgresos(){
   const totalIva=Math.round(egresos.reduce((s,e)=>s+(e.iva||0),0)*100)/100;
   const sinCat=egresos.filter(e=>!e.categoria).length;
   const conCat=egresos.length-sinCat;
+  const gastosPersonales=egresos.filter(e=>e.gastoPersonal);
+  const totalGP=gastosPersonales.reduce((s,e)=>s+(e.total||0),0);
+  const egresosOpActivos=_egShowGP?egresos:egresos.filter(e=>!e.gastoPersonal);
+  const totalOp=egresosOpActivos.reduce((s,e)=>s+(e.total||0),0);
+  const ivaOpActivo=egresosOpActivos.reduce((s,e)=>s+(e.iva||0),0);
   const nFacturasCFDI=egresos.filter(e=>e.tipoDoc!=='Nota de crédito'&&e.fuente!=='noCFDI').length;
   const nNoCFDI=egresos.filter(e=>e.fuente==='noCFDI').length;
   const nFacturas=nFacturasCFDI;
   const nNC=egresos.filter(e=>e.tipoDoc==='Nota de crédito').length;
+  const mesValNombre=(()=>{const mv=document.getElementById('eg-mes')?.value;if(!mv)return'todos los meses';const[y,mo]=mv.split('-');const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];return MN[parseInt(mo)-1]+' '+y;})();
   document.getElementById('eg-metrics').innerHTML=`
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+      <p style="font-size:13px;font-weight:500;margin:0">Facturas de ${mesValNombre}</p>
+      <div style="display:flex;background:#F0EDE8;border-radius:6px;padding:2px;gap:2px">
+        <button onclick="_egShowGP=true;renderEgresos()" style="border:none;padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;background:${_egShowGP?'#fff':'transparent'};font-weight:${_egShowGP?'500':'400'}">Con gastos personales</button>
+        <button onclick="_egShowGP=false;renderEgresos()" style="border:none;padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;background:${!_egShowGP?'#fff':'transparent'};font-weight:${!_egShowGP?'500':'400'}">Sin gastos personales</button>
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
     <div class="metric"><p class="mlabel">Facturas CFDI</p><p class="mval">${nFacturas}</p></div>
     ${nNoCFDI>0?`<div class="metric"><p class="mlabel">noCFDI</p><p class="mval" style="color:#0C447C">${nNoCFDI}</p></div>`:''}
     ${nNC>0?`<div class="metric"><p class="mlabel">Notas de crédito</p><p class="mval" style="color:#856404">${nNC}</p></div>`:''}
     <div class="metric"><p class="mlabel">Total egresos</p><p class="mval">${fmt(total)}</p></div>
-    <div class="metric"><p class="mlabel">IVA acreditable</p><p class="mval" style="color:#185FA5">${fmt(totalIva)}</p></div>
-    <div class="metric"><p class="mlabel">Sin categoría</p><p class="mval" style="color:${sinCat>0?'#BA7517':'#1D9E75'}">${sinCat}</p></div>`;
+    ${totalGP>0?`<div class="metric"><p class="mlabel" style="color:#BA7517">Gastos personales</p><p class="mval" style="color:#BA7517">${fmt(totalGP)}</p></div>`:''}
+    ${totalGP>0?`<div class="metric"><p class="mlabel">Total operación</p><p class="mval">${fmt(Math.round(totalOp*100)/100)}</p></div>`:''}
+    <div class="metric"><p class="mlabel" style="color:#185FA5">IVA acreditable</p><p class="mval" style="color:#185FA5">${fmt(ivaOpActivo)}</p></div>
+    <div class="metric"><p class="mlabel" style="color:${sinCat>0?'#BA7517':'#1D9E75'}">Sin categoría</p><p class="mval" style="color:${sinCat>0?'#BA7517':'#1D9E75'}">${sinCat}</p></div>
+    </div>`;
 
   // Progress
   const pct=egresos.length?Math.round(conCat/egresos.length*100):0;
@@ -2347,7 +2366,8 @@ function renderEgresos(){
   if(!egresos.length){
     document.getElementById('eg-list').innerHTML='<p class="empty">Sin egresos registrados</p>';return;
   }
-  const rows=egresos.map(e=>{
+  const egresosDisplay=_egShowGP?egresos:egresos.filter(e=>!e.gastoPersonal);
+  const rows=egresosDisplay.map(e=>{
     const esNC=e.tipoDoc==='Nota de crédito';
     const esNoCFDI=e.fuente==='noCFDI';
     const sinCatStyle=esNC&&!e.categoria?'background:rgba(250,238,218,0.4);border-radius:6px;':esNC?'background:#F5F5F2;border-radius:6px;':!e.categoria?'background:rgba(250,238,218,0.4);border-radius:6px;':'';
@@ -2361,6 +2381,7 @@ function renderEgresos(){
           <p style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${e.proveedor||''}</p>
           ${esNC?'<span style="background:#FFF3CD;color:#856404;border:0.5px solid #FFEAA0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Nota de crédito</span>':''}
           ${esNoCFDI?'<span style="background:#E6F1FB;color:#0C447C;border:0.5px solid #85B7EB;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">noCFDI</span>':''}
+          ${e.gastoPersonal?'<span style="background:#FAEEDA;color:#633806;border:0.5px solid #FAC775;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Gasto personal</span>':''}
         </div>
         <p style="color:#999;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.descripcion||''}</p>
       </div>
@@ -2384,14 +2405,31 @@ function openEgModal(uuid){
     <optgroup label="${g}">
       ${cats.filter(c=>c.grupo===g).map(c=>`<option value="${c.nombre}" ${c.nombre===e.categoria?'selected':''}>${c.nombre}</option>`).join('')}
     </optgroup>`).join('');
+  const isDeducible=(cat)=>{const c=gd(KCE).find(x=>x.nombre===cat);return c&&(c.deducibleAnual===true||c.deducibleAnual==='TRUE'||c.deducibleAnual===1);};
   document.getElementById('eg-modal-title').textContent=e.proveedor||'Factura';
   document.getElementById('eg-modal-body').innerHTML=`
     <p style="font-size:12px;color:#888;margin-bottom:4px">RFC: ${e.rfc} · ${e.fecha} · ${fmt(e.total)}</p>
     <p style="font-size:12px;color:#888;margin-bottom:14px;font-style:italic">${e.descripcion||''}</p>
     <p style="font-size:11px;color:#AAA;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Categoría</p>
-    <select id="eg-cat-sel" style="width:100%;margin-bottom:10px">
+    <select id="eg-cat-sel" style="width:100%;margin-bottom:10px" onchange="egModalCatChange(this.value,'${uuid}')">
       <option value="">— Sin categoría —</option>${optsHtml}
     </select>
+    <div style="display:flex;gap:10px;margin-bottom:10px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px 12px;border:0.5px solid ${e.gastoPersonal?'#BA7517':'#d5d5cf'};border-radius:6px;background:${e.gastoPersonal?'#FAEEDA':'#F5F5F2'};flex:1">
+        <input type="checkbox" id="eg-gasto-personal" style="width:14px;height:14px;accent-color:#BA7517" ${e.gastoPersonal?'checked':''}>
+        <div>
+          <p style="font-weight:500;color:${e.gastoPersonal?'#633806':'#444'};font-size:12px;margin:0">Gasto personal</p>
+          <p style="font-size:10px;color:#888;margin:0">No se guarda en regla</p>
+        </div>
+      </label>
+      <label id="eg-deducible-label" style="display:flex;align-items:center;gap:8px;font-size:12px;padding:8px 12px;border:0.5px solid #d5d5cf;border-radius:6px;background:#F5F5F2;flex:1;opacity:.6">
+        <input type="checkbox" id="eg-deducible-anual" style="width:14px;height:14px" ${e.deducibleAnual?'checked':''} disabled>
+        <div>
+          <p style="font-weight:500;font-size:12px;margin:0">Deducible anual</p>
+          <p style="font-size:10px;color:#888;margin:0">Automático por categoría</p>
+        </div>
+      </label>
+    </div>
     <textarea id="eg-nota-inp" placeholder="Nota opcional..." style="width:100%;height:54px;font-size:12px;resize:none;margin-bottom:12px">${e.nota||''}</textarea>
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#666;margin-bottom:14px;cursor:pointer">
       <input type="checkbox" id="eg-save-rule" style="width:14px;height:14px">
@@ -2401,7 +2439,16 @@ function openEgModal(uuid){
       <button class="btn" onclick="closeEgModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveEgCategoria('${uuid}')">Guardar</button>
     </div>`;
+  // Update deducible checkbox based on current category
+  setTimeout(()=>egModalCatChange(e.categoria||'','${uuid}'),0);
   document.getElementById('eg-modal-overlay').style.display='flex';
+}
+
+function egModalCatChange(cat,uuid){
+  const c=gd(KCE).find(x=>x.nombre===cat);
+  const isDeducible=c&&(c.deducibleAnual===true||c.deducibleAnual==='TRUE'||c.deducibleAnual===1);
+  const cb=document.getElementById('eg-deducible-anual');
+  if(cb){cb.checked=isDeducible;}
 }
 
 function closeEgModal(){
@@ -2412,11 +2459,16 @@ function saveEgCategoria(uuid){
   const cat=document.getElementById('eg-cat-sel').value;
   const nota=document.getElementById('eg-nota-inp').value;
   const saveRule=document.getElementById('eg-save-rule').checked;
+  const gastoPersonal=document.getElementById('eg-gasto-personal')?.checked||false;
+  const c=gd(KCE).find(x=>x.nombre===cat);
+  const deducibleAnual=c&&(c.deducibleAnual===true||c.deducibleAnual==='TRUE'||c.deducibleAnual===1);
   const egresos=gd(KE);
   const e=egresos.find(x=>x.uuid===uuid);
   if(!e)return;
   e.categoria=cat;
   e.nota=nota;
+  e.gastoPersonal=gastoPersonal;
+  e.deducibleAnual=!!deducibleAnual;
   sd(KE,egresos);
   if(saveRule&&cat){
     const reglas=gd(KRE);
@@ -2431,6 +2483,7 @@ function saveEgCategoria(uuid){
 }
 
 // ============================================================
+let _egShowGP=true; // toggle con/sin gastos personales
 
 // ── noCFDI MODULE ──────────────────────────────────────────
 let _nocfdiPending = [];
@@ -2619,7 +2672,9 @@ function confirmarNoCFDI(){
       nota:e.nota||'',
       fuente:'noCFDI',
       nFactura:e.nFactura||'',
-      fechaImportacion:e.fechaImportacion||new Date().toISOString().slice(0,10)
+      fechaImportacion:e.fechaImportacion||new Date().toISOString().slice(0,10),
+      gastoPersonal:false,
+      deducibleAnual:false
     });
     guardadas++;
   });
