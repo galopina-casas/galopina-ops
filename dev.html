@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.8-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.9-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.8-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.9-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -168,6 +168,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div id="dash-g7" class="card"></div>
       <div id="dash-g12" class="card"></div>
     </div>
+    <div id="dash-gres" class="card" style="margin-bottom:12px"></div>
+    <input type="hidden" id="gres-fecha-toggle" value="reserva">
     <p style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Finanzas</p>
     <div id="dash-g8" class="card" style="margin-bottom:12px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem">
@@ -861,6 +863,33 @@ function dashRenderChart(gId,months){
       {label:'Diferencia',data:d.map(x=>Math.round(x.ivaIng-x.ivaEgr)),type:'line',borderColor:'#185FA5',backgroundColor:'transparent',tension:.3,pointRadius:3,pointBackgroundColor:'#185FA5',order:1,borderWidth:2}
     ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+Math.round(ctx.parsed.y).toLocaleString()}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}}}}});
   }
+  if(gId==='gres'){
+    const useFechaRes=document.getElementById('gres-fecha-toggle')?.value==='reserva';
+    const origenCnt={};
+    const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
+    gd(KR).forEach(r=>{
+      const fecha=useFechaRes?(r.fechaReserva||''):(r.checkin||'');
+      if(fecha.slice(0,7)<cutoff)return;
+      const mo=fecha.slice(0,7);
+      const o=r.origen||'otro';
+      if(!origenCnt[mo])origenCnt[mo]={};
+      origenCnt[mo][o]=(origenCnt[mo][o]||0)+1;
+    });
+    const allMonths=[];
+    const now=new Date();
+    for(let i=months-1;i>=0;i--){const d=new Date(now.getFullYear(),now.getMonth()-i,1);allMonths.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'));}
+    const labels=allMonths.map(m=>DASH_MESES[parseInt(m.split('-')[1])-1]+(months>12?' '+m.split('-')[0]:''));
+    const origenKeys=[...new Set(gd(KR).map(r=>r.origen||'otro'))].filter(Boolean);
+    const datasets=origenKeys.map(o=>({
+      label:o.charAt(0).toUpperCase()+o.slice(1),
+      data:allMonths.map(m=>(origenCnt[m]||{})[o]||0),
+      backgroundColor:ORIGEN_COLORS[o]||ORIGEN_COLORS.otro,
+      stack:'s'
+    }));
+    mkChart('cv-gres',{type:'bar',data:{labels,datasets},options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{title:ctx=>ctx[0].label,label:ctx=>ctx.dataset.label+': '+ctx.parsed.y,footer:items=>'Total: '+items.reduce((s,i)=>s+i.parsed.y,0)}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{stepSize:2,font:{size:11}},border:{display:false}}}}});
+  }
   if(gId==='g11'){
     const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
     const catTot={};
@@ -906,20 +935,48 @@ function renderDash(){
 
   document.getElementById('dash-g10').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><p style="font-size:13px;font-weight:500;margin:0">IVA cobrado vs acreditable</p></div>${seg12('g10')}</div><div style="position:relative;height:260px"><canvas id="cv-g10" role="img" aria-label="IVA cobrado vs acreditable">IVA cobrado vs acreditable.</canvas></div>`;
 
+  const ORIGEN_LABELS={directo:'Directo',booking:'Booking',airbnb:'Airbnb',whatsapp:'WhatsApp',agencia:'Agencia',tablet:'Tablet',otro:'Otro'};
+  const legendHtml=Object.entries(ORIGEN_COLORS).map(([k,c])=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${ORIGEN_LABELS[k]||k}</span>`).join('');
+  document.getElementById('dash-gres').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+    <div><p style="font-size:13px;font-weight:500;margin:0">Reservas recibidas por mes</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Detalle por origen</p></div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+      <div style="display:flex;gap:6px">
+        <div class="dseg" id="seg-gres-f">
+          <button class="dsb on" onclick="setGresToggle(this,'reserva')">Fecha reserva</button>
+          <button class="dsb" onclick="setGresToggle(this,'llegada')">Fecha llegada</button>
+        </div>
+        ${dashSegHdr('gres',[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12)}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${legendHtml}</div>
+    </div>
+  </div>
+  <div style="position:relative;height:220px"><canvas id="cv-gres" role="img" aria-label="Reservas por mes y origen">Reservas por mes y origen.</canvas></div>`;
   document.getElementById('dash-g11').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Consumos por categoría</p>${seg12('g11')}</div><div style="position:relative;height:200px"><canvas id="cv-g11" role="img" aria-label="Consumos por categoría">Consumos por categoría.</canvas></div>`;
 
   if(!window.Chart){
     const s=document.createElement('script');
     s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';
-    s.onload=()=>['g1','g4','g6','g7','g12','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
+    s.onload=()=>['g1','g4','g6','g7','g12','gres','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
     document.head.appendChild(s);
   } else {
-    ['g1','g4','g6','g7','g12','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
+    ['g1','g4','g6','g7','g12','gres','g9','g10','g11'].forEach(g=>dashRenderChart(g,12));
   }
+}
+function setGresToggle(btn,tipo){
+  document.querySelectorAll('#seg-gres-f .dsb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('gres-fecha-toggle').value=tipo;
+  dashRenderChart('gres',parseInt(document.querySelector('#seg-gres .dsb.on')?.textContent)||12);
 }
 // ── NUEVA RESERVA: multiple habitaciones ──
 
 
+function setGresToggle(btn,tipo){
+  document.querySelectorAll('#seg-gres-f .dsb').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('gres-fecha-toggle').value=tipo;
+  dashRenderChart('gres',parseInt(document.querySelector('#seg-gres .dsb.on')?.textContent)||12);
+}
 // ── NUEVA RESERVA: multiple habitaciones ──
 var habRows=[];
 var habRowId=0;
@@ -2982,6 +3039,7 @@ const CAT_LABELS={
   'Propina':'Propina','Rembolso daño':'Reembolso daño',
   'hospedaje':'Hospedaje'
 };
+const ORIGEN_COLORS={directo:'#1D9E75',booking:'#003580',airbnb:'#FF5A5F',whatsapp:'#25D366',agencia:'#888780',tablet:'#8B6914',otro:'#B4B2A9'};
 const ORDER=['efectivo','transferencia','debito','stripe','cloudbeds','mercadopago','efectivo-nd'];
 const METODOS_LABELS={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe',cloudbeds:'CloudBeds'};
 
