@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.12-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.13-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.12-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.13-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -159,7 +159,6 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div class="sec active" id="sec-dashboard">
     <div id="dash-metrics" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;margin-bottom:1rem"></div>
     <p style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Reservas</p>
-    <div id="dash-g1" class="card" style="margin-bottom:12px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
       <div id="dash-g4" class="card"></div>
       <div id="dash-g6" class="card"></div>
@@ -171,6 +170,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <div id="dash-gres" class="card" style="margin-bottom:12px"></div>
     <input type="hidden" id="gres-fecha-toggle" value="reserva">
     <p style="font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Finanzas</p>
+    <div id="dash-g1" class="card" style="margin-bottom:12px"></div>
     <div id="dash-g8" class="card" style="margin-bottom:12px"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.5rem">
       <div id="dash-g9" class="card"></div>
@@ -761,20 +761,28 @@ function getMonthlyData(months){
     const d=new Date(now.getFullYear(),now.getMonth()-i,1);
     const prefix=d.getFullYear()+'-'+(String(d.getMonth()+1).padStart(2,'0'));
     const label=DASH_MESES[d.getMonth()]+(i>=12?' '+d.getFullYear():'');
-    // Hospedaje cobrado
-    const hosp=res.filter(r=>(r.antiFecha||'').startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd').reduce((s,r)=>s+(r.anticipo||0),0)
-      +res.filter(r=>(r.saldFecha||'').startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd').reduce((s,r)=>s+(r.saldo||0),0);
-    // Consumos
+    // Hospedaje cobrado (con IVA)
+    const hospRes=res.filter(r=>(r.antiFecha||'').startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd');
+    const hospResSald=res.filter(r=>(r.saldFecha||'').startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd');
+    const hosp=hospRes.reduce((s,r)=>s+(r.anticipo||0),0)+hospResSald.reduce((s,r)=>s+(r.saldo||0),0);
+    // Hospedaje base (sin IVA, sin ISH) - proporcional al pago
+    const hospBase=hospRes.reduce((s,r)=>s+Math.round((r.base||0)*(r.total>0?(r.anticipo||0)/r.total:0)*100)/100,0)
+      +hospResSald.reduce((s,r)=>s+Math.round((r.base||0)*(r.total>0?(r.saldo||0)/r.total:0)*100)/100,0);
+    // Consumos (con IVA)
     const consumos=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+(c.total||0),0);
-    // Egresos
+    // Consumos base (sin IVA)
+    const consumosBase=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+Math.round((c.subtotal||c.total/1.16||0)*100)/100,0);
+    // Egresos (con IVA)
     const egresos=egr.filter(e=>(e.fecha||'').startsWith(prefix)).reduce((s,e)=>s+(e.total||0),0);
+    // Egresos base (sin IVA)
+    const egresosBase=egr.filter(e=>(e.fecha||'').startsWith(prefix)).reduce((s,e)=>s+(e.subtotal||0),0);
     const ivaEgr=egr.filter(e=>(e.fecha||'').startsWith(prefix)).reduce((s,e)=>s+(e.iva||0),0);
     const ivaIng=res.filter(r=>(r.antiFecha||'').startsWith(prefix)).reduce((s,r)=>s+(r.iva||0),0);
     // Noches
     const resM=res.filter(r=>(r.checkin||'').startsWith(prefix));
     const noches=resM.reduce((s,r)=>s+(r.noches||0),0);
     const nRes=resM.length;
-    result.push({prefix,label,hosp,consumos,egresos,ivaEgr,ivaIng,noches,nRes});
+    result.push({prefix,label,hosp,hospBase,consumos,consumosBase,egresos,egresosBase,ivaEgr,ivaIng,noches,nRes});
   }
   return result;
 }
@@ -787,11 +795,11 @@ function dashRenderChart(gId,months){
   const d=getMonthlyData(months);
   const labels=d.map(x=>x.label);
   if(gId==='g1'){
-    const neto=d.map(x=>x.hosp+x.consumos-x.egresos);
+    const neto=d.map(x=>Math.round((x.hospBase+x.consumosBase-x.egresosBase)*100)/100);
     mkChart('cv-g1',{type:'bar',data:{labels,datasets:[
-      {label:'Hospedaje',data:d.map(x=>x.hosp),backgroundColor:'#185FA5',stack:'ing',order:2},
-      {label:'Consumos',data:d.map(x=>x.consumos),backgroundColor:'#1D9E75',stack:'ing',order:2},
-      {label:'Egresos',data:d.map(x=>x.egresos),backgroundColor:'#F5C4B3',stack:'egr',order:2},
+      {label:'Hospedaje',data:d.map(x=>Math.round(x.hospBase)),backgroundColor:'#185FA5',stack:'ing',order:2},
+      {label:'Consumos',data:d.map(x=>Math.round(x.consumosBase)),backgroundColor:'#1D9E75',stack:'ing',order:2},
+      {label:'Egresos',data:d.map(x=>Math.round(x.egresosBase)),backgroundColor:'#F5C4B3',stack:'egr',order:2},
       {label:'Neto',data:neto,type:'line',borderColor:'#0C447C',backgroundColor:'transparent',
        tension:.3,pointRadius:3,pointBackgroundColor:'#0C447C',order:1,borderWidth:2}
     ]},options:{responsive:true,maintainAspectRatio:false,
@@ -851,7 +859,7 @@ function dashRenderChart(gId,months){
 
   if(gId==='g9'){
     const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
-    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.total||0);});
+    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);});
     const top=Object.entries(catTot).sort((a,b)=>b[1]-a[1]).slice(0,8);
     const tot=top.reduce((s,e)=>s+e[1],0);
     mkChart('cv-g9',{type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{label:'Monto',data:top.map(e=>Math.round(e[1])),backgroundColor:top.map((_,i)=>i===0?'#185FA5':i<3?'#378ADD':i<6?'#85B7EB':'#B5D4F4'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.x.toLocaleString()+' · '+Math.round(ctx.parsed.x/tot*100)+'%'}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
@@ -931,9 +939,9 @@ function renderDash(){
 
   document.getElementById('dash-g8').style.display='none';
 
-  document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p>${segMes('g9')}</div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
+  document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Base sin IVA</p></div>${segMes('g9')}</div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
 
-  document.getElementById('dash-g10').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><div><p style="font-size:13px;font-weight:500;margin:0">IVA cobrado vs acreditable</p></div>${seg12('g10')}</div><div style="position:relative;height:260px"><canvas id="cv-g10" role="img" aria-label="IVA cobrado vs acreditable">IVA cobrado vs acreditable.</canvas></div>`;
+  document.getElementById('dash-g10').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">IVA cobrado vs acreditable</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Solo IVA</p></div>${seg12('g10')}</div><div style="position:relative;height:260px"><canvas id="cv-g10" role="img" aria-label="IVA cobrado vs acreditable">IVA cobrado vs acreditable.</canvas></div>`;
 
   const ORIGEN_LABELS={directo:'Directo',booking:'Booking',airbnb:'Airbnb',whatsapp:'WhatsApp',agencia:'Agencia',tablet:'Tablet',otro:'Otro'};
   const legendHtml=Object.entries(ORIGEN_COLORS).map(([k,c])=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${ORIGEN_LABELS[k]||k}</span>`).join('');
