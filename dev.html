@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.33-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.34-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.33-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.34-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -3610,10 +3610,10 @@ function exportarCierreExcel(){
       {v:fmtDate(r.checkout)||'',s:cs(bg)},
       {v:r.nombre||'',s:cs(bg)},
       {v:r.origen||'',s:cs(bg)},
-      {v:r.base||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+      {v:Math.round(((r.base||0)+((r.consumoCena||0)>0?(r.consumoCena/1.16):0))*100)/100,t:'n',z:'#,##0.00',s:{...cs(bg)}},
       {v:r.ish||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
-      {v:r.iva||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
-      {v:r.total||0,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+      {v:Math.round(((r.iva||0)+((r.consumoCena||0)>0?(r.consumoCena-r.consumoCena/1.16):0))*100)/100,t:'n',z:'#,##0.00',s:{...cs(bg)}},
+      {v:Math.round(((r.hospTotal||r.total||0)+(r.consumoCena||0))*100)/100,t:'n',z:'#,##0.00',s:{...cs(bg)}},
     ]);
   });
   const wsRes=XLSX.utils.aoa_to_sheet(resRows);
@@ -3631,14 +3631,14 @@ function exportarCierreExcel(){
   // Headers with color groups
   const detHeaders=[
     {v:'Núm. reserva',  g:'id'},{v:'Fecha Reserva',g:'id'},{v:'Fecha entrada',g:'id'},{v:'Fecha salida',g:'id'},
-    {v:'Fecha pago',    g:'id'},{v:'Huésped',      g:'id'},
+    {v:'Huésped',      g:'id'},
     {v:'Concepto',      g:'conc'},{v:'Producto',   g:'conc'},
-    {v:'Método pago',   g:'pago'},{v:'Base pago',  g:'pago'},{v:'ISH pago',  g:'pago'},
+    {v:'Fecha pago',    g:'pago'},{v:'Método pago',   g:'pago'},{v:'Base pago',  g:'pago'},{v:'ISH pago',  g:'pago'},
     {v:'IVA pago',      g:'pago'},{v:'Exento pago',g:'pago'},{v:'Total pago',g:'pago'},
     {v:'Base Reserva',  g:'res'},{v:'ISH Reserva', g:'res'},{v:'IVA Reserva',g:'res'},{v:'Total Reserva',g:'res'},
     {v:'Para contador', g:'cnt'}
   ];
-  const GROUP_COLORS={id:'BDD7EE',pago:'FCE4D6',res:'C6EFCE',cnt:null,conc:'FCE4D6'};
+  const GROUP_COLORS={id:'BDD7EE',pago:'F4B942',res:'C6EFCE',cnt:null,conc:'F4B942'};
   const hdrStyle=bg=>({font:{bold:true},fill:bg?{fgColor:{rgb:bg}}:{},border:{bottom:{style:'thin',color:{rgb:'888888'}}}});
 
   const detData=[detHeaders.map(h=>({v:h.v,s:hdrStyle(GROUP_COLORS[h.g])}))];
@@ -3663,16 +3663,16 @@ function exportarCierreExcel(){
     }
     const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
     detData.push([
-      {v:r.cbId||'',s:cs(rowBg)},{v:r.fechaReserva||'',s:cs(rowBg)},{v:r.checkin||'',s:cs(rowBg)},{v:r.checkout||'',s:cs(rowBg)},{v:r.fecha||'',s:cs(rowBg)},
+      {v:r.cbId||'',s:cs(rowBg)},{v:r.fechaReserva||'',s:cs(rowBg)},{v:r.checkin||'',s:cs(rowBg)},{v:r.checkout||'',s:cs(rowBg)},
       {v:r.huesped,s:cs(rowBg)},{v:concepto,s:cs(rowBg)},{v:producto,s:cs(rowBg)},
-      {v:METODOS_LABELS[r.pago]||r.pago,s:cs(rowBg)},nm(rowBg,r.base),nm(rowBg,r.ish),nm(rowBg,r.iva),nm(rowBg,r.exento),nm(rowBg,r.monto),
+      {v:r.fecha||'',s:cs(rowBg)},{v:METODOS_LABELS[r.pago]||r.pago,s:cs(rowBg)},nm(rowBg,r.base),nm(rowBg,r.ish),nm(rowBg,r.iva),nm(rowBg,r.exento),nm(rowBg,r.monto),
       nm(rowBg,r.baseRes||0),nm(rowBg,r.ishRes||0),nm(rowBg,r.ivaRes||0),nm(rowBg,r.totalRes||0),
       {v:rep?'Sí':'No',s:cs(rowBg)}
     ]);
   });
   const ws1=XLSX.utils.aoa_to_sheet(detData);
   // Column widths
-  ws1['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:13},{wch:25},{wch:22},{wch:22},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
+  ws1['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
   XLSX.utils.book_append_sheet(wb,ws1,'Detalle Pagos');
   const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
