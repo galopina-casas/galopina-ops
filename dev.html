@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.10-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.11-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.10-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.11-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -422,7 +422,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </div>
   <div id="eg-metrics" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
   <div id="eg-progress" style="margin-bottom:12px"></div>
-  <div class="card"><p class="ctitle" style="margin-bottom:8px">Facturas del mes</p><div id="eg-list"></div></div>
+  <div class="card">`<p class="ctitle" style="margin-bottom:8px">Facturas de ${(()=>{const m=document.getElementById('eg-mes')?.value;if(!m)return 'todos los meses';const [y,mo]=m.split('-');const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];return MN[parseInt(mo)-1]+' '+y;})()}</p>`<div id="eg-list"></div></div>
   <!-- Categoria modal -->
   <div id="eg-modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeEgModal()">
     <div style="background:#fff;border-radius:12px;padding:1.2rem;width:96%;max-width:500px;max-height:90vh;overflow-y:auto">
@@ -2136,11 +2136,12 @@ async function procesarZip(input){
     if(!xmlFiles.length){showAlert('No se encontraron XMLs en el ZIP','error');return;}
     const egresos=[...gd(KE)];
     const reglas=gd(KRE);
-    let nuevas=0,duplicadas=0;
+    let nuevas=0,duplicadas=0,cp01=0;
     for(const fname of xmlFiles){
       const xmlStr=await zip.files[fname].async('string');
       const egreso=parseCFDI(xmlStr);
       if(!egreso)continue;
+      if(egreso._skip==='cp01'){cp01++;continue;}
       if(egresos.find(e=>e.uuid===egreso.uuid)){duplicadas++;continue;}
       // Apply rules
       const regla=reglas.find(r=>r.rfc===egreso.rfc);
@@ -2150,7 +2151,7 @@ async function procesarZip(input){
     }
     sd(KE,egresos);
     renderEgresos();
-    showAlert(`${nuevas} facturas importadas${duplicadas?' · '+duplicadas+' duplicadas omitidas':''}`, 'success');
+    showAlert(`${nuevas} importadas${duplicadas?' · '+duplicadas+' duplicadas':''}${cp01?' · '+cp01+' omitidas (pagos CP01)':''}`, 'success');
   }catch(e){
     console.error(e);
     showAlert('Error al procesar ZIP: '+e.message,'error');
@@ -2174,11 +2175,14 @@ function parseCFDI(xmlStr){
     const doc=parser.parseFromString(xmlStr,'text/xml');
     const comp=doc.querySelector('Comprobante');
     if(!comp)return null;
-    // Only process received invoices (Ingreso type from 3rd party = egresos for us)
+    // Only process received invoices
     const tipo=comp.getAttribute('TipoDeComprobante');
     if(tipo!=='I'&&tipo!=='E')return null;
-    const emisor=doc.querySelector('Emisor');
+    // Exclude CP01 (complement payments, not invoices)
     const receptor=doc.querySelector('Receptor');
+    const usoCFDI=receptor?receptor.getAttribute('UsoCFDI'):'';
+    if(usoCFDI==='CP01')return {_skip:'cp01'};
+    const emisor=doc.querySelector('Emisor');
     const tfd=doc.querySelector('TimbreFiscalDigital');
     // Get IVA from root Impuestos element (TotalImpuestosTrasladados is the official rounded value)
     let iva=0;
@@ -2198,20 +2202,23 @@ function parseCFDI(xmlStr){
     const desc=concepto?concepto.getAttribute('Descripcion'):'';
     const uuid=tfd?tfd.getAttribute('UUID'):'';
     if(!uuid)return null;
+    const esNotaCredito=tipo==='E';
+    const totalVal=parseFloat(comp.getAttribute('Total')||0);
     return {
       uuid,
       fecha:(comp.getAttribute('Fecha')||'').slice(0,10),
       proveedor:emisor?emisor.getAttribute('Nombre'):'',
       rfc:emisor?emisor.getAttribute('Rfc'):'',
       descripcion:desc,
+      tipoDoc:esNotaCredito?'Nota de crédito':'Factura',
       formaPago:comp.getAttribute('FormaPago')||'',
       metodoPago:comp.getAttribute('MetodoPago')||'',
-      subtotal:parseFloat(comp.getAttribute('SubTotal')||0),
+      subtotal:esNotaCredito?-parseFloat(comp.getAttribute('SubTotal')||0):parseFloat(comp.getAttribute('SubTotal')||0),
       descuento:parseFloat(comp.getAttribute('Descuento')||0),
-      iva:Math.round(iva*100)/100,
-      total:parseFloat(comp.getAttribute('Total')||0),
+      iva:esNotaCredito?-Math.round(iva*100)/100:Math.round(iva*100)/100,
+      total:esNotaCredito?-totalVal:totalVal,
       moneda:comp.getAttribute('Moneda')||'MXN',
-      usoCFDI:receptor?receptor.getAttribute('UsoCFDI'):'',
+      usoCFDI,
       categoria:'',
       nota:'',
       fechaImportacion:new Date().toISOString().slice(0,10)
@@ -2245,7 +2252,7 @@ function renderEgresos(){
   if(search)egresos=egresos.filter(e=>(e.proveedor||'').toLowerCase().includes(search)||(e.descripcion||'').toLowerCase().includes(search));
   if(catFilter)egresos=egresos.filter(e=>(e.categoria||'').toLowerCase().includes(catFilter.toLowerCase()));
   if(soloSin)egresos=egresos.filter(e=>!e.categoria);
-  egresos.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  egresos.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
 
   // Metrics
   const total=Math.round(egresos.reduce((s,e)=>s+(e.total||0),0)*100)/100;
@@ -2273,14 +2280,18 @@ function renderEgresos(){
     document.getElementById('eg-list').innerHTML='<p class="empty">Sin egresos registrados</p>';return;
   }
   const rows=egresos.map(e=>{
-    const sinCatStyle=!e.categoria?'background:rgba(250,238,218,0.4);':'';
+    const esNC=e.tipoDoc==='Nota de crédito';
+    const sinCatStyle=(!e.categoria&&!esNC)?'background:rgba(250,238,218,0.4);':esNC?'background:var(--color-background-secondary);':'';
     const catBadge=e.categoria
       ?`<span style="background:#E1F5EE;color:#085041;border:0.5px solid #5DCAA5;border-radius:4px;padding:3px 7px;font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;cursor:pointer">${e.categoria}</span>`
       :`<span style="background:#FAEEDA;color:#BA7517;border-radius:4px;padding:3px 7px;font-size:11px;cursor:pointer;display:inline-block">⚠ Sin categoría</span>`;
     return `<div style="display:grid;grid-template-columns:90px 1fr 90px 70px 130px;gap:8px;align-items:start;padding:8px 6px;border-bottom:0.5px solid #f0ede8;font-size:12px;${sinCatStyle}border-radius:${sinCatStyle?'6px':'0'}">
       <span style="color:#888">${e.fecha||''}</span>
       <div style="min-width:0;overflow:hidden">
-        <p style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.proveedor||''}</p>
+        <div style="display:flex;align-items:center;gap:6px;min-width:0">
+          <p style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${e.proveedor||''}</p>
+          ${esNC?'<span style="background:#FFF3CD;color:#856404;border:0.5px solid #FFEAA0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Nota de crédito</span>':''}
+        </div>
         <p style="color:#999;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.descripcion||''}</p>
       </div>
       <span style="text-align:right">${fmt(e.total||0)}</span>
@@ -3319,7 +3330,7 @@ function exportarCierreExcel(){
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
   // === HOJA EGRESOS ===
   const egMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  const egHdrs=['Fecha','RFC','Nombre','Descripción','Moneda','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
+  const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Moneda','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
   const egData=[egHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
   egMes.forEach((e,i)=>{
     const bg=i%2===0?null:'F2F2F2';
@@ -3327,14 +3338,14 @@ function exportarCierreExcel(){
     const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
     egData.push([
       {v:e.fecha||'',s:cs(bg)},{v:e.rfc||'',s:cs(bg)},{v:e.proveedor||'',s:cs(bg)},
-      {v:e.descripcion||'',s:cs(bg)},{v:e.moneda||'MXN',s:cs(bg)},
+      {v:e.descripcion||'',s:cs(bg)},{v:e.tipoDoc||'Factura',s:cs(bg)},{v:e.moneda||'MXN',s:cs(bg)},
       {v:e.formaPago||'',s:cs(bg)},{v:e.metodoPago||'',s:cs(bg)},
       nm(bg,e.subtotal||0),nm(bg,e.descuento||0),nm(bg,e.iva||0),nm(bg,e.total||0),
       {v:e.categoria||'',s:cs(bg)},{v:e.nota||'',s:cs(bg)}
     ]);
   });
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
-  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
+  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
   XLSX.writeFile(wb,'Galopina_Cierre_'+mesNombre.replace(' ','_')+'.xlsx');
   showAlert('Excel exportado','success');
