@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.13</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.15-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.13</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.15-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -406,8 +406,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
   <div class="sec" id="sec-egresos">
   <div class="sh"><h2>Egresos</h2>
-    <button class="btn btn-primary btn-sm" id="btn-import-zip" onclick="importarZipSAT()">⬆ Importar ZIP del SAT</button>
+    <div style="display:flex;gap:6px;flex-wrap:wrap">
+      <button class="btn btn-primary btn-sm" onclick="importarZipSAT()">⬆ ZIP SAT (CFDI)</button>
+      <button class="btn btn-sm" onclick="importarPDFsNoCFDI()">⬆ Importar noCFDI</button>
+      <button class="btn btn-sm" onclick="abrirFormNoCFDI()">+ Agregar noCFDI</button>
+    </div>
     <input type="file" id="zip-input" accept=".zip" style="display:none" onchange="procesarZip(this)">
+    <input type="file" id="pdf-input" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none" onchange="procesarPDFsNoCFDI(this)">
   </div>
   <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
     <select id="eg-mes" onchange="renderEgresos()" style="height:32px;font-size:13px">
@@ -423,6 +428,30 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div id="eg-metrics" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
   <div id="eg-progress" style="margin-bottom:12px"></div>
   <div class="card"><p class="ctitle" style="margin-bottom:8px" id="eg-list-title">Facturas</p><div id="eg-list"></div></div>
+  <!-- noCFDI form modal -->
+  <div id="nocfdi-modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)cerrarFormNoCFDI()">
+    <div style="background:var(--color-background-primary);border-radius:12px;padding:1.2rem;width:96%;max-width:560px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 id="nocfdi-modal-title" style="font-size:15px;font-weight:600">Agregar factura noCFDI</h3>
+        <button onclick="cerrarFormNoCFDI()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#888">✕</button>
+      </div>
+      <div id="nocfdi-modal-body"></div>
+    </div>
+  </div>
+  <!-- noCFDI preview modal -->
+  <div id="nocfdi-preview-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center">
+    <div style="background:var(--color-background-primary);border-radius:12px;padding:1.2rem;width:96%;max-width:700px;max-height:90vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <h3 style="font-size:15px;font-weight:600">Vista previa — facturas extraídas</h3>
+        <button onclick="cerrarPreviewNoCFDI()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#888">✕</button>
+      </div>
+      <div id="nocfdi-preview-body"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+        <button class="btn" onclick="cerrarPreviewNoCFDI()">Cancelar</button>
+        <button class="btn btn-primary" onclick="confirmarNoCFDI()">Guardar todas</button>
+      </div>
+    </div>
+  </div>
   <!-- Categoria modal -->
   <div id="eg-modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center" onclick="if(event.target===this)closeEgModal()">
     <div style="background:#fff;border-radius:12px;padding:1.2rem;width:96%;max-width:500px;max-height:90vh;overflow-y:auto">
@@ -583,7 +612,7 @@ let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,c
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbx4jh-3AuqLXZ8BQmuRHSD0j2mogjJvCwiqmzQ4kH6vQ5U7c6HfguTbw5Ntj9qs8akg/exec';
-const ENV='prod'; // 'dev' | 'prod'
+const ENV='dev'; // 'dev' | 'prod'
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos'};
 
 // In-memory cache (loaded once at login)
@@ -2229,6 +2258,7 @@ function parseCFDI(xmlStr){
       usoCFDI,
       categoria:'',
       nota:'',
+      fuente:'cfdi',
       fechaImportacion:new Date().toISOString().slice(0,10)
     };
   }catch(e){console.error('parseCFDI error:',e);return null;}
@@ -2276,8 +2306,14 @@ function renderEgresos(){
   const totalIva=Math.round(egresos.reduce((s,e)=>s+(e.iva||0),0)*100)/100;
   const sinCat=egresos.filter(e=>!e.categoria).length;
   const conCat=egresos.length-sinCat;
+  const nFacturasCFDI=egresos.filter(e=>e.tipoDoc!=='Nota de crédito'&&e.fuente!=='noCFDI').length;
+  const nNoCFDI=egresos.filter(e=>e.fuente==='noCFDI').length;
+  const nFacturas=nFacturasCFDI;
+  const nNC=egresos.filter(e=>e.tipoDoc==='Nota de crédito').length;
   document.getElementById('eg-metrics').innerHTML=`
-    <div class="metric"><p class="mlabel">Facturas</p><p class="mval">${egresos.length}</p></div>
+    <div class="metric"><p class="mlabel">Facturas CFDI</p><p class="mval">${nFacturas}</p></div>
+    ${nNoCFDI>0?`<div class="metric"><p class="mlabel">noCFDI</p><p class="mval" style="color:#0C447C">${nNoCFDI}</p></div>`:''}
+    ${nNC>0?`<div class="metric"><p class="mlabel">Notas de crédito</p><p class="mval" style="color:#856404">${nNC}</p></div>`:''}
     <div class="metric"><p class="mlabel">Total egresos</p><p class="mval">${fmt(total)}</p></div>
     <div class="metric"><p class="mlabel">IVA acreditable</p><p class="mval" style="color:#185FA5">${fmt(totalIva)}</p></div>
     <div class="metric"><p class="mlabel">Sin categoría</p><p class="mval" style="color:${sinCat>0?'#BA7517':'#1D9E75'}">${sinCat}</p></div>`;
@@ -2305,6 +2341,7 @@ function renderEgresos(){
   }
   const rows=egresos.map(e=>{
     const esNC=e.tipoDoc==='Nota de crédito';
+    const esNoCFDI=e.fuente==='noCFDI';
     const sinCatStyle=esNC&&!e.categoria?'background:rgba(250,238,218,0.4);border-radius:6px;':esNC?'background:var(--color-background-secondary);border-radius:6px;':!e.categoria?'background:rgba(250,238,218,0.4);border-radius:6px;':'';
     const catBadge=e.categoria
       ?`<span style="background:#E1F5EE;color:#085041;border:0.5px solid #5DCAA5;border-radius:4px;padding:3px 7px;font-size:11px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word;cursor:pointer">${e.categoria}</span>`
@@ -2315,6 +2352,7 @@ function renderEgresos(){
         <div style="display:flex;align-items:center;gap:6px;min-width:0">
           <p style="font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0">${e.proveedor||''}</p>
           ${esNC?'<span style="background:#FFF3CD;color:#856404;border:0.5px solid #FFEAA0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Nota de crédito</span>':''}
+          ${esNoCFDI?'<span style="background:#E6F1FB;color:#0C447C;border:0.5px solid #85B7EB;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">noCFDI</span>':''}
         </div>
         <p style="color:#999;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.descripcion||''}</p>
       </div>
@@ -2385,6 +2423,268 @@ function saveEgCategoria(uuid){
 }
 
 // ============================================================
+
+// ── noCFDI MODULE ──────────────────────────────────────────
+let _nocfdiPending = [];
+
+function importarPDFsNoCFDI(){document.getElementById('pdf-input').click();}
+
+async function procesarPDFsNoCFDI(input){
+  const files=[...input.files];
+  if(!files.length)return;
+  input.value='';
+  showAlert(`Extrayendo datos de ${files.length} archivo(s)...`,'info');
+  _nocfdiPending=[];
+  const CATS=gd(KCE);
+  for(const file of files){
+    try{
+      const b64=await fileToBase64(file);
+      const isImg=file.type.startsWith('image/');
+      const mediaType=isImg?file.type:'application/pdf';
+      const resp=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({
+          model:'claude-sonnet-4-20250514',
+          max_tokens:1000,
+          messages:[{role:'user',content:[
+            {type:isImg?'image':'document',source:{type:'base64',media_type:mediaType,data:b64}},
+            {type:'text',text:`Extrae los siguientes campos de esta factura y responde SOLO con un objeto JSON sin markdown ni texto adicional:
+{
+  "proveedor": "nombre del emisor/proveedor",
+  "nFactura": "número de factura o referencia",
+  "fecha": "YYYY-MM-DD",
+  "descripcion": "descripción o concepto principal del servicio",
+  "monedaOriginal": "MXN|USD|EUR|GBP|otro",
+  "montoOriginal": número,
+  "iva": 0
+}
+Si la moneda no es MXN pon montoOriginal en la moneda original. Fecha debe ser YYYY-MM-DD.`}
+          ]}]
+        })
+      });
+      const data=await resp.json();
+      const text=data.content?.map(c=>c.text||'').join('');
+      const clean=text.replace(/```json|```/g,'').trim();
+      const parsed=JSON.parse(clean);
+      parsed.archivo=file.name;
+      parsed.montoMXN=parsed.monedaOriginal==='MXN'?parsed.montoOriginal:null;
+      parsed.categoria='';
+      parsed.nota='';
+      parsed.fuente='noCFDI';
+      parsed.uuid='NC-'+Date.now()+'-'+Math.random().toString(36).slice(2);
+      parsed.fechaImportacion=new Date().toISOString().slice(0,10);
+      _nocfdiPending.push(parsed);
+    }catch(e){
+      console.error('Error procesando',file.name,e);
+      _nocfdiPending.push({archivo:file.name,proveedor:'',nFactura:'',fecha:'',descripcion:'',monedaOriginal:'MXN',montoOriginal:0,montoMXN:0,categoria:'',nota:'',fuente:'noCFDI',uuid:'NC-'+Date.now(),error:true});
+    }
+  }
+  mostrarPreviewNoCFDI();
+}
+
+function fileToBase64(file){
+  return new Promise((res,rej)=>{
+    const r=new FileReader();
+    r.onload=()=>res(r.result.split(',')[1]);
+    r.onerror=()=>rej(new Error('Error leyendo archivo'));
+    r.readAsDataURL(file);
+  });
+}
+
+function mostrarPreviewNoCFDI(){
+  const cats=gd(KCE);
+  const grupos=[...new Set(cats.map(c=>c.grupo).filter(Boolean))];
+  const optsHtml='<option value="">— Sin categoría —</option>'+grupos.map(g=>`<optgroup label="${g}">${cats.filter(c=>c.grupo===g).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}</optgroup>`).join('');
+
+  const rows=_nocfdiPending.map((e,i)=>`
+    <div style="border:0.5px solid var(--color-border-tertiary);border-radius:8px;padding:10px;margin-bottom:8px;${e.error?'border-color:#E24B4A':''}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div style="font-size:11px;color:var(--color-text-secondary)">${e.archivo}</div>
+        ${e.error?'<span style="background:#FCE4D6;color:#C0392B;border-radius:4px;padding:2px 6px;font-size:10px">Error extracción</span>':''}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div>
+          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">PROVEEDOR</p>
+          <input value="${e.proveedor||''}" onchange="_nocfdiPending[${i}].proveedor=this.value" style="width:100%;font-size:12px;padding:4px 6px">
+        </div>
+        <div>
+          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">N° FACTURA</p>
+          <input value="${e.nFactura||''}" onchange="_nocfdiPending[${i}].nFactura=this.value" style="width:100%;font-size:12px;padding:4px 6px">
+        </div>
+        <div>
+          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">FECHA</p>
+          <input type="date" value="${e.fecha||''}" onchange="_nocfdiPending[${i}].fecha=this.value" style="width:100%;font-size:12px;padding:4px 6px">
+        </div>
+        <div>
+          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">MONEDA · MONTO ORIGINAL</p>
+          <div style="display:flex;gap:4px">
+            <select onchange="_nocfdiPending[${i}].monedaOriginal=this.value;actualizarMontoMXN(${i})" style="font-size:12px;padding:4px;width:80px">
+              ${['MXN','USD','EUR','GBP','CAD'].map(m=>`<option${m===e.monedaOriginal?' selected':''}>${m}</option>`).join('')}
+            </select>
+            <input type="number" value="${e.montoOriginal||''}" onchange="_nocfdiPending[${i}].montoOriginal=parseFloat(this.value);actualizarMontoMXN(${i})" style="flex:1;font-size:12px;padding:4px 6px">
+          </div>
+        </div>
+        ${e.monedaOriginal!=='MXN'?`
+        <div style="grid-column:span 2">
+          <p style="font-size:10px;color:#BA7517;margin-bottom:2px">⚠ MONTO EN MXN (captura manual)</p>
+          <input type="number" id="mxn-${i}" value="${e.montoMXN||''}" onchange="_nocfdiPending[${i}].montoMXN=parseFloat(this.value)" style="width:100%;font-size:12px;padding:4px 6px;border-color:#BA7517">
+        </div>`:''}
+      </div>
+      <div style="margin-bottom:8px">
+        <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">DESCRIPCIÓN</p>
+        <input value="${e.descripcion||''}" onchange="_nocfdiPending[${i}].descripcion=this.value" style="width:100%;font-size:12px;padding:4px 6px">
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">CATEGORÍA</p>
+          <select onchange="_nocfdiPending[${i}].categoria=this.value" style="width:100%;font-size:12px;padding:4px 6px">
+            ${optsHtml.replace(`value="${e.categoria}"`,`value="${e.categoria}" selected`)}
+          </select>
+        </div>
+        <div>
+          <p style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px">NOTA</p>
+          <input value="${e.nota||''}" onchange="_nocfdiPending[${i}].nota=this.value" style="width:100%;font-size:12px;padding:4px 6px">
+        </div>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('nocfdi-preview-body').innerHTML=rows;
+  document.getElementById('nocfdi-preview-overlay').style.display='flex';
+}
+
+function actualizarMontoMXN(i){
+  const e=_nocfdiPending[i];
+  if(e.monedaOriginal==='MXN') e.montoMXN=e.montoOriginal;
+}
+
+function cerrarPreviewNoCFDI(){
+  document.getElementById('nocfdi-preview-overlay').style.display='none';
+  _nocfdiPending=[];
+}
+
+function confirmarNoCFDI(){
+  const egresos=gd(KE);
+  const reglas=gd(KRE);
+  let guardadas=0;
+  _nocfdiPending.forEach(e=>{
+    if(!e.proveedor&&!e.monto)return;
+    // Apply rules if no category
+    if(!e.categoria){
+      const regla=reglas.find(r=>r.proveedor&&e.proveedor&&e.proveedor.toLowerCase().includes(r.proveedor.toLowerCase()));
+      if(regla)e.categoria=regla.categoria;
+    }
+    // Build egreso object compatible with CFDI schema
+    const montoMXN=e.monedaOriginal==='MXN'?e.montoOriginal:(e.montoMXN||e.montoOriginal||0);
+    egresos.push({
+      uuid:e.uuid,
+      fecha:e.fecha||new Date().toISOString().slice(0,10),
+      proveedor:e.proveedor||'',
+      rfc:'',
+      descripcion:e.descripcion||'',
+      tipoDoc:'Factura noCFDI',
+      formaPago:'',
+      metodoPago:'',
+      subtotal:montoMXN,
+      descuento:0,
+      iva:0,
+      total:montoMXN,
+      moneda:e.monedaOriginal||'MXN',
+      monedaOriginal:e.monedaOriginal||'MXN',
+      montoOriginal:e.montoOriginal||0,
+      montoMXN,
+      usoCFDI:'',
+      categoria:e.categoria||'',
+      nota:e.nota||'',
+      fuente:'noCFDI',
+      nFactura:e.nFactura||'',
+      fechaImportacion:e.fechaImportacion||new Date().toISOString().slice(0,10)
+    });
+    guardadas++;
+  });
+  sd(KE,egresos);
+  cerrarPreviewNoCFDI();
+  initEgresos();
+  showAlert(`${guardadas} factura(s) noCFDI guardadas`,'success');
+}
+
+function abrirFormNoCFDI(){
+  const cats=gd(KCE);
+  const grupos=[...new Set(cats.map(c=>c.grupo).filter(Boolean))];
+  const optsHtml='<option value="">— Sin categoría —</option>'+grupos.map(g=>`<optgroup label="${g}">${cats.filter(c=>c.grupo===g).map(c=>`<option value="${c.nombre}">${c.nombre}</option>`).join('')}</optgroup>`).join('');
+  document.getElementById('nocfdi-modal-title').textContent='Agregar factura noCFDI';
+  document.getElementById('nocfdi-modal-body').innerHTML=`
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div><label style="font-size:11px;color:var(--color-text-tertiary)">PROVEEDOR</label><input id="nc-proveedor" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div><label style="font-size:11px;color:var(--color-text-tertiary)">N° FACTURA</label><input id="nc-nfactura" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div><label style="font-size:11px;color:var(--color-text-tertiary)">FECHA</label><input type="date" id="nc-fecha" value="${new Date().toISOString().slice(0,10)}" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div><label style="font-size:11px;color:var(--color-text-tertiary)">MONEDA ORIGINAL</label>
+        <select id="nc-moneda" onchange="toggleMXNField()" style="width:100%;font-size:13px;margin-top:2px">
+          ${['MXN','USD','EUR','GBP','CAD'].map(m=>`<option>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div><label style="font-size:11px;color:var(--color-text-tertiary)">MONTO ORIGINAL</label><input type="number" id="nc-monto-orig" oninput="autoFillMXN()" style="width:100%;font-size:13px;margin-top:2px"></div>
+      <div id="nc-mxn-div"><label style="font-size:11px;color:var(--color-text-tertiary)">MONTO MXN</label><input type="number" id="nc-monto-mxn" style="width:100%;font-size:13px;margin-top:2px"></div>
+    </div>
+    <div style="margin-bottom:10px"><label style="font-size:11px;color:var(--color-text-tertiary)">DESCRIPCIÓN</label><input id="nc-desc" style="width:100%;font-size:13px;margin-top:2px"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div><label style="font-size:11px;color:var(--color-text-tertiary)">CATEGORÍA</label><select id="nc-cat" style="width:100%;font-size:13px;margin-top:2px">${optsHtml}</select></div>
+      <div><label style="font-size:11px;color:var(--color-text-tertiary)">NOTA</label><input id="nc-nota" style="width:100%;font-size:13px;margin-top:2px"></div>
+    </div>
+    <div style="display:flex;justify-content:flex-end;gap:8px">
+      <button class="btn" onclick="cerrarFormNoCFDI()">Cancelar</button>
+      <button class="btn btn-primary" onclick="guardarFormNoCFDI()">Guardar</button>
+    </div>`;
+  document.getElementById('nocfdi-modal-overlay').style.display='flex';
+  toggleMXNField();
+}
+
+function toggleMXNField(){
+  const moneda=document.getElementById('nc-moneda')?.value;
+  const div=document.getElementById('nc-mxn-div');
+  if(div)div.style.opacity=moneda==='MXN'?'0.4':'1';
+}
+
+function autoFillMXN(){
+  const moneda=document.getElementById('nc-moneda')?.value;
+  const orig=parseFloat(document.getElementById('nc-monto-orig')?.value||0);
+  if(moneda==='MXN'){const mxnField=document.getElementById('nc-monto-mxn');if(mxnField)mxnField.value=orig;}
+}
+
+function cerrarFormNoCFDI(){
+  document.getElementById('nocfdi-modal-overlay').style.display='none';
+}
+
+function guardarFormNoCFDI(){
+  const proveedor=document.getElementById('nc-proveedor').value.trim();
+  const fecha=document.getElementById('nc-fecha').value;
+  const montoOrig=parseFloat(document.getElementById('nc-monto-orig').value||0);
+  const moneda=document.getElementById('nc-moneda').value;
+  const montoMXN=moneda==='MXN'?montoOrig:parseFloat(document.getElementById('nc-monto-mxn').value||0);
+  if(!proveedor||!fecha||!montoOrig){showAlert('Proveedor, fecha y monto son obligatorios','error');return;}
+  const egresos=gd(KE);
+  egresos.push({
+    uuid:'NC-'+Date.now(),
+    fecha,proveedor,rfc:'',
+    descripcion:document.getElementById('nc-desc').value,
+    tipoDoc:'Factura noCFDI',
+    formaPago:'',metodoPago:'',
+    subtotal:montoMXN,descuento:0,iva:0,total:montoMXN,
+    moneda,monedaOriginal:moneda,montoOriginal:montoOrig,montoMXN,
+    usoCFDI:'',
+    categoria:document.getElementById('nc-cat').value,
+    nota:document.getElementById('nc-nota').value,
+    fuente:'noCFDI',
+    nFactura:document.getElementById('nc-nfactura').value,
+    fechaImportacion:new Date().toISOString().slice(0,10)
+  });
+  sd(KE,egresos);
+  cerrarFormNoCFDI();
+  initEgresos();
+  showAlert('Factura noCFDI guardada','success');
+}
+// ── END noCFDI MODULE ──────────────────────────────────────
+
 // END EGRESOS MODULE
 // ============================================================
 
@@ -3354,7 +3654,7 @@ function exportarCierreExcel(){
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
   // === HOJA EGRESOS ===
   const egMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
-  const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Moneda','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
+  const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Fuente','Moneda orig.','Monto orig.','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
   const egData=[egHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
   egMes.forEach((e,i)=>{
     const bg=i%2===0?null:'F2F2F2';
@@ -3362,14 +3662,14 @@ function exportarCierreExcel(){
     const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
     egData.push([
       {v:e.fecha||'',s:cs(bg)},{v:e.rfc||'',s:cs(bg)},{v:e.proveedor||'',s:cs(bg)},
-      {v:e.descripcion||'',s:cs(bg)},{v:e.tipoDoc||'Factura',s:cs(bg)},{v:e.moneda||'MXN',s:cs(bg)},
+      {v:e.descripcion||'',s:cs(bg)},{v:e.tipoDoc||'Factura',s:cs(bg)},{v:e.fuente||'cfdi',s:cs(bg)},{v:e.monedaOriginal||e.moneda||'MXN',s:cs(bg)},{v:e.montoOriginal||e.total||0,s:{...cs(bg),t:'n',z:'#,##0.00'}},
       {v:e.formaPago||'',s:cs(bg)},{v:e.metodoPago||'',s:cs(bg)},
       nm(bg,e.subtotal||0),nm(bg,e.descuento||0),nm(bg,e.iva||0),nm(bg,e.total||0),
       {v:e.categoria||'',s:cs(bg)},{v:e.nota||'',s:cs(bg)}
     ]);
   });
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
-  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:8},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
+  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
   XLSX.writeFile(wb,'Galopina_Cierre_'+mesNombre.replace(' ','_')+'.xlsx');
   showAlert('Excel exportado','success');
