@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.41-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.42-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.41-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.42-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2192,12 +2192,13 @@ async function procesarZip(input){
     if(!xmlFiles.length){showAlert('No se encontraron XMLs en el ZIP','error');return;}
     const egresos=[...gd(KE)];
     const reglas=gd(KRE);
-    let nuevas=0,duplicadas=0,cp01=0;
+    let nuevas=0,duplicadas=0,cp01=0,otros=0;
     for(const fname of xmlFiles){
       const xmlStr=await zip.files[fname].async('string');
       const egreso=parseCFDI(xmlStr);
       if(!egreso)continue;
       if(egreso._skip==='cp01'){cp01++;continue;}
+      if(egreso._skip==='otro'){otros++;continue;}
       if(egresos.find(e=>e.uuid===egreso.uuid)){duplicadas++;continue;}
       if(egreso.nFactura&&egreso.nFactura!==''){const nfNorm=String(egreso.nFactura).trim().toLowerCase().replace(/^0+/,'');if(egresos.find(e=>String(e.nFactura||'').trim().toLowerCase().replace(/^0+/,'')===nfNorm)){duplicadas++;continue;}}
       // Apply rules
@@ -2211,7 +2212,11 @@ async function procesarZip(input){
     const newDates=egresos.slice(-nuevas).map(e=>(e.fecha||'').slice(0,7)).filter(Boolean).sort().reverse();
     _egPostImportMes=newDates[0]||'';
     initEgresos();
-    showAlert(`${nuevas} importadas${duplicadas?' · '+duplicadas+' duplicadas':''}${cp01?' · '+cp01+' omitidas (pagos CP01)':''}`, 'success');
+    let msg=`${xmlFiles.length} archivo(s) detectado(s) · ${nuevas} importada(s)`;
+    if(duplicadas)msg+=` · ${duplicadas} duplicada(s)`;
+    if(cp01)msg+=` · ${cp01} complemento(s) de pago omitido(s)`;
+    if(otros)msg+=` · ${otros} otro(s) tipo(s) omitido(s)`;
+    showAlert(msg,'success',true);
   }catch(e){
     console.error(e);
     showAlert('Error al procesar ZIP: '+e.message,'error');
@@ -2239,13 +2244,14 @@ function parseCFDI(xmlStr){
     if(!comp)return null;
     // Only process received invoices
     const tipo=comp.getAttribute('TipoDeComprobante');
-    if(tipo!=='I'&&tipo!=='E')return null;
     // Helper: find element supporting namespaces
     const qEl=(tag)=>doc.querySelector(tag)||doc.getElementsByTagName(tag)[0];
-    // Exclude CP01 (complement payments, not invoices)
+    // Exclude CP01 / payment complements FIRST (tipo P or UsoCFDI CP01) so they get counted
     const receptor=qEl('Receptor');
     const usoCFDI=receptor?receptor.getAttribute('UsoCFDI'):'';
-    if(usoCFDI==='CP01')return {_skip:'cp01'};
+    if(tipo==='P'||usoCFDI==='CP01')return {_skip:'cp01'};
+    // Other non-invoice types (T, N, etc.) -> reported separately
+    if(tipo!=='I'&&tipo!=='E')return {_skip:'otro'};
     const emisor=qEl('Emisor');
     const tfd=qEl('TimbreFiscalDigital');
     // Get IVA from root Impuestos element (TotalImpuestosTrasladados is the official rounded value)
@@ -2560,10 +2566,10 @@ async function procesarPDFsNoCFDI(input){
     }
   }
   if(!_nocfdiPending.filter(e=>!e._dup).length&&duplicadas>0){
-    showAlert(`Todas las facturas ya estaban importadas (${duplicadas} duplicada(s) omitida(s))`,'error');
+    showAlert(`${files.length} archivo(s) detectado(s) · todas ya estaban importadas (${duplicadas} duplicada(s) omitida(s))`,'error',true);
     return;
   }
-  if(duplicadas>0) showAlert(`${duplicadas} duplicada(s) omitida(s) por N° factura`,'info');
+  if(duplicadas>0) showAlert(`${files.length} archivo(s) detectado(s) · ${duplicadas} duplicada(s) omitida(s) por N° factura`,'info',true);
   mostrarPreviewNoCFDI();
 }
 
@@ -2656,7 +2662,8 @@ function cerrarPreviewNoCFDI(){
 function confirmarNoCFDI(){
   const egresos=gd(KE);
   const reglas=gd(KRE);
-  let guardadas=0;
+  let guardadas=0,duplicadas=0;
+  const totalPend=_nocfdiPending.length;
   _nocfdiPending.forEach((e,i)=>{
     if(e._dup)return;
     if(!e.proveedor&&!e.montoOriginal)return;
@@ -2710,7 +2717,7 @@ function confirmarNoCFDI(){
   if(nDates[0])_egPostImportMes=nDates[0];
   cerrarPreviewNoCFDI();
   initEgresos();
-  showAlert(`${guardadas} factura(s) noCFDI guardadas${duplicadas?' · '+duplicadas+' duplicadas omitidas':''}`,'success');
+  showAlert(`${totalPend} factura(s) detectada(s) · ${guardadas} guardada(s)${duplicadas?' · '+duplicadas+' duplicada(s) omitida(s)':''}`,'success',true);
 }
 
 function abrirFormNoCFDI(){
@@ -3077,9 +3084,11 @@ function confirmImport(nuevas){
   showAlert(nuevas.length+' reserva(s) importadas correctamente','success');
 }
 
-function showAlert(msg,type='success'){
+var _alertTimer=null;
+function showAlert(msg,type='success',persist=false){
   const b=document.getElementById('alert-box');b.textContent=msg;b.className='alert '+type;b.style.display='block';
-  setTimeout(()=>b.style.display='none',3500);
+  if(_alertTimer){clearTimeout(_alertTimer);_alertTimer=null;}
+  if(!persist)_alertTimer=setTimeout(()=>{b.style.display='none';_alertTimer=null;},3500);
 }
 document.addEventListener('click',e=>{
   if(!e.target.closest('.ac-wrap'))document.querySelectorAll('.ac-dd').forEach(d=>d.style.display='none');
