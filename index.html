@@ -122,7 +122,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.51-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.51</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -145,7 +145,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.51-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.51</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -616,8 +616,8 @@ const KR='KR',KP='KP',KH='KH',KC='KC',KE='KE',KRE='KRE',KCE='KCE';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxQ60YzG4l1kS8pZt7CnzrFALV64BZyWlfSVIbmGiYZY_rCQ-V2jwfrRTKZibLPwOLf/exec';
-const ENV='dev'; // 'dev' | 'prod'
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyqRMjR05R-36GbofU8oHfemEJcw4KcuR8I6Nfy4_KZr5lj9dvpNZDV0GyHSs5HI-Vk/exec';
+const ENV='prod'; // 'dev' | 'prod'
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos'};
 
 // In-memory cache (loaded once at login)
