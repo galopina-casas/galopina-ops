@@ -12,6 +12,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .logo{font-size:17px;font-weight:600}.logo em{color:#1D9E75;font-style:normal}
 .ver{font-size:10px;background:#f0f0ec;border:0.5px solid #e0e0da;border-radius:4px;padding:2px 7px;color:#999;margin-left:6px;vertical-align:middle}
 .ubadge{font-size:12px;background:#f5f5f3;border:0.5px solid #e0e0da;border-radius:6px;padding:4px 10px;color:#666;cursor:pointer}
+.gx-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border:1px solid #b0afa7;border-radius:50%;color:#888780;font-size:9px;font-weight:700;font-style:normal;font-family:Georgia,serif;cursor:help;line-height:1;vertical-align:middle}
+.gx-info .gx-tip{visibility:hidden;opacity:0;transition:opacity .12s;position:absolute;bottom:150%;left:50%;transform:translateX(-50%);width:200px;background:#2C2C2A;color:#fff;font-size:11px;line-height:1.45;font-weight:400;font-family:-apple-system,sans-serif;text-align:left;padding:8px 10px;border-radius:8px;z-index:100;pointer-events:none}
+.gx-info .gx-tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#2C2C2A}
+.gx-info:hover .gx-tip{visibility:visible;opacity:1}
 .tabs{display:flex;gap:2px;margin-bottom:1.2rem;border-bottom:0.5px solid #e0e0da;overflow-x:auto}
 .tab{font-size:13px;padding:7px 13px;border:none;background:none;color:#888;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;white-space:nowrap}
 .tab.active{color:#1D9E75;border-bottom-color:#1D9E75;font-weight:500}
@@ -118,7 +122,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.43-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.44-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +145,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.43-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.44-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2349,9 +2353,10 @@ function renderEgresos(){
   const conCat=egresos.length-sinCat;
   const gastosPersonales=egresos.filter(e=>e.gastoPersonal);
   const totalGP=gastosPersonales.reduce((s,e)=>s+(e.total||0),0);
-  const egresosOpActivos=_egShowGP?egresos:egresos.filter(e=>!e.gastoPersonal);
-  const totalOp=egresosOpActivos.reduce((s,e)=>s+(e.total||0),0);
-  const ivaOpActivo=egresosOpActivos.reduce((s,e)=>s+(e.iva||0),0);
+  const ivaGP=gastosPersonales.reduce((s,e)=>s+(e.iva||0),0);
+  const egresosOp=egresos.filter(e=>!e.gastoPersonal);
+  const totalOp=egresosOp.reduce((s,e)=>s+(e.total||0),0);
+  const ivaOp=egresosOp.reduce((s,e)=>s+(e.iva||0),0);
   const nFacturasCFDI=egresos.filter(e=>e.tipoDoc!=='Nota de crédito'&&e.fuente!=='noCFDI').length;
   const nNoCFDI=egresos.filter(e=>e.fuente==='noCFDI').length;
   const nFacturas=nFacturasCFDI;
@@ -2366,10 +2371,9 @@ function renderEgresos(){
     <div class="metric"><p class="mlabel">Facturas CFDI</p><p class="mval">${nFacturas}</p></div>
     ${nNoCFDI>0?`<div class="metric"><p class="mlabel">noCFDI</p><p class="mval" style="color:#0C447C">${nNoCFDI}</p></div>`:''}
     ${nNC>0?`<div class="metric"><p class="mlabel">Notas de crédito</p><p class="mval" style="color:#856404">${nNC}</p></div>`:''}
-    <div class="metric"><p class="mlabel">Total egresos</p><p class="mval">${fmt(totalSinDeducibles)}</p></div>
-    ${totalGP>0?`<div class="metric"><p class="mlabel" style="color:#BA7517">Gastos personales</p><p class="mval" style="color:#BA7517">${fmt(totalGP)}</p></div>`:''}
-    ${totalGP>0?`<div class="metric"><p class="mlabel">Total operación</p><p class="mval">${fmt(Math.round(totalOp*100)/100)}</p></div>`:''}
-    <div class="metric"><p class="mlabel" style="color:#185FA5">IVA acreditable</p><p class="mval" style="color:#185FA5">${fmt(ivaOpActivo)}</p></div>
+    <div class="metric"><p class="mlabel">Total egresos <span class="gx-info">i<span class="gx-tip">Suma de todas las facturas del mes (incluye gastos personales). Excluye deducibles anuales.</span></span></p><p class="mval">${fmt(totalSinDeducibles)}</p><p style="font-size:11px;color:#888;margin-top:3px">IVA ${fmt(totalIva)}</p></div>
+    ${totalGP>0?`<div class="metric" style="background:#FAEEDA"><p class="mlabel" style="color:#854F0B">Gastos personales</p><p class="mval" style="color:#633806">${fmt(totalGP)}</p><p style="font-size:11px;color:#854F0B;margin-top:3px">IVA ${fmt(Math.round(ivaGP*100)/100)}</p></div>`:''}
+    <div class="metric"><p class="mlabel">Total operación <span class="gx-info">i<span class="gx-tip">Gasto real del negocio: excluye gastos personales y deducibles anuales. Su IVA es el acreditable.</span></span></p><p class="mval">${fmt(Math.round(totalOp*100)/100)}</p><p style="font-size:11px;color:#888;margin-top:3px">IVA ${fmt(Math.round(ivaOp*100)/100)}</p></div>
     <div class="metric"><p class="mlabel" style="color:${sinCat>0?'#BA7517':'#1D9E75'}">Sin categoría</p><p class="mval" style="color:${sinCat>0?'#BA7517':'#1D9E75'}">${sinCat}</p></div>
     </div>`;
 
@@ -2394,7 +2398,7 @@ function renderEgresos(){
   if(!egresos.length){
     document.getElementById('eg-list').innerHTML='<p class="empty">Sin egresos registrados</p>';return;
   }
-  const egresosDisplay=_egShowGP?egresos:egresos.filter(e=>!e.gastoPersonal);
+  const egresosDisplay=egresos;
   const rows=egresosDisplay.map(e=>{
     const esNC=e.tipoDoc==='Nota de crédito';
     const esNoCFDI=e.fuente==='noCFDI';
@@ -2512,7 +2516,6 @@ function saveEgCategoria(uuid){
 }
 
 // ============================================================
-let _egShowGP=true;
 let _egPostImportMes=null; // month to select after import
 let _dashEgrIncludeGP=false; // dashboard: include gastos personales in charts
 
