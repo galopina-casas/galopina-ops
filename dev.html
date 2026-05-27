@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.40-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.41-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.40-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.41-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2233,20 +2233,24 @@ function parseCFDI(xmlStr){
   try{
     const parser=new DOMParser();
     const doc=parser.parseFromString(xmlStr,'text/xml');
-    const comp=doc.querySelector('Comprobante');
+    // Support both namespaced (cfdi:Comprobante) and non-namespaced (Comprobante)
+    const comp=doc.querySelector('Comprobante')||doc.getElementsByTagName('Comprobante')[0]||
+               (doc.documentElement.localName==='Comprobante'?doc.documentElement:null);
     if(!comp)return null;
     // Only process received invoices
     const tipo=comp.getAttribute('TipoDeComprobante');
     if(tipo!=='I'&&tipo!=='E')return null;
+    // Helper: find element supporting namespaces
+    const qEl=(tag)=>doc.querySelector(tag)||doc.getElementsByTagName(tag)[0];
     // Exclude CP01 (complement payments, not invoices)
-    const receptor=doc.querySelector('Receptor');
+    const receptor=qEl('Receptor');
     const usoCFDI=receptor?receptor.getAttribute('UsoCFDI'):'';
     if(usoCFDI==='CP01')return {_skip:'cp01'};
-    const emisor=doc.querySelector('Emisor');
-    const tfd=doc.querySelector('TimbreFiscalDigital');
+    const emisor=qEl('Emisor');
+    const tfd=qEl('TimbreFiscalDigital');
     // Get IVA from root Impuestos element (TotalImpuestosTrasladados is the official rounded value)
     let iva=0;
-    const rootImp=comp.querySelector(':scope > Impuestos')||doc.querySelector('Comprobante > Impuestos');
+    const rootImp=comp.querySelector(':scope > Impuestos')||qEl('Impuestos');
     if(rootImp){
       const totalTras=rootImp.getAttribute('TotalImpuestosTrasladados');
       if(totalTras) iva=parseFloat(totalTras);
@@ -2258,7 +2262,7 @@ function parseCFDI(xmlStr){
     }
     iva=Math.round(iva*100)/100;
     // Get first concepto description
-    const concepto=doc.querySelector('Concepto');
+    const concepto=doc.querySelector('Concepto')||doc.getElementsByTagName('Concepto')[0];
     const desc=concepto?concepto.getAttribute('Descripcion'):'';
     const uuid=tfd?tfd.getAttribute('UUID'):'';
     if(!uuid)return null;
