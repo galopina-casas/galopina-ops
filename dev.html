@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.42-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.43-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.42-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.43-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2739,9 +2739,25 @@ function abrirFormNoCFDI(){
       <div id="nc-mxn-div"><label style="font-size:11px;color:#888780">MONTO MXN</label><input type="number" id="nc-monto-mxn" style="width:100%;font-size:13px;margin-top:2px"></div>
     </div>
     <div style="margin-bottom:10px"><label style="font-size:11px;color:#888780">DESCRIPCIÓN</label><input id="nc-desc" style="width:100%;font-size:13px;margin-top:2px"></div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
-      <div><label style="font-size:11px;color:#888780">CATEGORÍA</label><select id="nc-cat" style="width:100%;font-size:13px;margin-top:2px">${optsHtml}</select></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+      <div><label style="font-size:11px;color:#888780">CATEGORÍA</label><select id="nc-cat" onchange="ncFormCatChange(this.value)" style="width:100%;font-size:13px;margin-top:2px">${optsHtml}</select></div>
       <div><label style="font-size:11px;color:#888780">NOTA</label><input id="nc-nota" style="width:100%;font-size:13px;margin-top:2px"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:14px">
+      <label id="nc-gasto-label" style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px 12px;border:0.5px solid #d5d5cf;border-radius:6px;background:#F5F5F2;flex:1">
+        <input type="checkbox" id="nc-gasto-personal" style="width:14px;height:14px;accent-color:#BA7517" onchange="ncFormGPToggle()">
+        <div>
+          <p style="font-weight:500;font-size:12px;margin:0">Gasto personal</p>
+          <p style="font-size:10px;color:#888;margin:0">No se guarda en regla</p>
+        </div>
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;padding:8px 12px;border:0.5px solid #d5d5cf;border-radius:6px;background:#F5F5F2;flex:1;opacity:.6">
+        <input type="checkbox" id="nc-deducible-anual" style="width:14px;height:14px" disabled>
+        <div>
+          <p style="font-weight:500;font-size:12px;margin:0">Deducible anual</p>
+          <p style="font-size:10px;color:#888;margin:0">Automático por categoría</p>
+        </div>
+      </label>
     </div>
     <div style="display:flex;justify-content:flex-end;gap:8px">
       <button class="btn" onclick="cerrarFormNoCFDI()">Cancelar</button>
@@ -2755,6 +2771,21 @@ function toggleMXNField(){
   const moneda=document.getElementById('nc-moneda')?.value;
   const div=document.getElementById('nc-mxn-div');
   if(div)div.style.opacity=moneda==='MXN'?'0.4':'1';
+}
+
+function ncFormCatChange(cat){
+  const c=gd(KCE).find(x=>x.nombre===cat);
+  const isDeducible=c&&(c.deducibleAnual===true||c.deducibleAnual==='TRUE'||c.deducibleAnual===1);
+  const cb=document.getElementById('nc-deducible-anual');
+  if(cb)cb.checked=!!isDeducible;
+}
+
+function ncFormGPToggle(){
+  const cb=document.getElementById('nc-gasto-personal');
+  const lbl=document.getElementById('nc-gasto-label');
+  if(!cb||!lbl)return;
+  if(cb.checked){lbl.style.border='0.5px solid #BA7517';lbl.style.background='#FAEEDA';}
+  else{lbl.style.border='0.5px solid #d5d5cf';lbl.style.background='#F5F5F2';}
 }
 
 function autoFillMXN(){
@@ -2774,6 +2805,10 @@ function guardarFormNoCFDI(){
   const moneda=document.getElementById('nc-moneda').value;
   const montoMXN=moneda==='MXN'?montoOrig:parseFloat(document.getElementById('nc-monto-mxn').value||0);
   if(!proveedor||!fecha||!montoOrig){showAlert('Proveedor, fecha y monto son obligatorios','error');return;}
+  const categoria=document.getElementById('nc-cat').value;
+  const cCat=gd(KCE).find(x=>x.nombre===categoria);
+  const deducibleAnual=!!(cCat&&(cCat.deducibleAnual===true||cCat.deducibleAnual==='TRUE'||cCat.deducibleAnual===1));
+  const gastoPersonal=document.getElementById('nc-gasto-personal')?.checked||false;
   const egresos=gd(KE);
   egresos.push({
     uuid:'NC-'+Date.now(),
@@ -2784,11 +2819,13 @@ function guardarFormNoCFDI(){
     subtotal:montoMXN,descuento:0,iva:0,total:montoMXN,
     moneda,monedaOriginal:moneda,montoOriginal:montoOrig,montoMXN,
     usoCFDI:'',
-    categoria:document.getElementById('nc-cat').value,
+    categoria,
     nota:document.getElementById('nc-nota').value,
     fuente:'noCFDI',
     nFactura:document.getElementById('nc-nfactura').value,
-    fechaImportacion:new Date().toISOString().slice(0,10)
+    fechaImportacion:new Date().toISOString().slice(0,10),
+    gastoPersonal,
+    deducibleAnual
   });
   sd(KE,egresos);
   cerrarFormNoCFDI();
