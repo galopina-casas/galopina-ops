@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.54</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.55</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.54</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.55</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -3161,22 +3161,48 @@ function processImport(rows, preview){
   </div>`:''}`;
 
   if(nuevas.length){
-    html+=`<div style="margin-bottom:10px">
-      ${nuevas.map(r=>`<div style="background:#F5F4F0;border-radius:6px;padding:8px 12px;margin-bottom:6px;font-size:13px">
-        <span style="display:inline-flex;align-items:center;gap:6px;vertical-align:middle">${origenLogo(r.origen,r.fuente)}<strong>${r.nombre}</strong></span> <span style="color:#888;font-size:11px">CB: ${r.cbId}</span><br>
-        <span class="tag">${r.habitacion}</span> ${r.checkin} → ${r.checkout} · ${r.noches} noches<br>
-        Total: <strong>${fmt(r.total)}</strong> · Anticipo: ${fmt(r.anticipo)} · Saldo: <span style="color:#C83232">${fmt(r.saldo)}</span>
-        ${r.cbWarning==='incoherente'?'<br><span style="color:#B8860B;font-size:11px">⚠️ Anticipo=Saldo=Total en Cloudbeds — pagos no importados, verificar</span>':''}
-        ${r.cbWarning==='sin-pago-info'&&r.anticipo>0&&!r.antiPago&&!r.antiFecha?'<br><span style="color:#B8860B;font-size:11px">⚠️ Sin fecha/método de pago — completar después</span>':''}
-        ${r.consumoCena>0?`<br><span style="color:#1D9E75;font-size:11px">🍽 ${r.consumoCenaCant} cena${r.consumoCenaCant>1?'s':''} incluidas: ${fmt(r.consumoCena)}</span>`:''}
+    window._impNuevas=nuevas;
+    window._impSel=nuevas.map(()=>true);
+    html+=`<div id="imp-rows" style="margin-bottom:10px">
+      ${nuevas.map((r,idx)=>`<div id="imp-row-${idx}" style="background:#F5F4F0;border-radius:6px;padding:8px 12px;margin-bottom:6px;font-size:13px;display:flex;gap:10px;align-items:flex-start">
+        <input type="checkbox" checked onchange="toggleImportRow(${idx},this.checked)" style="width:15px;height:15px;margin-top:3px;flex-shrink:0;accent-color:#1D9E75;cursor:pointer">
+        <div style="flex:1">
+          <span style="display:inline-flex;align-items:center;gap:6px;vertical-align:middle">${origenLogo(r.origen,r.fuente)}<strong>${r.nombre}</strong></span> <span style="color:#888;font-size:11px">CB: ${r.cbId}</span><br>
+          <span class="tag">${r.habitacion}</span> ${r.checkin} → ${r.checkout} · ${r.noches} noches<br>
+          Total: <strong>${fmt(r.total)}</strong> · Anticipo: ${fmt(r.anticipo)} · Saldo: <span style="color:#C83232">${fmt(r.saldo)}</span>
+          ${r.cbWarning==='incoherente'?'<br><span style="color:#B8860B;font-size:11px">⚠️ Anticipo=Saldo=Total en Cloudbeds — pagos no importados, verificar</span>':''}
+          ${r.cbWarning==='sin-pago-info'&&r.anticipo>0&&!r.antiPago&&!r.antiFecha?'<br><span style="color:#B8860B;font-size:11px">⚠️ Sin fecha/método de pago — completar después</span>':''}
+          ${r.consumoCena>0?`<br><span style="color:#1D9E75;font-size:11px">🍽 ${r.consumoCenaCant} cena${r.consumoCenaCant>1?'s':''} incluidas: ${fmt(r.consumoCena)}</span>`:''}
+        </div>
       </div>`).join('')}
     </div>
-    <button class="btn btn-primary" onclick="confirmImport(${JSON.stringify(nuevas).replace(/"/g,'&quot;')})">
+    <button class="btn btn-primary" id="btn-confirm-import" onclick="confirmImportSelected()">
       ✓ Importar ${nuevas.length} reserva(s)
     </button>`;
   }
   if(errores.length) html+=`<p style="color:#A32D2D;font-size:12px;margin-top:8px">${errores.join('<br>')}</p>`;
   preview.innerHTML=html;
+}
+
+function toggleImportRow(idx,checked){
+  if(!window._impSel)return;
+  window._impSel[idx]=checked;
+  const row=document.getElementById('imp-row-'+idx);
+  if(row)row.style.opacity=checked?'1':'0.5';
+  const n=window._impSel.filter(Boolean).length;
+  const btn=document.getElementById('btn-confirm-import');
+  if(btn){
+    btn.textContent=`✓ Importar ${n} reserva(s)`;
+    btn.disabled=n===0;
+    btn.style.opacity=n===0?'0.5':'';
+  }
+}
+
+function confirmImportSelected(){
+  if(!window._impNuevas)return;
+  const sel=window._impNuevas.filter((_,i)=>window._impSel[i]);
+  if(!sel.length)return;
+  confirmImport(sel);
 }
 
 function confirmImport(nuevas){
