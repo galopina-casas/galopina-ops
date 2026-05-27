@@ -16,6 +16,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .gx-info .gx-tip{visibility:hidden;opacity:0;transition:opacity .12s;position:absolute;bottom:150%;left:50%;transform:translateX(-50%);width:200px;background:#2C2C2A;color:#fff;font-size:11px;line-height:1.45;font-weight:400;font-family:-apple-system,sans-serif;text-align:left;padding:8px 10px;border-radius:8px;z-index:100;pointer-events:none}
 .gx-info .gx-tip::after{content:"";position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#2C2C2A}
 .gx-info:hover .gx-tip{visibility:visible;opacity:1}
+@keyframes gx-spin{to{transform:rotate(360deg)}}
 .tabs{display:flex;gap:2px;margin-bottom:1.2rem;border-bottom:0.5px solid #e0e0da;overflow-x:auto}
 .tab{font-size:13px;padding:7px 13px;border:none;background:none;color:#888;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;white-space:nowrap}
 .tab.active{color:#1D9E75;border-bottom-color:#1D9E75;font-weight:500}
@@ -122,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.51</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.54</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -145,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.51</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.54</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -443,6 +444,18 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     </div>
   </div>
   <!-- noCFDI preview modal -->
+  <div id="nocfdi-progress-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:400;align-items:center;justify-content:center">
+    <div style="background:#fff;border-radius:12px;padding:24px 32px;min-width:340px;max-width:90vw;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.18)">
+      <div style="display:inline-block;width:28px;height:28px;border:3px solid #1D9E75;border-top-color:transparent;border-radius:50%;animation:gx-spin 1s linear infinite;margin-bottom:12px"></div>
+      <p id="nocfdi-progress-title" style="font-size:14px;font-weight:600;margin:0 0 4px;color:#2C2C2A">Extrayendo datos de las facturas</p>
+      <p style="font-size:12px;color:#888;margin:0 0 14px">Esto puede tardar unos segundos por archivo</p>
+      <div style="background:#F1EFE8;height:6px;border-radius:3px;overflow:hidden">
+        <div id="nocfdi-progress-bar" style="background:#1D9E75;height:100%;width:0%;transition:width 0.3s"></div>
+      </div>
+      <p id="nocfdi-progress-count" style="font-size:12px;color:#888;margin:8px 0 0">0 de 0</p>
+    </div>
+  </div>
+
   <div id="nocfdi-preview-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.45);z-index:300;align-items:center;justify-content:center">
     <div style="background:#fff;border-radius:12px;padding:1.2rem;width:96%;max-width:700px;max-height:90vh;overflow-y:auto;box-shadow:0 4px 24px rgba(0,0,0,.18)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
@@ -2567,7 +2580,11 @@ async function procesarPDFsNoCFDI(input){
   // Disable button during extraction
   const btnImp=document.querySelector('button[onclick="importarPDFsNoCFDI()"]');
   if(btnImp){btnImp.disabled=true;btnImp.style.opacity='0.5';btnImp.style.cursor='wait';}
-  showAlert(`Extrayendo datos... 0 de ${files.length}`,'info',true);
+  // Show progress modal overlay
+  const ovl=document.getElementById('nocfdi-progress-overlay');
+  const bar=document.getElementById('nocfdi-progress-bar');
+  const cnt=document.getElementById('nocfdi-progress-count');
+  if(ovl){ovl.style.display='flex';bar.style.width='0%';cnt.textContent=`0 de ${files.length}`;}
   _nocfdiPending=[];
   let duplicadas=0;
   console.log('[noCFDI] KE nFacturas en cache:',gd(KE).map(e=>e.nFactura).filter(Boolean));
@@ -2611,10 +2628,12 @@ async function procesarPDFsNoCFDI(input){
       _nocfdiPending.push({archivo:file.name,proveedor:'',nFactura:'',fecha:'',descripcion:'',monedaOriginal:'MXN',montoOriginal:0,montoMXN:0,iva:0,categoria:'',nota:'',fuente:'noCFDI',uuid:'NC-'+Date.now(),error:true});
     }
     procesados++;
-    showAlert(`Extrayendo datos... ${procesados} de ${files.length}`,'info',true);
+    if(bar)bar.style.width=Math.round(procesados/files.length*100)+'%';
+    if(cnt)cnt.textContent=`${procesados} de ${files.length}`;
   }
   }finally{
     if(btnImp){btnImp.disabled=false;btnImp.style.opacity='';btnImp.style.cursor='';}
+    if(ovl)ovl.style.display='none';
   }
   if(!_nocfdiPending.filter(e=>!e._dup).length&&duplicadas>0){
     showAlert(`${files.length} archivo(s) detectado(s) · todas ya estaban importadas (${duplicadas} duplicada(s) omitida(s))`,'error',true);
@@ -2969,12 +2988,12 @@ function processImport(rows, preview){
   const mapOrigen=f=>{
     if(!f)return 'directo';
     const fl=f.toLowerCase();
-    if(fl.includes('booking'))return 'booking';
+    if(fl.includes('booking.com'))return 'booking';
     if(fl.includes('airbnb'))return 'airbnb';
     if(fl.includes('expedia'))return 'expedia';
+    if(fl.includes('tablet hotels'))return 'tablet';
     if(fl.includes('sitio web')||fl.includes('motor'))return 'directo';
     if(fl.includes('whatsapp'))return 'whatsapp';
-    if(fl.includes('tablet'))return 'tablet';
     if(_AGENCIAS.some(a=>fl.includes(a)))return 'agencia';
     return 'otro';
   };
@@ -3144,7 +3163,7 @@ function processImport(rows, preview){
   if(nuevas.length){
     html+=`<div style="margin-bottom:10px">
       ${nuevas.map(r=>`<div style="background:#F5F4F0;border-radius:6px;padding:8px 12px;margin-bottom:6px;font-size:13px">
-        <strong>${r.nombre}</strong> <span style="color:#888;font-size:11px">CB: ${r.cbId}</span><br>
+        <span style="display:inline-flex;align-items:center;gap:6px;vertical-align:middle">${origenLogo(r.origen,r.fuente)}<strong>${r.nombre}</strong></span> <span style="color:#888;font-size:11px">CB: ${r.cbId}</span><br>
         <span class="tag">${r.habitacion}</span> ${r.checkin} → ${r.checkout} · ${r.noches} noches<br>
         Total: <strong>${fmt(r.total)}</strong> · Anticipo: ${fmt(r.anticipo)} · Saldo: <span style="color:#C83232">${fmt(r.saldo)}</span>
         ${r.cbWarning==='incoherente'?'<br><span style="color:#B8860B;font-size:11px">⚠️ Anticipo=Saldo=Total en Cloudbeds — pagos no importados, verificar</span>':''}
