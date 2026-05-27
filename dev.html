@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.37-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.38-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.37-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.38-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -772,9 +772,11 @@ function showTab(t){
 let _dashCharts={};
 const DASH_MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 
+const _dashSegN={};
 function dashSeg(gId,btn,n){
   document.querySelectorAll('#seg-'+gId+' .dsb').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
+  _dashSegN[gId]=n;
   dashRenderChart(gId,n);
 }
 
@@ -957,7 +959,7 @@ function renderDash(){
   const seg12mes=(gId)=>dashSegHdr(gId,[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12);
   const segMes=(gId)=>dashSegHdr(gId,[{l:'Mes',v:1},{l:'3m',v:3},{l:'12m',v:12}],12);
 
-  document.getElementById('dash-g1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos vs egresos</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Con resultado neto</p></div><div style="display:flex;align-items:center;gap:8px"><button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;dashRenderChart('g1',_dashSegs['g1']||12);dashRenderChart('g9',_dashSegs['g9']||12);" id="btn-dash-gp" style="border:0.5px solid ${_dashEgrIncludeGP?'#BA7517':'#d5d5cf'};background:${_dashEgrIncludeGP?'#FAEEDA':'transparent'};color:${_dashEgrIncludeGP?'#633806':'var(--color-text-secondary)'};border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer">+ Gastos personales</button><div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-secondary)">${[['#185FA5','Hospedaje'],['#1D9E75','Consumos'],['#F5C4B3','Egresos']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}<span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#0C447C;display:inline-block"></span>Neto</span></div>${seg12('g1')}</div></div><div style="position:relative;height:240px"><canvas id="cv-g1" role="img" aria-label="Ingresos vs egresos mensuales">Ingresos vs egresos mensuales.</canvas></div>`;
+  document.getElementById('dash-g1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos vs egresos</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Con resultado neto</p></div><div style="display:flex;align-items:center;gap:8px"><button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;dashRenderChart('g1',_dashSegN['g1']||12);dashRenderChart('g9',_dashSegN['g9']||12);" id="btn-dash-gp" style="border:0.5px solid ${_dashEgrIncludeGP?'#BA7517':'#d5d5cf'};background:${_dashEgrIncludeGP?'#FAEEDA':'transparent'};color:${_dashEgrIncludeGP?'#633806':'var(--color-text-secondary)'};border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer">+ Gastos personales</button><div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-secondary)">${[['#185FA5','Hospedaje'],['#1D9E75','Consumos'],['#F5C4B3','Egresos']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}<span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#0C447C;display:inline-block"></span>Neto</span></div>${seg12('g1')}</div></div><div style="position:relative;height:240px"><canvas id="cv-g1" role="img" aria-label="Ingresos vs egresos mensuales">Ingresos vs egresos mensuales.</canvas></div>`;
 
   document.getElementById('dash-g4').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Orígenes</p>${seg12('g4')}</div><div style="position:relative;height:180px"><canvas id="cv-g4" role="img" aria-label="Orígenes de reservas">Orígenes de reservas.</canvas></div>`;
 
@@ -969,7 +971,7 @@ function renderDash(){
 
   document.getElementById('dash-g8').style.display='none';
 
-  document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Base sin IVA</p></div><div style="display:flex;align-items:center;gap:8px"><button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;dashRenderChart('g1',_dashSegs['g1']||12);dashRenderChart('g9',_dashSegs['g9']||12);" style="border:0.5px solid ${_dashEgrIncludeGP?'#BA7517':'#d5d5cf'};background:${_dashEgrIncludeGP?'#FAEEDA':'transparent'};color:${_dashEgrIncludeGP?'#633806':'var(--color-text-secondary)'};border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer">+ Gastos personales</button>${segMes('g9')}</div></div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
+  document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Base sin IVA</p></div><div style="display:flex;align-items:center;gap:8px"><button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;dashRenderChart('g1',_dashSegN['g1']||12);dashRenderChart('g9',_dashSegN['g9']||12);" style="border:0.5px solid ${_dashEgrIncludeGP?'#BA7517':'#d5d5cf'};background:${_dashEgrIncludeGP?'#FAEEDA':'transparent'};color:${_dashEgrIncludeGP?'#633806':'var(--color-text-secondary)'};border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer">+ Gastos personales</button>${segMes('g9')}</div></div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
 
   document.getElementById('dash-g10').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">IVA cobrado vs acreditable</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Solo IVA</p></div>${seg12('g10')}</div><div style="position:relative;height:260px"><canvas id="cv-g10" role="img" aria-label="IVA cobrado vs acreditable">IVA cobrado vs acreditable.</canvas></div>`;
 
