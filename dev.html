@@ -118,7 +118,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.35-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.37-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -141,7 +141,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.35-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.37-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -801,11 +801,12 @@ function getMonthlyData(months){
     const consumos=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+(c.total||0),0);
     // Consumos base (sin IVA)
     const consumosBase=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+Math.round((c.subtotal||c.total/1.16||0)*100)/100,0);
-    // Egresos (con IVA)
-    const egresos=egr.filter(e=>(e.fecha||'').startsWith(prefix)).reduce((s,e)=>s+(e.total||0),0);
+    // Egresos (con IVA) — exclude gastos personales unless toggle on
+    const egrFilt=egr.filter(e=>(e.fecha||'').startsWith(prefix)&&(_dashEgrIncludeGP||!e.gastoPersonal));
+    const egresos=egrFilt.reduce((s,e)=>s+(e.total||0),0);
     // Egresos base (sin IVA)
-    const egresosBase=egr.filter(e=>(e.fecha||'').startsWith(prefix)).reduce((s,e)=>s+(e.subtotal||0),0);
-    const ivaEgr=egr.filter(e=>(e.fecha||'').startsWith(prefix)).reduce((s,e)=>s+(e.iva||0),0);
+    const egresosBase=egrFilt.reduce((s,e)=>s+(e.subtotal||0),0);
+    const ivaEgr=egrFilt.reduce((s,e)=>s+(e.iva||0),0);
     const ivaIng=res.filter(r=>(r.antiFecha||'').startsWith(prefix)).reduce((s,r)=>s+(r.iva||0),0);
     // Noches
     const resM=res.filter(r=>(r.checkin||'').startsWith(prefix));
@@ -888,7 +889,7 @@ function dashRenderChart(gId,months){
 
   if(gId==='g9'){
     const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
-    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);});
+    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria&&(_dashEgrIncludeGP||!e.gastoPersonal)).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);});
     const top=Object.entries(catTot).sort((a,b)=>b[1]-a[1]).slice(0,8);
     const tot=top.reduce((s,e)=>s+e[1],0);
     mkChart('cv-g9',{type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{label:'Monto',data:top.map(e=>Math.round(e[1])),backgroundColor:top.map((_,i)=>i===0?'#185FA5':i<3?'#378ADD':i<6?'#85B7EB':'#B5D4F4'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.x.toLocaleString()+' · '+Math.round(ctx.parsed.x/tot*100)+'%'}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
@@ -956,7 +957,7 @@ function renderDash(){
   const seg12mes=(gId)=>dashSegHdr(gId,[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12);
   const segMes=(gId)=>dashSegHdr(gId,[{l:'Mes',v:1},{l:'3m',v:3},{l:'12m',v:12}],12);
 
-  document.getElementById('dash-g1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos vs egresos</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Con resultado neto</p></div><div style="display:flex;align-items:center;gap:12px"><div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-secondary)">${[['#185FA5','Hospedaje'],['#1D9E75','Consumos'],['#F5C4B3','Egresos']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}<span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#0C447C;display:inline-block"></span>Neto</span></div>${seg12('g1')}</div></div><div style="position:relative;height:240px"><canvas id="cv-g1" role="img" aria-label="Ingresos vs egresos mensuales">Ingresos vs egresos mensuales.</canvas></div>`;
+  document.getElementById('dash-g1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos vs egresos</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Con resultado neto</p></div><div style="display:flex;align-items:center;gap:8px"><button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;dashRenderChart('g1',_dashSegs['g1']||12);dashRenderChart('g9',_dashSegs['g9']||12);" id="btn-dash-gp" style="border:0.5px solid ${_dashEgrIncludeGP?'#BA7517':'#d5d5cf'};background:${_dashEgrIncludeGP?'#FAEEDA':'transparent'};color:${_dashEgrIncludeGP?'#633806':'var(--color-text-secondary)'};border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer">+ Gastos personales</button><div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-secondary)">${[['#185FA5','Hospedaje'],['#1D9E75','Consumos'],['#F5C4B3','Egresos']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}<span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#0C447C;display:inline-block"></span>Neto</span></div>${seg12('g1')}</div></div><div style="position:relative;height:240px"><canvas id="cv-g1" role="img" aria-label="Ingresos vs egresos mensuales">Ingresos vs egresos mensuales.</canvas></div>`;
 
   document.getElementById('dash-g4').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Orígenes</p>${seg12('g4')}</div><div style="position:relative;height:180px"><canvas id="cv-g4" role="img" aria-label="Orígenes de reservas">Orígenes de reservas.</canvas></div>`;
 
@@ -968,7 +969,7 @@ function renderDash(){
 
   document.getElementById('dash-g8').style.display='none';
 
-  document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Base sin IVA</p></div>${segMes('g9')}</div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
+  document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Base sin IVA</p></div><div style="display:flex;align-items:center;gap:8px"><button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;dashRenderChart('g1',_dashSegs['g1']||12);dashRenderChart('g9',_dashSegs['g9']||12);" style="border:0.5px solid ${_dashEgrIncludeGP?'#BA7517':'#d5d5cf'};background:${_dashEgrIncludeGP?'#FAEEDA':'transparent'};color:${_dashEgrIncludeGP?'#633806':'var(--color-text-secondary)'};border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer">+ Gastos personales</button>${segMes('g9')}</div></div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
 
   document.getElementById('dash-g10').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">IVA cobrado vs acreditable</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Solo IVA</p></div>${seg12('g10')}</div><div style="position:relative;height:260px"><canvas id="cv-g10" role="img" aria-label="IVA cobrado vs acreditable">IVA cobrado vs acreditable.</canvas></div>`;
 
@@ -2195,6 +2196,9 @@ async function procesarZip(input){
       nuevas++;
     }
     sd(KE,egresos);
+    // Find most recent month from newly imported
+    const newDates=egresos.slice(-nuevas).map(e=>(e.fecha||'').slice(0,7)).filter(Boolean).sort().reverse();
+    _egPostImportMes=newDates[0]||'';
     initEgresos();
     showAlert(`${nuevas} importadas${duplicadas?' · '+duplicadas+' duplicadas':''}${cp01?' · '+cp01+' omitidas (pagos CP01)':''}`, 'success');
   }catch(e){
@@ -2287,14 +2291,19 @@ function initEgresos(){
     sel.appendChild(opt);
   });
 
-  // Set current month as default if available
+  // Set month: post-import month if set, else current month
   const now=new Date();
   const curPrefix=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const sel2=document.getElementById('eg-mes');
   if(sel2){
-    const hasCurrentMonth=[...sel2.options].some(o=>o.value===curPrefix);
-    if(hasCurrentMonth)sel2.value=curPrefix;
-    else sel2.value='';
+    if(_egPostImportMes){
+      sel2.value=_egPostImportMes;
+      _egPostImportMes=null;
+    } else {
+      const hasCurrentMonth=[...sel2.options].some(o=>o.value===curPrefix);
+      if(hasCurrentMonth)sel2.value=curPrefix;
+      else sel2.value='';
+    }
   }
   renderEgresos();
 }
@@ -2313,6 +2322,7 @@ function renderEgresos(){
 
   // Metrics
   const total=Math.round(egresos.reduce((s,e)=>s+(e.total||0),0)*100)/100;
+  const totalSinDeducibles=Math.round(egresos.filter(e=>!e.deducibleAnual).reduce((s,e)=>s+(e.total||0),0)*100)/100;
   const totalIva=Math.round(egresos.reduce((s,e)=>s+(e.iva||0),0)*100)/100;
   const sinCat=egresos.filter(e=>!e.categoria).length;
   const conCat=egresos.length-sinCat;
@@ -2329,16 +2339,13 @@ function renderEgresos(){
   document.getElementById('eg-metrics').innerHTML=`
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
       <p style="font-size:13px;font-weight:500;margin:0">Facturas de ${mesValNombre}</p>
-      <div style="display:flex;background:#F0EDE8;border-radius:6px;padding:2px;gap:2px">
-        <button onclick="_egShowGP=true;renderEgresos()" style="border:none;padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;background:${_egShowGP?'#fff':'transparent'};font-weight:${_egShowGP?'500':'400'}">Con gastos personales</button>
-        <button onclick="_egShowGP=false;renderEgresos()" style="border:none;padding:4px 10px;border-radius:5px;font-size:11px;cursor:pointer;background:${!_egShowGP?'#fff':'transparent'};font-weight:${!_egShowGP?'500':'400'}">Sin gastos personales</button>
-      </div>
+
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
     <div class="metric"><p class="mlabel">Facturas CFDI</p><p class="mval">${nFacturas}</p></div>
     ${nNoCFDI>0?`<div class="metric"><p class="mlabel">noCFDI</p><p class="mval" style="color:#0C447C">${nNoCFDI}</p></div>`:''}
     ${nNC>0?`<div class="metric"><p class="mlabel">Notas de crédito</p><p class="mval" style="color:#856404">${nNC}</p></div>`:''}
-    <div class="metric"><p class="mlabel">Total egresos</p><p class="mval">${fmt(total)}</p></div>
+    <div class="metric"><p class="mlabel">Total egresos</p><p class="mval">${fmt(totalSinDeducibles)}</p></div>
     ${totalGP>0?`<div class="metric"><p class="mlabel" style="color:#BA7517">Gastos personales</p><p class="mval" style="color:#BA7517">${fmt(totalGP)}</p></div>`:''}
     ${totalGP>0?`<div class="metric"><p class="mlabel">Total operación</p><p class="mval">${fmt(Math.round(totalOp*100)/100)}</p></div>`:''}
     <div class="metric"><p class="mlabel" style="color:#185FA5">IVA acreditable</p><p class="mval" style="color:#185FA5">${fmt(ivaOpActivo)}</p></div>
@@ -2382,6 +2389,7 @@ function renderEgresos(){
           ${esNC?'<span style="background:#FFF3CD;color:#856404;border:0.5px solid #FFEAA0;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Nota de crédito</span>':''}
           ${esNoCFDI?'<span style="background:#E6F1FB;color:#0C447C;border:0.5px solid #85B7EB;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">noCFDI</span>':''}
           ${e.gastoPersonal?'<span style="background:#FAEEDA;color:#633806;border:0.5px solid #FAC775;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Gasto personal</span>':''}
+          ${e.deducibleAnual?'<span style="background:#E6F1FB;color:#0C447C;border:0.5px solid #85B7EB;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Deducible anual</span>':''}
         </div>
         <p style="color:#999;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.descripcion||''}</p>
       </div>
@@ -2483,7 +2491,9 @@ function saveEgCategoria(uuid){
 }
 
 // ============================================================
-let _egShowGP=true; // toggle con/sin gastos personales
+let _egShowGP=true;
+let _egPostImportMes=null; // month to select after import
+let _dashEgrIncludeGP=false; // dashboard: include gastos personales in charts
 
 // ── noCFDI MODULE ──────────────────────────────────────────
 let _nocfdiPending = [];
@@ -2680,6 +2690,9 @@ function confirmarNoCFDI(){
   });
   sd(KE,egresos);
   if(reglas.length)sd(KRE,reglas);
+  // Select month of most recently imported noCFDI
+  const nDates=egresos.filter(e=>e.fuente==='noCFDI').slice(-guardadas).map(e=>(e.fecha||'').slice(0,7)).filter(Boolean).sort().reverse();
+  if(nDates[0])_egPostImportMes=nDates[0];
   cerrarPreviewNoCFDI();
   initEgresos();
   showAlert(`${guardadas} factura(s) noCFDI guardadas${duplicadas?' · '+duplicadas+' duplicadas omitidas':''}`,'success');
