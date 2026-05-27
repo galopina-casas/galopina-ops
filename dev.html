@@ -122,7 +122,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.46-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.47-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -145,7 +145,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.46-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.47-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -3770,12 +3770,14 @@ function exportarCierreExcel(){
 
   // --- Concepto CFDI helper ---
   const _prods=gd(KP);
-  const _cenaProd=_prods.find(p=>p.cat==='cenas'||p.nombre==='Cena');
+  const _norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').trim();
+  const _cenaProd=_prods.find(p=>p.cat==='cenas'||_norm(p.nombre)===_norm('Cena'));
   const _cenaCFDI=(_cenaProd&&_cenaProd.conceptoCFDI)?_cenaProd.conceptoCFDI:'Cena';
   const conceptoCFDIof=(r)=>{
     if(r.tipo==='hospedaje')return 'Hospedaje';
     if(r.cat==='cenas')return _cenaCFDI;
-    const p=_prods.find(x=>x.nombre===(r.concepto||''));
+    const key=_norm(r.concepto||'');
+    const p=_prods.find(x=>_norm(x.nombre)===key);
     return (p&&p.conceptoCFDI)?p.conceptoCFDI:'';
   };
 
@@ -3822,6 +3824,39 @@ function exportarCierreExcel(){
       {v:rep?'Sí':'No',s:cs(rowBg)}
     ]);
   });
+  // --- Resumen por Concepto CFDI (formulas SUMIF) at the bottom of Detalle Pagos ---
+  // Columns: F=Concepto CFDI, K=Base, L=ISH, M=IVA, N=Exento, O=Total
+  const detDetailFirst=2, detDetailLast=detData.length;
+  const detConceptosUnicos=[...new Set(rowsSorted.map(r=>conceptoCFDIof(r)||'(sin concepto)'))].sort((a,b)=>a.localeCompare(b));
+  detData.push([]);
+  detData.push([{v:'Resumen por Concepto CFDI',s:{font:{bold:true,sz:12}}}]);
+  const detSumHdrStyle={font:{bold:true},fill:{fgColor:{rgb:'F4B942'}},border:{bottom:{style:'thin',color:{rgb:'888888'}}}};
+  detData.push([
+    {v:'Concepto CFDI',s:detSumHdrStyle},{v:'Base',s:detSumHdrStyle},{v:'ISH',s:detSumHdrStyle},{v:'IVA',s:detSumHdrStyle},{v:'Exento',s:detSumHdrStyle},{v:'Total',s:detSumHdrStyle}
+  ]);
+  const detSumNum={t:'n',z:'#,##0.00'};
+  detConceptosUnicos.forEach(c=>{
+    const lit='"'+String(c).replace(/"/g,'""')+'"';
+    const rng=(col)=>`${col}${detDetailFirst}:${col}${detDetailLast}`;
+    detData.push([
+      {v:c},
+      {f:`SUMIF(${rng('F')},${lit},${rng('K')})`,...detSumNum},
+      {f:`SUMIF(${rng('F')},${lit},${rng('L')})`,...detSumNum},
+      {f:`SUMIF(${rng('F')},${lit},${rng('M')})`,...detSumNum},
+      {f:`SUMIF(${rng('F')},${lit},${rng('N')})`,...detSumNum},
+      {f:`SUMIF(${rng('F')},${lit},${rng('O')})`,...detSumNum},
+    ]);
+  });
+  const detSumFirst=detDetailLast+4, detSumLast=detSumFirst+detConceptosUnicos.length-1;
+  detData.push([
+    {v:'TOTAL',s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(B${detSumFirst}:B${detSumLast})`,...detSumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(C${detSumFirst}:C${detSumLast})`,...detSumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(D${detSumFirst}:D${detSumLast})`,...detSumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(E${detSumFirst}:E${detSumLast})`,...detSumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(F${detSumFirst}:F${detSumLast})`,...detSumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+  ]);
+
   const ws1=XLSX.utils.aoa_to_sheet(detData);
   // Column widths
   ws1['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
@@ -3835,10 +3870,11 @@ function exportarCierreExcel(){
     if(!pxcMap[gk]){
       pxcMap[gk]={cbId:r.cbId||'',fechaReserva:r.fechaReserva||'',checkin:r.checkin||'',checkout:r.checkout||'',
         huesped:r.huesped,conceptoCFDI:cCFDI,fecha:r.fecha||'',pago:r.pago||'',
-        base:0,ish:0,iva:0,exento:0,monto:0,rep:METODOS_REPORTABLES.includes(r.pago)};
+        base:0,ish:0,iva:0,exento:0,monto:0,rep:METODOS_REPORTABLES.includes(r.pago),notaSet:new Set()};
     }
     const g=pxcMap[gk];
     g.base+=(r.base||0);g.ish+=(r.ish||0);g.iva+=(r.iva||0);g.exento+=(r.exento||0);g.monto+=(r.monto||0);
+    if(r.concepto)g.notaSet.add(r.concepto);
   });
   const pxcRows=Object.values(pxcMap).sort((a,b)=>{
     const ci=(a.checkin||'').localeCompare(b.checkin||'');if(ci!==0)return ci;
@@ -3848,7 +3884,7 @@ function exportarCierreExcel(){
   const pxcHeaders=[
     {v:'Núm. reserva',g:'id'},{v:'Fecha Reserva',g:'id'},{v:'Fecha entrada',g:'id'},{v:'Fecha salida',g:'id'},
     {v:'Huésped',g:'id'},
-    {v:'Concepto CFDI',g:'conc'},
+    {v:'Concepto CFDI',g:'conc'},{v:'Nota',g:'conc'},
     {v:'Fecha pago',g:'pago'},{v:'Método pago',g:'pago'},{v:'Base pago',g:'pago'},{v:'ISH pago',g:'pago'},
     {v:'IVA pago',g:'pago'},{v:'Exento pago',g:'pago'},{v:'Total pago',g:'pago'},
     {v:'Para contador',g:'cnt'}
@@ -3862,15 +3898,56 @@ function exportarCierreExcel(){
     const rowBg=_pxcTog?null:'F2F2F2';
     const cs=bg=>bg?{fill:{fgColor:{rgb:bg}}}:{};
     const nm=(bg,v)=>({v:r2(v),t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
+    const nota=[...g.notaSet].join(' + ');
     pxcData.push([
       {v:g.cbId||'',s:cs(rowBg)},{v:g.fechaReserva||'',s:cs(rowBg)},{v:g.checkin||'',s:cs(rowBg)},{v:g.checkout||'',s:cs(rowBg)},
-      {v:g.huesped,s:cs(rowBg)},{v:g.conceptoCFDI,s:cs(rowBg)},
+      {v:g.huesped,s:cs(rowBg)},{v:g.conceptoCFDI,s:cs(rowBg)},{v:nota,s:cs(rowBg)},
       {v:g.fecha||'',s:cs(rowBg)},{v:METODOS_LABELS[g.pago]||g.pago,s:cs(rowBg)},nm(rowBg,g.base),nm(rowBg,g.ish),nm(rowBg,g.iva),nm(rowBg,g.exento),nm(rowBg,g.monto),
       {v:g.rep?'Sí':'No',s:cs(rowBg)}
     ]);
   });
+
+  // --- Resumen por Concepto CFDI (formulas SUMIF) at the bottom of PagoxConcepto ---
+  // Columns in PagoxConcepto (1-based):
+  // F=Concepto CFDI, J=Base pago, K=ISH pago, L=IVA pago, M=Exento pago, N=Total pago
+  const pxcDetailFirst=2, pxcDetailLast=pxcData.length; // sheet row numbers
+  const pxcConceptosUnicos=[...new Set(pxcRows.map(g=>g.conceptoCFDI||'(sin concepto)'))].sort((a,b)=>a.localeCompare(b));
+  // blank separator
+  pxcData.push([]);
+  // resumen header
+  const sumHdrStyle={font:{bold:true},fill:{fgColor:{rgb:'F4B942'}},border:{bottom:{style:'thin',color:{rgb:'888888'}}}};
+  pxcData.push([
+    {v:'Resumen por Concepto CFDI',s:{font:{bold:true,sz:12}}}
+  ]);
+  pxcData.push([
+    {v:'Concepto CFDI',s:sumHdrStyle},{v:'Base',s:sumHdrStyle},{v:'ISH',s:sumHdrStyle},{v:'IVA',s:sumHdrStyle},{v:'Exento',s:sumHdrStyle},{v:'Total',s:sumHdrStyle}
+  ]);
+  const sumNum={t:'n',z:'#,##0.00'};
+  pxcConceptosUnicos.forEach(c=>{
+    const lit='"'+String(c).replace(/"/g,'""')+'"';
+    const rng=(col)=>`${col}${pxcDetailFirst}:${col}${pxcDetailLast}`;
+    pxcData.push([
+      {v:c},
+      {f:`SUMIF(${rng('F')},${lit},${rng('J')})`,...sumNum},
+      {f:`SUMIF(${rng('F')},${lit},${rng('K')})`,...sumNum},
+      {f:`SUMIF(${rng('F')},${lit},${rng('L')})`,...sumNum},
+      {f:`SUMIF(${rng('F')},${lit},${rng('M')})`,...sumNum},
+      {f:`SUMIF(${rng('F')},${lit},${rng('N')})`,...sumNum},
+    ]);
+  });
+  // TOTAL row
+  const pxcSumFirst=pxcDetailLast+4, pxcSumLast=pxcSumFirst+pxcConceptosUnicos.length-1;
+  pxcData.push([
+    {v:'TOTAL',s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(B${pxcSumFirst}:B${pxcSumLast})`,...sumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(C${pxcSumFirst}:C${pxcSumLast})`,...sumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(D${pxcSumFirst}:D${pxcSumLast})`,...sumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(E${pxcSumFirst}:E${pxcSumLast})`,...sumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+    {f:`SUM(F${pxcSumFirst}:F${pxcSumLast})`,...sumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
+  ]);
+
   const wsPxc=XLSX.utils.aoa_to_sheet(pxcData);
-  wsPxc['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:13}];
+  wsPxc['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:13}];
   XLSX.utils.book_append_sheet(wb,wsPxc,'PagoxConcepto');
   const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
