@@ -122,7 +122,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.49</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.50-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -145,7 +145,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.49</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.50-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -616,8 +616,8 @@ const KR='KR',KP='KP',KH='KH',KC='KC',KE='KE',KRE='KRE',KCE='KCE';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyqRMjR05R-36GbofU8oHfemEJcw4KcuR8I6Nfy4_KZr5lj9dvpNZDV0GyHSs5HI-Vk/exec';
-const ENV='prod'; // 'dev' | 'prod'
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxQ60YzG4l1kS8pZt7CnzrFALV64BZyWlfSVIbmGiYZY_rCQ-V2jwfrRTKZibLPwOLf/exec';
+const ENV='dev'; // 'dev' | 'prod'
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos'};
 
 // In-memory cache (loaded once at login)
@@ -2564,11 +2564,16 @@ async function procesarPDFsNoCFDI(input){
   const files=[...input.files];
   if(!files.length)return;
   input.value='';
-  showAlert(`Extrayendo datos de ${files.length} archivo(s)...`,'info');
+  // Disable button during extraction
+  const btnImp=document.querySelector('button[onclick="importarPDFsNoCFDI()"]');
+  if(btnImp){btnImp.disabled=true;btnImp.style.opacity='0.5';btnImp.style.cursor='wait';}
+  showAlert(`Extrayendo datos... 0 de ${files.length}`,'info',true);
   _nocfdiPending=[];
   let duplicadas=0;
   console.log('[noCFDI] KE nFacturas en cache:',gd(KE).map(e=>e.nFactura).filter(Boolean));
   const CATS=gd(KCE);
+  let procesados=0;
+  try{
   for(const file of files){
     try{
       const b64=await fileToBase64(file);
@@ -2591,6 +2596,8 @@ async function procesarPDFsNoCFDI(input){
       if(isDup){duplicadas++;parsed._dup=true;}
       parsed.archivo=file.name;
       parsed.montoMXN=parsed.monedaOriginal==='MXN'?parsed.montoOriginal:null;
+      // IVA from extraction (fallback to 0)
+      parsed.iva=Number(parsed.iva)||0;
       // Apply existing rules
       const reglaMatch=gd(KRE).find(r=>r.proveedor&&parsed.proveedor&&parsed.proveedor.toLowerCase().includes(r.proveedor.toLowerCase()));
       parsed.categoria=reglaMatch?reglaMatch.categoria:'';
@@ -2601,8 +2608,13 @@ async function procesarPDFsNoCFDI(input){
       _nocfdiPending.push(parsed);
     }catch(e){
       console.error('Error procesando',file.name,e);
-      _nocfdiPending.push({archivo:file.name,proveedor:'',nFactura:'',fecha:'',descripcion:'',monedaOriginal:'MXN',montoOriginal:0,montoMXN:0,categoria:'',nota:'',fuente:'noCFDI',uuid:'NC-'+Date.now(),error:true});
+      _nocfdiPending.push({archivo:file.name,proveedor:'',nFactura:'',fecha:'',descripcion:'',monedaOriginal:'MXN',montoOriginal:0,montoMXN:0,iva:0,categoria:'',nota:'',fuente:'noCFDI',uuid:'NC-'+Date.now(),error:true});
     }
+    procesados++;
+    showAlert(`Extrayendo datos... ${procesados} de ${files.length}`,'info',true);
+  }
+  }finally{
+    if(btnImp){btnImp.disabled=false;btnImp.style.opacity='';btnImp.style.cursor='';}
   }
   if(!_nocfdiPending.filter(e=>!e._dup).length&&duplicadas>0){
     showAlert(`${files.length} archivo(s) detectado(s) · todas ya estaban importadas (${duplicadas} duplicada(s) omitida(s))`,'error',true);
@@ -2664,6 +2676,7 @@ function mostrarPreviewNoCFDI(){
           </div>
         </div>
         ${e.monedaOriginal!=='MXN'?`<div style="grid-column:span 2"><label style="font-size:10px;color:#BA7517;text-transform:uppercase;letter-spacing:.05em;display:block;margin-bottom:4px">⚠ Monto en MXN (captura manual)</label><input type="number" id="mxn-${i}" value="${e.montoMXN||''}" onchange="_nocfdiPending[${i}].montoMXN=parseFloat(this.value)" style="width:100%;font-size:13px;border-color:#BA7517"></div>`:''}
+        <div><label style="${lbl}">IVA</label><input type="number" step="0.01" value="${e.iva||0}" onchange="_nocfdiPending[${i}].iva=parseFloat(this.value)||0" style="width:100%;font-size:13px"></div>
       </div>
       <div style="margin-bottom:10px"><label style="${lbl}">Descripción</label><input value="${e.descripcion||''}" onchange="_nocfdiPending[${i}].descripcion=this.value" style="width:100%;font-size:13px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
@@ -2730,9 +2743,9 @@ function confirmarNoCFDI(){
       tipoDoc:'Factura noCFDI',
       formaPago:'',
       metodoPago:'',
-      subtotal:montoMXN,
+      subtotal:Math.round((montoMXN-(Number(e.iva)||0))*100)/100,
       descuento:0,
-      iva:0,
+      iva:Math.round((Number(e.iva)||0)*100)/100,
       total:montoMXN,
       moneda:e.monedaOriginal||'MXN',
       monedaOriginal:e.monedaOriginal||'MXN',
