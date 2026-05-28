@@ -52,7 +52,7 @@ input[readonly]{background:#f5f5f3;color:#555}
 .tag{font-size:10px;background:#fff;border:0.5px solid #d5d5cf;border-radius:4px;padding:2px 5px;color:#777}
 .empty{text-align:center;padding:1.5rem;color:#bbb;font-size:13px}
 .acts{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
-.alert{padding:9px 12px;border-radius:6px;font-size:12px;margin-bottom:.8rem;display:none}
+.alert{padding:11px 18px;border-radius:8px;font-size:13px;font-weight:500;display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.12);max-width:90vw}
 .alert.success{background:#EAF3DE;color:#3B6D11;border:0.5px solid #97C459}
 .alert.error{background:#FCEBEB;color:#A32D2D;border:0.5px solid #F09595}
 .tline{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.2-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.2-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1531,7 +1531,17 @@ function guardarRes(){
   const antiPctVal=hasAnticipo?(document.getElementById('r-antipct').value||'').trim():'';
   // Rule: if anticipo is enabled, all its fields must be filled (% , fecha, método)
   if(hasAnticipo){
-    if(!antiPctVal||anti<=0||!antiFecha||!antiPago){
+    const pctEl=document.getElementById('r-antipct');
+    const montoEl=document.getElementById('r-antimonto');
+    const fechaEl=document.getElementById('r-antifecha');
+    const pagoEl=document.getElementById('r-antipago');
+    // clear previous highlights
+    [pctEl,montoEl,fechaEl,pagoEl].forEach(el=>{if(el)el.style.border='';});
+    let faltan=false;
+    if(!antiPctVal||anti<=0){if(pctEl)pctEl.style.border='1.5px solid #E24B4A';if(montoEl)montoEl.style.border='1.5px solid #E24B4A';faltan=true;}
+    if(!antiFecha){if(fechaEl)fechaEl.style.border='1.5px solid #E24B4A';faltan=true;}
+    if(!antiPago){if(pagoEl)pagoEl.style.border='1.5px solid #E24B4A';faltan=true;}
+    if(faltan){
       showAlert('Para guardar el anticipo, completa porcentaje, fecha y método de pago','error');
       return;
     }
@@ -1716,7 +1726,7 @@ function resHtml(r,i){
       ${r.cbWarning==='sin-pago-info'&&(r.anticipo||0)>0&&(!r.antiFecha||!r.antiPago)?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Sin fecha/método de anticipo — completar</p>`:''}
       ${(r.anticipo||0)>0?`<p style="font-size:11px;color:#888;margin-top:2px">Anticipo: ${fmt(r.anticipo||0)} (${r.antiPct||0}%) · ${pagoLabel(r.antiPago||'')}${r.antiFecha?' · '+fmtDate(r.antiFecha):''}</p>`:''}
       ${(r.saldo||0)>0&&r.saldPago?`<p style="font-size:11px;color:#888;margin-top:2px">Saldo: ${fmt(r.saldo)} (${r.total>0?Math.round(r.saldo/r.total*100):0}%) · ${pagoLabel(r.saldPago)}${r.saldFecha?' · '+fmtDate(r.saldFecha):''}</p>`:''}
-      ${(()=>{const tot=(r.consumoCena||0)>0?((r.hospTotal||0)+(r.consumoCena||0)):(r.total||0);const cobrado=(r.anticipo||0)+((r.saldo||0)&&r.saldPago?(r.saldo||0):0);const pend=Math.round((tot-cobrado)*100)/100;return pend>0.5?`<p style="font-size:11px;color:#E24B4A;margin-top:2px">Saldo pendiente: ${fmt(pend)}</p>`:'';})()}
+      ${(()=>{const tot=(r.consumoCena||0)>0?((r.hospTotal||0)+(r.consumoCena||0)):(r.total||0);const pend=Math.round((tot-(r.anticipo||0)-(r.saldo||0))*100)/100;return pend>0.5?`<p style="font-size:11px;color:#E24B4A;margin-top:2px">Saldo pendiente: ${fmt(pend)}</p>`:'';})()}
     </div>
     <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;min-width:90px">
       <span style="font-size:15px;font-weight:700;white-space:nowrap">${fmt((r.consumoCena||0)>0?(r.hospTotal||0)+(r.consumoCena||0):r.total||0)}</span>
@@ -2314,10 +2324,10 @@ function renderIngresos(){
     const gKey=resId.replace(/[^a-zA-Z0-9]/g,'_');
     const res=resMap[resId];
 
-    // Header subtitle: habitacion · checkin → checkout · Saldo
+    // Header subtitle: habitacion · checkin → checkout · Saldo pendiente (calculated)
     const subInfo=res
       ? `${res.habitacion} &nbsp;·&nbsp; ${fmtDate(res.checkin)} &rarr; ${fmtDate(res.checkout)}`
-        +((res.saldo||0)>0&&!res.saldPago?`&nbsp;&nbsp;<span style="color:#E24B4A;font-weight:600">Saldo pend: ${fmt(res.saldo)}</span>`:'')
+        +(()=>{const totR=(res.consumoCena||0)>0?((res.hospTotal||0)+(res.consumoCena||0)):(res.total||0);const pend=Math.round((totR-(res.anticipo||0)-(res.saldo||0))*100)/100;return pend>0.5?`&nbsp;&nbsp;<span style="color:#E24B4A;font-weight:600">Saldo pend: ${fmt(pend)}</span>`:'';})()
       : 'Cliente sin hospedaje';
 
     // Split items: hospedaje first, then consumos
