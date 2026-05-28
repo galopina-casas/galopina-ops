@@ -52,7 +52,7 @@ input[readonly]{background:#f5f5f3;color:#555}
 .tag{font-size:10px;background:#fff;border:0.5px solid #d5d5cf;border-radius:4px;padding:2px 5px;color:#777}
 .empty{text-align:center;padding:1.5rem;color:#bbb;font-size:13px}
 .acts{display:flex;gap:6px;justify-content:flex-end;margin-top:10px}
-.alert{padding:9px 12px;border-radius:6px;font-size:12px;margin-bottom:.8rem;display:none}
+.alert{padding:11px 18px;border-radius:8px;font-size:13px;font-weight:500;display:none;position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.12);max-width:90vw}
 .alert.success{background:#EAF3DE;color:#3B6D11;border:0.5px solid #97C459}
 .alert.error{background:#FCEBEB;color:#A32D2D;border:0.5px solid #F09595}
 .tline{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.66</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.66</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1528,11 +1528,30 @@ function guardarRes(){
   const anti=hasAnticipo?cleanNum(document.getElementById('r-antimonto').value):0;
   const antiFecha=hasAnticipo?document.getElementById('r-antifecha').value:'';
   const antiPago=hasAnticipo?document.getElementById('r-antipago').value:'';
+  const antiPctVal=hasAnticipo?(document.getElementById('r-antipct').value||'').trim():'';
+  // Rule: if anticipo is enabled, all its fields must be filled (% , fecha, método)
+  if(hasAnticipo){
+    const pctEl=document.getElementById('r-antipct');
+    const montoEl=document.getElementById('r-antimonto');
+    const fechaEl=document.getElementById('r-antifecha');
+    const pagoEl=document.getElementById('r-antipago');
+    // clear previous highlights
+    [pctEl,montoEl,fechaEl,pagoEl].forEach(el=>{if(el)el.style.border='';});
+    let faltan=false;
+    if(!antiPctVal||anti<=0){if(pctEl)pctEl.style.border='1.5px solid #E24B4A';if(montoEl)montoEl.style.border='1.5px solid #E24B4A';faltan=true;}
+    if(!antiFecha){if(fechaEl)fechaEl.style.border='1.5px solid #E24B4A';faltan=true;}
+    if(!antiPago){if(pagoEl)pagoEl.style.border='1.5px solid #E24B4A';faltan=true;}
+    if(faltan){
+      showAlert('Para guardar el anticipo, completa porcentaje, fecha y método de pago','error');
+      return;
+    }
+  }
 
   const hasSaldo=document.getElementById('chk-saldo').checked;
   const saldFecha=hasSaldo?document.getElementById('r-saldfecha').value:'';
   const saldPago=hasSaldo?document.getElementById('r-saldpago').value:'';
-  const saldo=Math.round((total-anti)*100)/100;
+  // campo `saldo` = collected balance (only when "Saldo cobrado" is checked); otherwise 0 (pending is calculated)
+  const saldo=hasSaldo?Math.round((total-anti)*100)/100:0;
   const habitacion=habRows.map(r=>r.nombre).join(' + ');
 
   const res=gd(KR);
@@ -1691,7 +1710,7 @@ function origenLogo(origen, fuenteOriginal){
   return `<span title="${fuenteOriginal||origen||'Directo'}" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#1D9E75;color:#fff;font-size:13px;flex-shrink:0">⌂</span>`;
 }
 function resHtml(r,i){
-  const saldoPend=(r.saldo||0)>0&&!r.saldFecha;
+  const saldoPend=(()=>{const tot=(r.consumoCena||0)>0?((r.hospTotal||0)+(r.consumoCena||0)):(r.total||0);return Math.round((tot-(r.anticipo||0)-(r.saldo||0))*100)/100>0.5;})();
   const eb=r.estado==='checkin'?'b-efectivo':r.estado==='checkout'?'b-transferencia':'b-stripe';
   const isManual=!r.cbId;
   return `<div class="res-item" style="border-color:${isManual?'#C49A6C':'#E0E0DA'};border-width:${isManual?'1.5px':'0.5px'}">
@@ -1706,9 +1725,8 @@ function resHtml(r,i){
       ${(r.consumoCena||0)>0?`<div style="display:inline-flex;align-items:center;gap:5px;background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:20px;padding:2px 9px;margin-top:5px;font-size:11px;color:#085041">🍽 <strong>${r.consumoCenaCant||0} cena${(r.consumoCenaCant||0)>1?'s':''} incluida${(r.consumoCenaCant||0)>1?'s':''}</strong> · ${fmt(r.consumoCena)}</div>`:''}
       ${r.cbWarning==='sin-pago-info'&&(r.anticipo||0)>0&&(!r.antiFecha||!r.antiPago)?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Sin fecha/método de anticipo — completar</p>`:''}
       ${(r.anticipo||0)>0?`<p style="font-size:11px;color:#888;margin-top:2px">Anticipo: ${fmt(r.anticipo||0)} (${r.antiPct||0}%) · ${pagoLabel(r.antiPago||'')}${r.antiFecha?' · '+fmtDate(r.antiFecha):''}</p>`:''}
-      ${(r.saldo||0)>0&&r.saldPago?`<p style="font-size:11px;color:#888;margin-top:2px">Saldo: ${fmt(r.saldo)} (${r.total>0?Math.round(r.saldo/r.total*100):0}%) · ${pagoLabel(r.saldPago)}${r.saldFecha?' · '+fmtDate(r.saldFecha):''}</p>`:
-        (r.saldo||0)>0?`<p style="font-size:11px;color:#E24B4A;margin-top:2px">Saldo pendiente: ${fmt(r.saldo)}</p>`:
-        ''}
+      ${(r.saldo||0)>0&&r.saldPago?`<p style="font-size:11px;color:#888;margin-top:2px">Saldo: ${fmt(r.saldo)} (${r.total>0?Math.round(r.saldo/r.total*100):0}%) · ${pagoLabel(r.saldPago)}${r.saldFecha?' · '+fmtDate(r.saldFecha):''}</p>`:''}
+      ${(()=>{const tot=(r.consumoCena||0)>0?((r.hospTotal||0)+(r.consumoCena||0)):(r.total||0);const pend=Math.round((tot-(r.anticipo||0)-(r.saldo||0))*100)/100;return pend>0.5?`<p style="font-size:11px;color:#E24B4A;margin-top:2px">Saldo pendiente: ${fmt(pend)}</p>`:'';})()}
     </div>
     <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;min-width:90px">
       <span style="font-size:15px;font-weight:700;white-space:nowrap">${fmt((r.consumoCena||0)>0?(r.hospTotal||0)+(r.consumoCena||0):r.total||0)}</span>
@@ -2184,23 +2202,24 @@ function buildIngresos(mesFiltro){
   const res=gd(KR),cons=gd(KC),rows=[];
   res.forEach(r=>{
     const resId=String(r.id);
-    // Anticipo
+    // Anticipo (collected)
     if((r.anticipo||0)>0)
       rows.push({id:'RA-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
         fecha:r.antiFecha,monto:r.anticipo,pago:r.antiPago,
         base:r.base,ish:r.ish,iva:r.iva,descuento:r.descuento,label:'Anticipo hospedaje',noches:r.noches});
-    // Saldo pendiente (not yet paid)
-    if((r.saldo||0)>0 && !r.saldFecha)
-      rows.push({id:'RSP-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        fecha:'',monto:r.saldo,pago:'pendiente',label:'Saldo pendiente'});
-    // Saldo paid
-    if((r.saldo||0)>0 && r.saldFecha)
+    // Saldo collected (campo `saldo` now always represents a paid balance)
+    if((r.saldo||0)>0)
       rows.push({id:'RS-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        fecha:r.saldFecha,monto:r.saldo,pago:r.saldPago,label:'Saldo hospedaje'});
-    (r.pagos||[]).filter(p=>p.tipo==='saldo').forEach((p,i)=>{
-      rows.push({id:'RP-'+r.id+'-'+i,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        fecha:p.fecha,monto:p.monto,pago:p.pago,label:'Saldo hospedaje'});
-    });
+        fecha:r.saldFecha||'',monto:r.saldo,pago:r.saldPago||'pendiente',label:'Saldo hospedaje'});
+    // Pending balance = total - anticipo - saldo (not yet collected)
+    {
+      const totR=(r.consumoCena||0)>0?((r.hospTotal||0)):(r.total||0);
+      // Pending applies to hospedaje portion; cenas handled separately below if needed
+      const pend=Math.round(((r.total||0)-(r.anticipo||0)-(r.saldo||0))*100)/100;
+      if(pend>0.5)
+        rows.push({id:'RSP-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+          fecha:'',monto:pend,pago:'pendiente',label:'Saldo pendiente'});
+    }
   });
   cons.forEach(c=>{
     const resC=gd(KR).find(r=>r.id===c.reservaId);
@@ -2305,10 +2324,10 @@ function renderIngresos(){
     const gKey=resId.replace(/[^a-zA-Z0-9]/g,'_');
     const res=resMap[resId];
 
-    // Header subtitle: habitacion · checkin → checkout · Saldo
+    // Header subtitle: habitacion · checkin → checkout · Saldo pendiente (calculated)
     const subInfo=res
       ? `${res.habitacion} &nbsp;·&nbsp; ${fmtDate(res.checkin)} &rarr; ${fmtDate(res.checkout)}`
-        +((res.saldo||0)>0&&!res.saldPago?`&nbsp;&nbsp;<span style="color:#E24B4A;font-weight:600">Saldo pend: ${fmt(res.saldo)}</span>`:'')
+        +(()=>{const totR=(res.consumoCena||0)>0?((res.hospTotal||0)+(res.consumoCena||0)):(res.total||0);const pend=Math.round((totR-(res.anticipo||0)-(res.saldo||0))*100)/100;return pend>0.5?`&nbsp;&nbsp;<span style="color:#E24B4A;font-weight:600">Saldo pend: ${fmt(pend)}</span>`:'';})()
       : 'Cliente sin hospedaje';
 
     // Split items: hospedaje first, then consumos
@@ -3270,27 +3289,16 @@ function processImport(rows, preview){
       const fuenteRaw=get(['Fuente','fuente','source'])||'';
       const cbDirect=fuenteRaw.toLowerCase().includes('sitio web')||fuenteRaw.toLowerCase().includes('motor de reservas');
 
-      // Motor de reservas: anticipo siempre = 50% del total (Cloudbeds acumula pagos en Depósito)
-      const isTriple=!cbDirect&&deposito>0&&saldoPend>0&&near(deposito,saldoPend)&&near(deposito,totalConImpuestos);
-      const missingPayInfo=!cbDirect&&deposito>0&&!isTriple;
+      // Payment import policy:
+      // - cbDirect (Sitio web/motor): anticipo = saldo = 50% del Total general
+      // - Everything else (Airbnb, Booking, agencias, etc.): NO se importan pagos (0/0),
+      //   el total queda pendiente y se registra manualmente.
+      const isTriple=false;
+      const missingPayInfo=false;
       const anticoFinal=cbDirect
         ? Math.round(totalConImpuestos*0.5*100)/100
-        : isTriple?0:deposito;
-      const saldoFinal=cbDirect
-        ? Math.round(totalConImpuestos*0.5*100)/100
-        : isTriple?0:saldoPend;
-
-      // Incoherent saldo check — only for non-motor reservations
-      if(!cbDirect){
-        const _sumaAS=anticoFinal+saldoFinal;
-        const _incoher=!isTriple&&saldoFinal>0&&anticoFinal>0&&Math.abs(_sumaAS-totalConImpuestos)>2;
-        if(_incoher){
-          skipped.push({fila:i+2,nombre:String(nombre).trim(),cbId:cbIdClean,
-            razon:`Anticipo+Saldo (${fmt(_sumaAS)}) ≠ Total (${fmt(totalConImpuestos)}) — corregir en Cloudbeds`,
-            isError:true});
-          return;
-        }
-      }
+        : 0;
+      const saldoFinal=0;
 
       const origen=mapOrigen(fuenteRaw);
       const estado=mapEstado(get(['Estado ','estado ','Estado','estado','status']));
@@ -3453,7 +3461,7 @@ function ckOpen(rid){
 }
 function ckCancel(){document.getElementById('tchk').style.display='none';showTab('reservas');}
 function ckRenderHosp(r){
-  const s=parseFloat(r.saldo)||0;
+  const s=Math.round(((r.total||0)-(r.anticipo||0)-(r.saldo||0))*100)/100;
   const card=document.getElementById('ck-hosp');
   if(s<=0){card.style.display='none';return;}
   card.style.display='block';
@@ -3600,14 +3608,15 @@ function ckTotals(){
 function ckConfirm(){
   const res=gd(KR),r=res.find(x=>x.id==CK_ID||x.id===CK_ID);if(!r)return;
   const cons=gd(KC),hoy=today();
-  if((r.saldo||0)>0){
+  const pendiente=Math.round(((r.total||0)-(r.anticipo||0)-(r.saldo||0))*100)/100;
+  if(pendiente>0){
     const ps=document.getElementById('ck-hp'),fp=document.getElementById('ck-hf');
     const saldoPago=ps?ps.value:'efectivo';
     const saldoFecha=fp?fp.value:hoy;
-    r.pagos=r.pagos||[];r.pagos.push({tipo:'saldo',monto:r.saldo,pago:saldoPago,fecha:saldoFecha});
+    // Record collected balance in the `saldo` field (sum with any previously collected balance)
+    r.saldo=Math.round(((r.saldo||0)+pendiente)*100)/100;
     r.saldFecha=saldoFecha;
     r.saldPago=saldoPago;
-    r.saldo=0;
   }
   cons.forEach(c=>{
     if(c.reservaId!==CK_ID)return;
