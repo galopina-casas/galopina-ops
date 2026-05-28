@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.66-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.66-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1691,7 +1691,7 @@ function origenLogo(origen, fuenteOriginal){
   return `<span title="${fuenteOriginal||origen||'Directo'}" style="display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:#1D9E75;color:#fff;font-size:13px;flex-shrink:0">⌂</span>`;
 }
 function resHtml(r,i){
-  const saldoPend=(r.saldo||0)>0&&!r.saldFecha;
+  const saldoPend=(()=>{const tot=(r.consumoCena||0)>0?((r.hospTotal||0)+(r.consumoCena||0)):(r.total||0);return Math.round((tot-(r.anticipo||0)-(r.saldo||0))*100)/100>0.5;})();
   const eb=r.estado==='checkin'?'b-efectivo':r.estado==='checkout'?'b-transferencia':'b-stripe';
   const isManual=!r.cbId;
   return `<div class="res-item" style="border-color:${isManual?'#C49A6C':'#E0E0DA'};border-width:${isManual?'1.5px':'0.5px'}">
@@ -1706,9 +1706,8 @@ function resHtml(r,i){
       ${(r.consumoCena||0)>0?`<div style="display:inline-flex;align-items:center;gap:5px;background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:20px;padding:2px 9px;margin-top:5px;font-size:11px;color:#085041">🍽 <strong>${r.consumoCenaCant||0} cena${(r.consumoCenaCant||0)>1?'s':''} incluida${(r.consumoCenaCant||0)>1?'s':''}</strong> · ${fmt(r.consumoCena)}</div>`:''}
       ${r.cbWarning==='sin-pago-info'&&(r.anticipo||0)>0&&(!r.antiFecha||!r.antiPago)?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Sin fecha/método de anticipo — completar</p>`:''}
       ${(r.anticipo||0)>0?`<p style="font-size:11px;color:#888;margin-top:2px">Anticipo: ${fmt(r.anticipo||0)} (${r.antiPct||0}%) · ${pagoLabel(r.antiPago||'')}${r.antiFecha?' · '+fmtDate(r.antiFecha):''}</p>`:''}
-      ${(r.saldo||0)>0&&r.saldPago?`<p style="font-size:11px;color:#888;margin-top:2px">Saldo: ${fmt(r.saldo)} (${r.total>0?Math.round(r.saldo/r.total*100):0}%) · ${pagoLabel(r.saldPago)}${r.saldFecha?' · '+fmtDate(r.saldFecha):''}</p>`:
-        (r.saldo||0)>0?`<p style="font-size:11px;color:#E24B4A;margin-top:2px">Saldo pendiente: ${fmt(r.saldo)}</p>`:
-        ''}
+      ${(r.saldo||0)>0&&r.saldPago?`<p style="font-size:11px;color:#888;margin-top:2px">Saldo: ${fmt(r.saldo)} (${r.total>0?Math.round(r.saldo/r.total*100):0}%) · ${pagoLabel(r.saldPago)}${r.saldFecha?' · '+fmtDate(r.saldFecha):''}</p>`:''}
+      ${(()=>{const tot=(r.consumoCena||0)>0?((r.hospTotal||0)+(r.consumoCena||0)):(r.total||0);const cobrado=(r.anticipo||0)+((r.saldo||0)&&r.saldPago?(r.saldo||0):0);const pend=Math.round((tot-cobrado)*100)/100;return pend>0.5?`<p style="font-size:11px;color:#E24B4A;margin-top:2px">Saldo pendiente: ${fmt(pend)}</p>`:'';})()}
     </div>
     <div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end;flex-shrink:0;min-width:90px">
       <span style="font-size:15px;font-weight:700;white-space:nowrap">${fmt((r.consumoCena||0)>0?(r.hospTotal||0)+(r.consumoCena||0):r.total||0)}</span>
@@ -2184,23 +2183,24 @@ function buildIngresos(mesFiltro){
   const res=gd(KR),cons=gd(KC),rows=[];
   res.forEach(r=>{
     const resId=String(r.id);
-    // Anticipo
+    // Anticipo (collected)
     if((r.anticipo||0)>0)
       rows.push({id:'RA-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
         fecha:r.antiFecha,monto:r.anticipo,pago:r.antiPago,
         base:r.base,ish:r.ish,iva:r.iva,descuento:r.descuento,label:'Anticipo hospedaje',noches:r.noches});
-    // Saldo pendiente (not yet paid)
-    if((r.saldo||0)>0 && !r.saldFecha)
-      rows.push({id:'RSP-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        fecha:'',monto:r.saldo,pago:'pendiente',label:'Saldo pendiente'});
-    // Saldo paid
-    if((r.saldo||0)>0 && r.saldFecha)
+    // Saldo collected (campo `saldo` now always represents a paid balance)
+    if((r.saldo||0)>0)
       rows.push({id:'RS-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        fecha:r.saldFecha,monto:r.saldo,pago:r.saldPago,label:'Saldo hospedaje'});
-    (r.pagos||[]).filter(p=>p.tipo==='saldo').forEach((p,i)=>{
-      rows.push({id:'RP-'+r.id+'-'+i,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
-        fecha:p.fecha,monto:p.monto,pago:p.pago,label:'Saldo hospedaje'});
-    });
+        fecha:r.saldFecha||'',monto:r.saldo,pago:r.saldPago||'pendiente',label:'Saldo hospedaje'});
+    // Pending balance = total - anticipo - saldo (not yet collected)
+    {
+      const totR=(r.consumoCena||0)>0?((r.hospTotal||0)):(r.total||0);
+      // Pending applies to hospedaje portion; cenas handled separately below if needed
+      const pend=Math.round(((r.total||0)-(r.anticipo||0)-(r.saldo||0))*100)/100;
+      if(pend>0.5)
+        rows.push({id:'RSP-'+r.id,resId,tipo:'hospedaje',huesped:r.nombre,habitacion:r.habitacion,
+          fecha:'',monto:pend,pago:'pendiente',label:'Saldo pendiente'});
+    }
   });
   cons.forEach(c=>{
     const resC=gd(KR).find(r=>r.id===c.reservaId);
@@ -3270,27 +3270,18 @@ function processImport(rows, preview){
       const fuenteRaw=get(['Fuente','fuente','source'])||'';
       const cbDirect=fuenteRaw.toLowerCase().includes('sitio web')||fuenteRaw.toLowerCase().includes('motor de reservas');
 
-      // Motor de reservas: anticipo siempre = 50% del total (Cloudbeds acumula pagos en Depósito)
-      const isTriple=!cbDirect&&deposito>0&&saldoPend>0&&near(deposito,saldoPend)&&near(deposito,totalConImpuestos);
-      const missingPayInfo=!cbDirect&&deposito>0&&!isTriple;
+      // Payment import policy:
+      // - cbDirect (Sitio web/motor): anticipo = saldo = 50% del Total general
+      // - Everything else (Airbnb, Booking, agencias, etc.): NO se importan pagos (0/0),
+      //   el total queda pendiente y se registra manualmente.
+      const isTriple=false;
+      const missingPayInfo=false;
       const anticoFinal=cbDirect
         ? Math.round(totalConImpuestos*0.5*100)/100
-        : isTriple?0:deposito;
+        : 0;
       const saldoFinal=cbDirect
         ? Math.round(totalConImpuestos*0.5*100)/100
-        : isTriple?0:saldoPend;
-
-      // Incoherent saldo check — only for non-motor reservations
-      if(!cbDirect){
-        const _sumaAS=anticoFinal+saldoFinal;
-        const _incoher=!isTriple&&saldoFinal>0&&anticoFinal>0&&Math.abs(_sumaAS-totalConImpuestos)>2;
-        if(_incoher){
-          skipped.push({fila:i+2,nombre:String(nombre).trim(),cbId:cbIdClean,
-            razon:`Anticipo+Saldo (${fmt(_sumaAS)}) ≠ Total (${fmt(totalConImpuestos)}) — corregir en Cloudbeds`,
-            isError:true});
-          return;
-        }
-      }
+        : 0;
 
       const origen=mapOrigen(fuenteRaw);
       const estado=mapEstado(get(['Estado ','estado ','Estado','estado','status']));
@@ -3453,7 +3444,7 @@ function ckOpen(rid){
 }
 function ckCancel(){document.getElementById('tchk').style.display='none';showTab('reservas');}
 function ckRenderHosp(r){
-  const s=parseFloat(r.saldo)||0;
+  const s=Math.round(((r.total||0)-(r.anticipo||0)-(r.saldo||0))*100)/100;
   const card=document.getElementById('ck-hosp');
   if(s<=0){card.style.display='none';return;}
   card.style.display='block';
@@ -3600,14 +3591,15 @@ function ckTotals(){
 function ckConfirm(){
   const res=gd(KR),r=res.find(x=>x.id==CK_ID||x.id===CK_ID);if(!r)return;
   const cons=gd(KC),hoy=today();
-  if((r.saldo||0)>0){
+  const pendiente=Math.round(((r.total||0)-(r.anticipo||0)-(r.saldo||0))*100)/100;
+  if(pendiente>0){
     const ps=document.getElementById('ck-hp'),fp=document.getElementById('ck-hf');
     const saldoPago=ps?ps.value:'efectivo';
     const saldoFecha=fp?fp.value:hoy;
-    r.pagos=r.pagos||[];r.pagos.push({tipo:'saldo',monto:r.saldo,pago:saldoPago,fecha:saldoFecha});
+    // Record collected balance in the `saldo` field (sum with any previously collected balance)
+    r.saldo=Math.round(((r.saldo||0)+pendiente)*100)/100;
     r.saldFecha=saldoFecha;
     r.saldPago=saldoPago;
-    r.saldo=0;
   }
   cons.forEach(c=>{
     if(c.reservaId!==CK_ID)return;
