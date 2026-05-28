@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.6.2</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.7.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.6.2</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.7.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2772,6 +2772,11 @@ function renderEgresos(){
   const egresosOp=egresos.filter(e=>!e.gastoPersonal);
   const totalOp=egresosOp.reduce((s,e)=>s+(e.total||0),0);
   const ivaOp=egresosOp.reduce((s,e)=>s+(e.iva||0),0);
+  // Net amounts (excluding their own IVA) for display coherence with Cierre Mensual
+  const totalSinDeducIva=Math.round(egresos.filter(e=>!e.deducibleAnual).reduce((s,e)=>s+(e.iva||0),0)*100)/100;
+  const netoSinDeduc=Math.round((totalSinDeducibles-totalSinDeducIva)*100)/100;
+  const netoGP=Math.round((totalGP-ivaGP)*100)/100;
+  const netoOp=Math.round((totalOp-ivaOp)*100)/100;
   const nFacturasCFDI=egresos.filter(e=>e.tipoDoc!=='Nota de crédito'&&e.fuente!=='noCFDI').length;
   const nNoCFDI=egresos.filter(e=>e.fuente==='noCFDI').length;
   const nFacturas=nFacturasCFDI;
@@ -2786,9 +2791,9 @@ function renderEgresos(){
     <div class="metric"><p class="mlabel">Facturas CFDI</p><p class="mval">${nFacturas}</p></div>
     ${nNoCFDI>0?`<div class="metric"><p class="mlabel">noCFDI</p><p class="mval" style="color:#0C447C">${nNoCFDI}</p></div>`:''}
     ${nNC>0?`<div class="metric"><p class="mlabel">Notas de crédito</p><p class="mval" style="color:#856404">${nNC}</p></div>`:''}
-    <div class="metric"><p class="mlabel">Total egresos <span class="gx-info">i<span class="gx-tip">Suma de todas las facturas del mes (incluye gastos personales). Excluye deducibles anuales.</span></span></p><p class="mval">${fmt(totalSinDeducibles)}</p><p style="font-size:11px;color:#888;margin-top:3px">IVA ${fmt(totalIva)}</p></div>
-    ${totalGP>0?`<div class="metric" style="background:#FAEEDA"><p class="mlabel" style="color:#854F0B">Gastos personales</p><p class="mval" style="color:#633806">${fmt(totalGP)}</p><p style="font-size:11px;color:#854F0B;margin-top:3px">IVA ${fmt(Math.round(ivaGP*100)/100)}</p></div>`:''}
-    <div class="metric"><p class="mlabel">Total operación <span class="gx-info">i<span class="gx-tip">Gasto real del negocio: excluye gastos personales y deducibles anuales. Su IVA es el acreditable.</span></span></p><p class="mval">${fmt(Math.round(totalOp*100)/100)}</p><p style="font-size:11px;color:#888;margin-top:3px">IVA ${fmt(Math.round(ivaOp*100)/100)}</p></div>
+    <div class="metric"><p class="mlabel">Total egresos netos <span class="gx-info">i<span class="gx-tip">Monto neto (sin IVA) de todas las facturas del mes (incluye gastos personales). Excluye deducibles anuales.</span></span></p><p class="mval">${fmt(netoSinDeduc)}</p><p style="font-size:11px;color:#888;margin-top:3px">+IVA ${fmt(totalSinDeducIva)}</p></div>
+    ${totalGP>0?`<div class="metric" style="background:#FAEEDA"><p class="mlabel" style="color:#854F0B">Gastos personales netos</p><p class="mval" style="color:#633806">${fmt(netoGP)}</p><p style="font-size:11px;color:#854F0B;margin-top:3px">+IVA ${fmt(Math.round(ivaGP*100)/100)}</p></div>`:''}
+    <div class="metric"><p class="mlabel">Total operación netos <span class="gx-info">i<span class="gx-tip">Gasto neto real del negocio: excluye gastos personales y deducibles anuales. Su IVA es el acreditable.</span></span></p><p class="mval">${fmt(netoOp)}</p><p style="font-size:11px;color:#888;margin-top:3px">+IVA ${fmt(Math.round(ivaOp*100)/100)}</p></div>
     <div class="metric"><p class="mlabel" style="color:${sinCat>0?'#BA7517':'#1D9E75'}">Sin categoría</p><p class="mval" style="color:${sinCat>0?'#BA7517':'#1D9E75'}">${sinCat}</p></div>
     </div>`;
 
@@ -4171,8 +4176,8 @@ function renderCierre(){
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <div class="metric"><p style="${mLabel}">Reservaciones</p><p style="${mVal}">${nReservaciones}</p></div>
       <div class="metric"><p style="${mLabel}">Noches vendidas</p><p style="${mVal}">${noches}</p></div>
-      <div class="metric"><p style="${mLabel}">Ingresos netos</p><p style="${mVal};color:#1860A5">${fmt(ingresosNetos)}</p></div>
-      <div class="metric"><p style="${mLabel}">Egresos netos</p><p style="${mVal};color:#BA7517">${fmt(egresosNetos)}</p></div>
+      <div class="metric"><p style="${mLabel}">Ingresos netos</p><p style="${mVal};color:#1860A5">${fmt(ingresosNetos)}</p><p style="font-size:11px;color:#888;margin-top:3px">+IVA ${fmt(ivaCobrado)}</p></div>
+      <div class="metric"><p style="${mLabel}">Egresos netos</p><p style="${mVal};color:#BA7517">${fmt(egresosNetos)}</p><p style="font-size:11px;color:#888;margin-top:3px">+IVA ${fmt(ivaAcreditable)}</p></div>
       <div class="metric"><p style="${mLabel}">IVA ${ivaEsAFavor?'a favor':'a pagar'}</p><p style="${mVal};color:${ivaEsAFavor?'#1D9E75':'#E24B4A'}">${fmt(ivaAbs)}</p></div>
       <div class="metric"><p style="${mLabel}">Utilidad</p><p style="${mVal};color:${utilidad>=0?'#1D9E75':'#E24B4A'}">${fmt(utilidad)}</p></div>
     </div></div>`;
