@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.1.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.2.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.1.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.2.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1771,7 +1771,7 @@ function selH(r){
   selGuest=r;
   const paisRow=document.getElementById('cons-pais-row');if(paisRow)paisRow.style.display='none';
   document.getElementById('ac-h').value=r.nombre;document.getElementById('ac-hdd').style.display='none';
-  document.getElementById('res-preview').innerHTML=`<div class="res-card"><div class="rcf"><span>${r.habitacion}</span>Hab.</div><div class="rcf"><span>${fmtDate(r.checkin)}</span>Check-in</div><div class="rcf"><span>${fmtDate(r.checkout)}</span>Check-out</div>${r.pais?`<div class="rcf"><span>${r.pais}</span>País</div>`:''}<span class="badge b-${r.cbId?'cb':'manual'}">${r.cbId?'Cloudbeds':'Manual'}</span></div>`;
+  document.getElementById('res-preview').innerHTML=`<div class="res-card"><div class="rcf"><span>${r.habitacion}</span>Hab.</div><div class="rcf"><span>${fmtDate(r.checkin)}</span>Check-in</div><div class="rcf"><span>${fmtDate(r.checkout)}</span>Check-out</div>${r.pais?`<div class="rcf"><span>${r.pais}</span>País</div>`:''}${(r.consumoCena||0)>0?`<div class="rcf" style="background:#E1F5EE;padding:4px 10px;border-radius:6px"><span style="color:#085041">🍽 ${r.consumoCenaCant||1} cena${(r.consumoCenaCant||1)>1?'s':''} · ${fmt(r.consumoCena)}</span><span style="color:#085041">Incluidas</span></div>`:''}<span class="badge b-${r.cbId?'cb':'manual'}">${r.cbId?'Cloudbeds':'Manual'}</span></div>`;
 }
 
 function onPSearch(val){
@@ -1834,7 +1834,8 @@ function addLinea(){
   const precio=parseFloat(document.getElementById('inp-precio').value)||0;
   const pago=document.getElementById('inp-pago').value;
   lineas.push({id:Date.now()+Math.random(),cat,nombre:curProd?curProd.nombre:nombre,cantidad:qty,precio,pago});
-  clearProd();document.getElementById('inp-qty').value=1;document.getElementById('inp-pago').value='tbd';
+  clearProd();document.getElementById('inp-qty').value=1;
+  // Keep the last selected método de pago for the next item (don't reset to tbd)
   renderLineas();
 }
 
@@ -1953,6 +1954,7 @@ function resetC(){
   // Reset product search fields safely
   ['p-search','inp-precio','inp-sub'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const iq=document.getElementById('inp-qty');if(iq)iq.value=1;
+  const ip=document.getElementById('inp-pago');if(ip)ip.value='debito';
   const sp=document.getElementById('sel-prod');if(sp){sp.innerHTML='<option value="">— Producto —</option>';sp.disabled=true;}
 }
 
