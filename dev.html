@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.3.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.4.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.3.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.4.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -3979,7 +3979,15 @@ function renderCierre(){
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
   const consG=rep.filter(r=>r.tipo==='consumo'&&r.exento===0);
   const consE=rep.filter(r=>r.tipo==='consumo'&&r.exento>0);
+  // All payment methods (for "Incluir todos los métodos" toggle in métricas)
+  const hospAll=rows.filter(r=>r.tipo==='hospedaje'&&r.pago&&r.pago!=='tbd'&&r.pago!=='pendiente');
+  const consGAll=rows.filter(r=>r.tipo==='consumo'&&r.exento===0&&r.pago&&r.pago!=='tbd'&&r.pago!=='pendiente');
+  const consEAll=rows.filter(r=>r.tipo==='consumo'&&r.exento>0&&r.pago&&r.pago!=='tbd'&&r.pago!=='pendiente');
   const sv=(arr,f)=>Math.round(arr.reduce((t,r)=>t+(r[f]||0),0)*100)/100;
+  const incTodos=!!window._cmIncTodos;
+  const _hospM=incTodos?hospAll:hospR;
+  const _consGM=incTodos?consGAll:consG;
+  const _consEM=incTodos?consEAll:consE;
 
   // --- Métricas del mes ---
   const reservasMes=gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.estado!=='cancelada');
@@ -3988,9 +3996,9 @@ function renderCierre(){
     const nHab=String(r.habitacion||'').split('+').map(x=>x.trim()).filter(Boolean).length||1;
     return s+((parseInt(r.noches)||0)*nHab);
   },0);
-  const baseHosp=sv(hospR,'base'),baseCons=sv(consG,'base'),montoExentos=sv(consE,'exento');
+  const baseHosp=sv(_hospM,'base'),baseCons=sv(_consGM,'base'),montoExentos=sv(_consEM,'exento');
   const ingresosNetos=Math.round((baseHosp+baseCons+montoExentos)*100)/100;
-  const ivaCobrado=Math.round((sv(hospR,'iva')+sv(consG,'iva'))*100)/100;
+  const ivaCobrado=Math.round((sv(_hospM,'iva')+sv(_consGM,'iva'))*100)/100;
   const egresosMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)&&!e.gastoPersonal&&!e.deducibleAnual);
   const egresosNetos=Math.round(egresosMes.reduce((s,e)=>s+((e.total||0)-(e.iva||0)),0)*100)/100;
   const ivaAcreditable=Math.round(egresosMes.reduce((s,e)=>s+(e.iva||0),0)*100)/100;
@@ -4001,7 +4009,8 @@ function renderCierre(){
 
   const mLabel='font-size:11px;color:#888;margin-bottom:3px';
   const mVal='font-size:19px;font-weight:600';
-  document.getElementById('cm-metrics').innerHTML=`<div class="card"><p class="ctitle">Métricas de ${mesNombre}</p>
+  document.getElementById('cm-metrics').innerHTML=`<div class="card"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px"><p class="ctitle" style="margin:0">Métricas de ${mesNombre}</p>
+    <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#666;cursor:pointer"><input type="checkbox" id="cm-inc-todos" ${incTodos?'checked':''} onchange="window._cmIncTodos=this.checked;renderCierre()" style="width:14px;height:14px;accent-color:#1D9E75;cursor:pointer">Incluir todos los métodos</label></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <div class="metric"><p style="${mLabel}">Reservaciones</p><p style="${mVal}">${nReservaciones}</p></div>
       <div class="metric"><p style="${mLabel}">Noches vendidas</p><p style="${mVal}">${noches}</p></div>
