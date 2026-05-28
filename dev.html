@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.2-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.1.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.0.2-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.1.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -681,7 +681,7 @@ const PAGO_MAP={cloudbeds:'CloudBeds',efectivo:'Efectivo','efectivo-nd':'Efectiv
 const pagoLabel=v=>PAGO_MAP[v]||v;
 const BADGE_MAP={cloudbeds:'b-cloudbeds',efectivo:'b-efectivo','efectivo-nd':'b-efectivo-nd',transferencia:'b-transferencia',debito:'b-debito',mercadopago:'b-mercadopago',stripe:'b-stripe',pendiente:'b-pendiente',tbd:'b-tbd',''   :'b-pendiente'};
 const pagoBadge=v=>BADGE_MAP[v]||'b-pendiente';
-const PAISES=['México','Alemania','Argentina','Australia','Austria','Bélgica','Brasil','Canadá','Chile','China','Colombia','Corea del Sur','Dinamarca','España','Estados Unidos','Francia','India','Israel','Italia','Japón','Noruega','Nueva Zelanda','Países Bajos','Polonia','Portugal','Reino Unido','Rusia','Singapur','Suecia','Suiza','Turquía','Otro'];
+const PAISES=['México','Alemania','Argentina','Australia','Austria','Bélgica','Brasil','Canadá','Chile','China','Colombia','Corea del Sur','Dinamarca','España','Estados Unidos','Francia','India','Israel','Italia','Japón','Noruega','Nueva Zelanda','Países Bajos','Polonia','Portugal','Reino Unido','República Checa','Rusia','Singapur','Suecia','Suiza','Turquía','Otro'];
 
 const DP=[
   {id:1,cat:'bebidas_alc',nombre:'Bailey',precio:130},{id:2,cat:'bebidas_alc',nombre:'Bta Capotondo',precio:1250},{id:3,cat:'bebidas_alc',nombre:'Bta Chablis',precio:1840},{id:4,cat:'bebidas_alc',nombre:'Bta Ensamble',precio:1550},{id:5,cat:'bebidas_alc',nombre:'Bta La Gde Metairie',precio:790},{id:6,cat:'bebidas_alc',nombre:'Bta Las Moras Malbec',precio:480},{id:7,cat:'bebidas_alc',nombre:'Bta Las Moras Sauv',precio:470},{id:8,cat:'bebidas_alc',nombre:'Bta Linvincible',precio:890},{id:9,cat:'bebidas_alc',nombre:'Bta Nítido',precio:1150},{id:10,cat:'bebidas_alc',nombre:'Bta Paradoja',precio:1200},{id:11,cat:'bebidas_alc',nombre:'Bta Piensos',precio:1080},{id:12,cat:'bebidas_alc',nombre:'Bta Reserva',precio:780},{id:13,cat:'bebidas_alc',nombre:'Bta Rosé Tangible',precio:1180},{id:14,cat:'bebidas_alc',nombre:'Cerveza',precio:55},{id:15,cat:'bebidas_alc',nombre:'Cerveza artesanal',precio:100},{id:16,cat:'bebidas_alc',nombre:'Cerveza artesanal Thodes',precio:110},{id:17,cat:'bebidas_alc',nombre:'Champagne',precio:2500},{id:18,cat:'bebidas_alc',nombre:'Cóctel cortesía',precio:0},{id:19,cat:'bebidas_alc',nombre:'Cóctel mezcal',precio:180},{id:20,cat:'bebidas_alc',nombre:'Cóctel ron',precio:160},{id:21,cat:'bebidas_alc',nombre:'Cóctel tequila',precio:210},{id:22,cat:'bebidas_alc',nombre:'Cóctel vodka',precio:170},{id:23,cat:'bebidas_alc',nombre:'Copa Las Moras Malbec',precio:170},{id:24,cat:'bebidas_alc',nombre:'Copa Las Moras Sauv',precio:160},{id:25,cat:'bebidas_alc',nombre:'Descorche',precio:470},{id:26,cat:'bebidas_alc',nombre:'Michelada',precio:80},{id:27,cat:'bebidas_alc',nombre:'Shot mezcal Jipi Espadín',precio:140},{id:28,cat:'bebidas_alc',nombre:'Shot mezcal Jipi Tobalá',precio:210},{id:29,cat:'bebidas_alc',nombre:'Shot ron',precio:100},{id:30,cat:'bebidas_alc',nombre:'Shot tequila',precio:160},{id:31,cat:'bebidas_alc',nombre:'Shot vodka',precio:140},{id:32,cat:'bebidas_alc',nombre:'Whisky',precio:250},
@@ -1678,7 +1678,7 @@ const PAIS_FLAGS={
   'India':'🇮🇳','Australia':'🇦🇺','Japón':'🇯🇵','China':'🇨🇳',
   'Portugal':'🇵🇹','Suecia':'🇸🇪','Noruega':'🇳🇴','Dinamarca':'🇩🇰',
   'Finlandia':'🇫🇮','Polonia':'🇵🇱','Rusia':'🇷🇺','Turquía':'🇹🇷',
-  'Israel':'🇮🇱','Emiratos':'🇦🇪','Sudáfrica':'🇿🇦',
+  'Israel':'🇮🇱','República Checa':'🇨🇿','Emiratos':'🇦🇪','Sudáfrica':'🇿🇦',
   'Venezuela':'🇻🇪','Peru':'🇵🇪','Uruguay':'🇺🇾','Ecuador':'🇪🇨',
   'Guatemala':'🇬🇹','Costa Rica':'🇨🇷','Cuba':'🇨🇺','Honduras':'🇭🇳',
   'Desconocido':'🌍','Otro':'🌍'
@@ -3981,7 +3981,10 @@ function renderCierre(){
   // --- Métricas del mes ---
   const reservasMes=gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.estado!=='cancelada');
   const nReservaciones=reservasMes.length;
-  const noches=reservasMes.reduce((s,r)=>s+(parseInt(r.noches)||0),0);
+  const noches=reservasMes.reduce((s,r)=>{
+    const nHab=String(r.habitacion||'').split('+').map(x=>x.trim()).filter(Boolean).length||1;
+    return s+((parseInt(r.noches)||0)*nHab);
+  },0);
   const baseHosp=sv(hospR,'base'),baseCons=sv(consG,'base'),montoExentos=sv(consE,'exento');
   const ingresosNetos=Math.round((baseHosp+baseCons+montoExentos)*100)/100;
   const ivaCobrado=Math.round((sv(hospR,'iva')+sv(consG,'iva'))*100)/100;
