@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.61-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.62-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.61-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.62-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1373,7 +1373,14 @@ function editRes(id){
       totalCard.appendChild(note);
     }
   } else {
-    calcTarifa();
+    // Manual reservation: load STORED fiscal values (do not recalculate on open)
+    const fmt2=v=>'$'+(v||0).toLocaleString('en',{minimumFractionDigits:0,maximumFractionDigits:2});
+    el('r-base')&&(el('r-base').value=fmt2(r.base||0));
+    el('r-ish')&&(el('r-ish').value=fmt2(r.ish||0));
+    el('r-iva')&&(el('r-iva').value=fmt2(r.iva||0));
+    el('r-total')&&(el('r-total').value=fmt2(r.total||0));
+    el('r-noches')&&(el('r-noches').value=r.noches||0);
+    const _cn=document.getElementById('r-cena-note');if(_cn)_cn.remove();
   }
   // Restore original anticipo/saldo values AFTER calcTarifa (which resets to 50%)
   {
@@ -1430,12 +1437,12 @@ function guardarRes(){
   let base,ish,iva,total;
   const cleanN_=v=>parseFloat(String(v).replace(/[$,\s]/g,''))||0;
   if(window._fiscalUnlocked){
-    // Manual fiscal override: total typed by user, base/ish/iva derived
+    // Manual fiscal override: keep total EXACTLY as typed; derive base/ish/iva from it
     total=cleanN_(document.getElementById('r-total').value);
     base=Math.round(total/1.205*100)/100;
     ish=Math.round(base*0.045*100)/100;
     iva=Math.round(base*0.16*100)/100;
-    total=Math.round((base+ish+iva)*100)/100;
+    // NOTE: do not recompose total from base+ish+iva — preserve user-typed value
   } else if(editingCB){
     // Preserve Cloudbeds fiscal values — read from readonly display fields
     const cleanN=v=>parseFloat(String(v).replace(/[$,]/g,''))||0;
