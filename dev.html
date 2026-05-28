@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.58-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.59-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.58-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.59-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1203,8 +1203,18 @@ function toggleFiscalLock(){
   if(!window._fiscalUnlocked){
     if(!confirm('Vas a editar el total de la reserva. Base, ISH e IVA se recalcularán a partir del nuevo total. ¿Continuar?'))return;
     window._fiscalUnlocked=true;
+    const fmt2=v=>'$'+Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+    const cleanN=v=>parseFloat(String(v).replace(/[$,\s]/g,''))||0;
+    // Reformat all 4 fields with 2 decimals from current displayed values
+    const baseEl=document.getElementById('r-base');
+    const ishEl=document.getElementById('r-ish');
+    const ivaEl=document.getElementById('r-iva');
     const totalEl=document.getElementById('r-total');
+    if(baseEl)baseEl.value=fmt2(cleanN(baseEl.value));
+    if(ishEl)ishEl.value=fmt2(cleanN(ishEl.value));
+    if(ivaEl)ivaEl.value=fmt2(cleanN(ivaEl.value));
     if(totalEl){
+      totalEl.value=fmt2(cleanN(totalEl.value));
       totalEl.removeAttribute('readonly');
       totalEl.style.border='1.5px solid #BA7517';
       totalEl.style.background='#fff';
@@ -1227,9 +1237,10 @@ function onTotalManualEdit(){
   const base=total/1.205;
   const ish=base*0.045;
   const iva=base*0.16;
-  document.getElementById('r-base').value=fmt(base);
-  document.getElementById('r-ish').value=fmt(ish);
-  document.getElementById('r-iva').value=fmt(iva);
+  const fmt2=v=>'$'+Number(v||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  document.getElementById('r-base').value=fmt2(base);
+  document.getElementById('r-ish').value=fmt2(ish);
+  document.getElementById('r-iva').value=fmt2(iva);
 }
 
 function onSaldPagoChange(){
