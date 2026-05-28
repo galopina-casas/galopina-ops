@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.4.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.6.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.4.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.6.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -409,6 +409,11 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <div style="flex:1;min-width:110px"><label>Mes</label><select id="ing-mes" onchange="renderIngresos()"><option value="">Todos</option></select></div>
         <div style="flex:2;min-width:130px"><label>Cliente</label><input type="text" id="ing-cli" placeholder="Buscar..." oninput="renderIngresos()"></div>
         <div style="flex:1;min-width:90px"><label>Tipo</label><select id="ing-tipo" onchange="renderIngresos()"><option value="">Todos</option><option value="hospedaje">Hospedaje</option><option value="consumo">Consumos</option></select></div>
+        <div style="flex:1;min-width:140px;position:relative"><label>Método</label>
+          <button type="button" id="ing-pago-btn" onclick="toggleIngPagoDD()" style="width:100%;text-align:left;padding:6px 8px;font-size:13px;border:0.5px solid #e0e0da;border-radius:6px;background:#fff;cursor:pointer">Todos</button>
+          <div id="ing-pago-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:0.5px solid #e0e0da;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.08);z-index:10;margin-top:2px;padding:6px;max-height:240px;overflow-y:auto"></div>
+        </div>
+        <div style="flex:1;min-width:140px"><label>Agrupar por</label><select id="ing-group" onchange="renderIngresos()" style="font-size:13px"><option value="cards">Tarjetas</option><option value="byGuest">Tabla por huésped</option><option value="chrono">Tabla cronológica</option></select></div>
         <button class="btn btn-sm" onclick="clearFiltros()">✕</button>
       </div>
     </div>
@@ -1568,6 +1573,8 @@ function guardarRes(){
         const coherent=anti>=0&&saldo>=0&&Math.abs(anti+saldo-Math.round(total*100)/100)<=1;
         if(coherent&&(anti===0||(antiOk))) newWarning='';
       }
+      // Clear fiscal-incoherente warning when user manually adjusts the fiscal breakdown via the lock
+      if(window._fiscalUnlocked&&newWarning==='fiscal-incoherente')newWarning='';
       res[idx]={...res[idx],
         nombre,     pais:document.getElementById('r-pais').value,
         habitacion, checkin:ci, checkout:co, noches,
@@ -1722,6 +1729,7 @@ function resHtml(r,i){
       </div>
       <p style="font-size:11px;color:#888"><span class="tag">${r.habitacion}</span> ${r.checkin||'?'} → ${r.checkout||'?'} · ${r.noches||'?'} noches · Hosp: ${fmt(r.hospTotal||r.total||0)}</p>
       ${r.cbWarning==='incoherente'?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Pagos incoherentes en Cloudbeds — verificar</p>`:''}
+      ${r.cbWarning==='fiscal-incoherente'?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ ISH/IVA inconsistentes — verificar</p>`:''}
       ${(r.consumoCena||0)>0?`<div style="display:inline-flex;align-items:center;gap:5px;background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:20px;padding:2px 9px;margin-top:5px;font-size:11px;color:#085041">🍽 <strong>${r.consumoCenaCant||0} cena${(r.consumoCenaCant||0)>1?'s':''} incluida${(r.consumoCenaCant||0)>1?'s':''}</strong> · ${fmt(r.consumoCena)}</div>`:''}
       ${r.cbWarning==='sin-pago-info'&&(r.anticipo||0)>0&&(!r.antiFecha||!r.antiPago)?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Sin fecha/método de anticipo — completar</p>`:''}
       ${(r.anticipo||0)>0?`<p style="font-size:11px;color:#888;margin-top:2px">Anticipo: ${fmt(r.anticipo||0)} (${r.antiPct||0}%) · ${pagoLabel(r.antiPago||'')}${r.antiFecha?' · '+fmtDate(r.antiFecha):''}</p>`:''}
@@ -2262,14 +2270,85 @@ function toggleIngRow(gKey){
     }
   }
 }
+function toggleIngPagoDD(){
+  const dd=document.getElementById('ing-pago-dd');
+  if(!dd)return;
+  if(dd.style.display==='none'){
+    // Build options on open
+    const all=Object.keys(PAGO_MAP);
+    const sel=Array.isArray(window._ingPagoSel)&&window._ingPagoSel.length?window._ingPagoSel:all.slice();
+    window._ingPagoSel=sel;
+    dd.innerHTML=`<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer;font-weight:600;border-bottom:0.5px solid #eee;margin-bottom:4px" onclick="ingPagoToggleAll();event.preventDefault()"><input type="checkbox" id="ing-pago-all" ${sel.length===all.length?'checked':''} onclick="event.preventDefault()" style="width:14px;height:14px;accent-color:#1D9E75;pointer-events:none">Todos</label>`+
+      all.map(p=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" ${sel.includes(p)?'checked':''} onchange="ingPagoToggle('${p}',this.checked)" style="width:14px;height:14px;accent-color:#1D9E75;cursor:pointer">${PAGO_MAP[p]||p}</label>`).join('');
+    dd.style.display='block';
+    setTimeout(()=>document.addEventListener('click',_closeIngPagoOnOutside),0);
+  } else {
+    dd.style.display='none';
+    document.removeEventListener('click',_closeIngPagoOnOutside);
+  }
+}
+function _closeIngPagoOnOutside(e){
+  const dd=document.getElementById('ing-pago-dd');
+  const btn=document.getElementById('ing-pago-btn');
+  if(!dd||!btn)return;
+  if(!dd.contains(e.target)&&!btn.contains(e.target)){dd.style.display='none';document.removeEventListener('click',_closeIngPagoOnOutside);}
+}
+function ingPagoToggle(p,checked){
+  const all=Object.keys(PAGO_MAP);
+  let sel=Array.isArray(window._ingPagoSel)?window._ingPagoSel.slice():all.slice();
+  if(checked){if(!sel.includes(p))sel.push(p);}
+  else {sel=sel.filter(x=>x!==p);}
+  window._ingPagoSel=sel;
+  _ingPagoUpdateButton();
+  renderIngresos();
+}
+function ingPagoToggleAll(){
+  const all=Object.keys(PAGO_MAP);
+  const sel=Array.isArray(window._ingPagoSel)?window._ingPagoSel:all.slice();
+  // Toggle: if currently all selected, deselect all; otherwise select all
+  const allSelected=sel.length===all.length;
+  window._ingPagoSel=allSelected?[]:all.slice();
+  // Refresh dropdown content (close and reopen)
+  const dd=document.getElementById('ing-pago-dd');
+  if(dd&&dd.style.display==='block'){dd.style.display='none';toggleIngPagoDD();}
+  _ingPagoUpdateButton();
+  renderIngresos();
+}
+function _ingPagoUpdateButton(){
+  const btn=document.getElementById('ing-pago-btn');if(!btn)return;
+  const all=Object.keys(PAGO_MAP);
+  const sel=Array.isArray(window._ingPagoSel)?window._ingPagoSel:all;
+  if(sel.length===all.length||sel.length===0)btn.textContent='Todos';
+  else if(sel.length===1)btn.textContent=PAGO_MAP[sel[0]]||sel[0];
+  else btn.textContent=sel.length+' métodos';
+}
+
 function renderIngresos(){
   const mes=document.getElementById('ing-mes').value;
   const cli=(document.getElementById('ing-cli').value||'').toLowerCase();
   const tipo=document.getElementById('ing-tipo').value;
+  const groupEl=document.getElementById('ing-group');
+  const groupBy=groupEl?groupEl.value:'cards';
+  const pagoFilter=Array.isArray(window._ingPagoSel)?window._ingPagoSel:null;
   let rows=buildIngresos(mes);
   if(mes)rows=rows.filter(r=>r.fecha&&r.fecha.startsWith(mes));
   if(cli)rows=rows.filter(r=>r.huesped.toLowerCase().includes(cli));
   if(tipo)rows=rows.filter(r=>r.tipo===tipo);
+  if(pagoFilter&&pagoFilter.length){
+    rows=rows.flatMap(r=>{
+      if(r.tipo==='hospedaje'){
+        return pagoFilter.includes(r.pago||'')?[r]:[];
+      }
+      if(r.tipo==='consumo'&&Array.isArray(r.items)){
+        const filteredItems=r.items.filter(it=>pagoFilter.includes(it.pago||''));
+        if(!filteredItems.length)return [];
+        const newTotal=filteredItems.reduce((s,it)=>s+(it.precio||0)*(it.cantidad||0),0);
+        const allSame=filteredItems.every(i=>i.pago===filteredItems[0].pago);
+        return [{...r,items:filteredItems,monto:newTotal,pago:allSame?filteredItems[0].pago:'mixto'}];
+      }
+      return pagoFilter.includes(r.pago||'')?[r]:[];
+    });
+  }
 
   const cobrado=rows.filter(r=>r.pago&&r.pago!=='pendiente'&&r.pago!=='tbd'&&r.pago!=='').reduce((s,r)=>s+r.monto,0);
   // For the 4 global metrics, split each hospedaje payment into hospedaje + cenas portions per reservation
@@ -2320,6 +2399,74 @@ function renderIngresos(){
   gd(KR).forEach(r=>resMap[String(r.id)]=r);
 
   ING_CACHE=byRes;
+  // Helper for guest row data
+  const _resForGuest=resId=>resMap[resId];
+
+  if(groupBy==='byGuest'){
+    // Vista 2 — Tabla por huésped
+    const tableRows=Object.entries(byRes).map(([resId,items])=>{
+      const nombre=items[0].huesped;
+      const r=_resForGuest(resId);
+      const totalT=r?(r.total||0):0;
+      const cenasT=r?(r.consumoCena||0):0;
+      const hospT=r?(r.hospTotal||(totalT-cenasT)):0;
+      const ratioH=totalT>0?hospT/totalT:1;
+      const ratioC=totalT>0?cenasT/totalT:0;
+      let hosp=0,cenas=0,cons=0;
+      items.forEach(it=>{
+        if(!it.pago||it.pago==='pendiente'||it.pago==='tbd')return;
+        if(it.tipo==='hospedaje'){
+          if(cenasT>0){hosp+=it.monto*ratioH;cenas+=it.monto*ratioC;}
+          else hosp+=it.monto;
+        } else if(it.tipo==='consumo'){
+          cons+=it.monto;
+        }
+      });
+      const total=hosp+cenas+cons;
+      return {nombre,hosp:Math.round(hosp*100)/100,cenas:Math.round(cenas*100)/100,cons:Math.round(cons*100)/100,total:Math.round(total*100)/100};
+    }).filter(t=>t.total>0.5).sort((a,b)=>b.total-a.total);
+    const tot={hosp:0,cenas:0,cons:0,total:0};
+    tableRows.forEach(t=>{tot.hosp+=t.hosp;tot.cenas+=t.cenas;tot.cons+=t.cons;tot.total+=t.total;});
+    box.innerHTML=`<div class="card" style="padding:14px 16px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Huésped</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Hospedaje</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Cenas</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Consumos</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody>${tableRows.map(t=>`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${t.nombre}</td><td style="padding:7px 8px;text-align:right;color:#1860A5">${t.hosp>0?fmt(t.hosp):'—'}</td><td style="padding:7px 8px;text-align:right;color:#1D9E75">${t.cenas>0?fmt(t.cenas):'—'}</td><td style="padding:7px 8px;text-align:right;color:#1D9E75">${t.cons>0?fmt(t.cons):'—'}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(t.total)}</td></tr>`).join('')}<tr style="font-weight:700;border-top:2px solid #EEE"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right;color:#1860A5">${fmt(tot.hosp)}</td><td style="padding:8px;text-align:right;color:#1D9E75">${fmt(tot.cenas)}</td><td style="padding:8px;text-align:right;color:#1D9E75">${fmt(tot.cons)}</td><td style="padding:8px;text-align:right;color:#1A1916">${fmt(tot.total)}</td></tr></tbody></table></div>`;
+    return;
+  }
+
+  if(groupBy==='chrono'){
+    // Vista 3 — Tabla cronológica (un movimiento por fila)
+    const chronoRows=[];
+    rows.forEach(r=>{
+      if(!r.pago||r.pago==='pendiente'||r.pago==='tbd'||!r.fecha)return;
+      if(r.tipo==='hospedaje'){
+        // Split hospedaje row into hospedaje + cenas portions if applicable
+        const rr=_resForGuest(r.resId);
+        const totalT=rr?(rr.total||0):0;
+        const cenasT=rr?(rr.consumoCena||0):0;
+        const hospT=rr?(rr.hospTotal||(totalT-cenasT)):0;
+        if(cenasT>0&&totalT>0){
+          const mH=Math.round(r.monto*(hospT/totalT)*100)/100;
+          const mC=Math.round(r.monto*(cenasT/totalT)*100)/100;
+          chronoRows.push({fecha:r.fecha,huesped:r.huesped,concepto:r.label||'Hospedaje',monto:mH,pago:r.pago,color:'#1860A5'});
+          chronoRows.push({fecha:r.fecha,huesped:r.huesped,concepto:(r.label||'').replace('hospedaje','cena').replace('Hospedaje','Cena')||'Cena',monto:mC,pago:r.pago,color:'#1D9E75'});
+        } else {
+          chronoRows.push({fecha:r.fecha,huesped:r.huesped,concepto:r.label||'Hospedaje',monto:r.monto,pago:r.pago,color:'#1860A5'});
+        }
+      } else if(r.tipo==='consumo'&&Array.isArray(r.items)){
+        r.items.forEach(it=>{
+          if(!it.pago||it.pago==='pendiente'||it.pago==='tbd')return;
+          if(pagoFilter&&pagoFilter.length&&!pagoFilter.includes(it.pago))return;
+          const itemFecha=it.fechaPago||r.fecha;
+          if(mes&&!String(itemFecha).startsWith(mes))return;
+          chronoRows.push({fecha:itemFecha,huesped:r.huesped,concepto:it.nombre+(it.cantidad>1?' x'+it.cantidad:''),monto:(it.precio||0)*(it.cantidad||0),pago:it.pago,color:'#1D9E75'});
+        });
+      }
+    });
+    chronoRows.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    const totMonto=chronoRows.reduce((s,r)=>s+r.monto,0);
+    box.innerHTML=`<div class="card" style="padding:14px 16px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase;width:100px">Fecha</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Huésped</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase;width:120px">Método</th></tr></thead><tbody>${chronoRows.map(r=>`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${fmtDate(r.fecha)}</td><td style="padding:7px 8px">${r.huesped}</td><td style="padding:7px 8px;color:${r.color}">${r.concepto}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(r.monto)}</td><td style="padding:7px 8px">${pagoLabel(r.pago)}</td></tr>`).join('')}<tr style="font-weight:700;border-top:2px solid #EEE"><td style="padding:8px" colspan="3">TOTAL</td><td style="padding:8px;text-align:right;color:#1D9E75">${fmt(totMonto)}</td><td></td></tr></tbody></table></div>`;
+    return;
+  }
+
+  // Default: vista tarjetas
   box.innerHTML=Object.entries(byRes).map(([resId,items])=>{
     const nombre=items[0].huesped;
     const tot=items.reduce((s,i)=>s+i.monto,0);
@@ -2410,6 +2557,7 @@ function renderIngresos(){
             <p style="font-size:13px;font-weight:600;margin:0 0 2px">${nombre}</p>
             <p style="font-size:11px;color:#888;margin:0">${subInfo}${nochesTxt}</p>
             ${resData&&resData.cbWarning==='incoherente'?`<p style="font-size:11px;color:#B8860B;margin:2px 0 0">⚠️ Pagos incoherentes en Cloudbeds</p>`:''}
+            ${resData&&resData.cbWarning==='fiscal-incoherente'?`<p style="font-size:11px;color:#B8860B;margin:2px 0 0">⚠️ ISH/IVA inconsistentes</p>`:''}
             ${resData&&resData.cbWarning==='sin-pago-info'&&resData.anticipo>0&&(!resData.antiFecha||!resData.antiPago)?`<p style="font-size:11px;color:#B8860B;margin:2px 0 0">⚠️ Sin fecha/método de anticipo</p>`:''}
           </div>
         </div>
@@ -2435,7 +2583,10 @@ function renderIngresos(){
 
 
 function clearFiltros(){
-  document.getElementById('ing-mes').value='';document.getElementById('ing-cli').value='';document.getElementById('ing-tipo').value='';renderIngresos();
+  document.getElementById('ing-mes').value='';document.getElementById('ing-cli').value='';document.getElementById('ing-tipo').value='';
+  const g=document.getElementById('ing-group');if(g)g.value='cards';
+  window._ingPagoSel=null;_ingPagoUpdateButton();
+  renderIngresos();
 }
 
 
@@ -3281,6 +3432,11 @@ function processImport(rows, preview){
       const ishCB=parseFloat(get(['ISH','ish']))||0;
       const ivaCB=parseFloat(get(['IVA','iva']))||0;
       const ivaColPunto=parseFloat(get(['IVA.','iva.']))||0;
+      // Validate raw CB fiscal values BEFORE applying fallbacks
+      const ishExpected=Math.round(base*0.045*100)/100;
+      const ivaExpected=Math.round(base*0.16*100)/100;
+      const ivaHospCB=ivaCB-ivaColPunto;
+      const fiscalIncoherente=base>0&&(Math.abs(ishCB-ishExpected)>1||Math.abs(ivaHospCB-ivaExpected)>1);
       // IVA hospedaje = IVA - IVA. (IVA. es el IVA de las cenas)
       const ish=ishCB>0?Math.round(ishCB*100)/100:Math.round(base*0.045*100)/100;
       const iva=ivaCB>0?Math.round((ivaCB-ivaColPunto)*100)/100:Math.round(base*0.16*100)/100;
@@ -3334,7 +3490,7 @@ function processImport(rows, preview){
         saldo:saldoFinal,
         saldFecha:'', saldPago:'',
         descuento:0, pagos:[],
-        cbWarning:cbDirect?'':isTriple?'incoherente':missingPayInfo?'sin-pago-info':'',
+        cbWarning:fiscalIncoherente?'fiscal-incoherente':(cbDirect?'':isTriple?'incoherente':missingPayInfo?'sin-pago-info':''),
         hospTotal:Math.round(calcTotal*100)/100,
         fechaReserva:fechaReservaVal||'',
         consumoCena:tieneCena?montoCenas:0,
@@ -3376,6 +3532,7 @@ function processImport(rows, preview){
           Total: <strong>${fmt(r.total)}</strong> · Anticipo: ${fmt(r.anticipo)} · Saldo: <span style="color:#C83232">${fmt(r.saldo)}</span>
           ${r.cbWarning==='incoherente'?'<br><span style="color:#B8860B;font-size:11px">⚠️ Anticipo=Saldo=Total en Cloudbeds — pagos no importados, verificar</span>':''}
           ${r.cbWarning==='sin-pago-info'&&r.anticipo>0&&!r.antiPago&&!r.antiFecha?'<br><span style="color:#B8860B;font-size:11px">⚠️ Sin fecha/método de pago — completar después</span>':''}
+          ${r.cbWarning==='fiscal-incoherente'?'<br><span style="color:#B8860B;font-size:11px">⚠️ ISH/IVA inconsistentes con base × 4.5%/16% — verificar</span>':''}
           ${r.consumoCena>0?`<br><span style="color:#1D9E75;font-size:11px">🍽 ${r.consumoCenaCant} cena${r.consumoCenaCant>1?'s':''} incluidas: ${fmt(r.consumoCena)}</span>`:''}
         </div>
       </div>`).join('')}
