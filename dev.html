@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.59-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.60-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.59-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.60-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1094,6 +1094,24 @@ function renderHabRows(){
     </div>`).join('');
 }
 function calcTarifa(){
+  // If fiscal lock was manually opened, recompute will close it (Option B)
+  if(window._fiscalUnlocked){
+    window._fiscalUnlocked=false;
+    const totalEl=document.getElementById('r-total');
+    if(totalEl){
+      totalEl.setAttribute('readonly','readonly');
+      totalEl.style.border='';
+      totalEl.style.background='';
+      totalEl.style.color='#1D9E75';
+      totalEl.style.fontWeight='700';
+    }
+    const btn=document.getElementById('r-lock-btn');
+    const icon=document.getElementById('r-lock-icon');
+    const label=document.getElementById('r-lock-label');
+    if(btn){btn.style.border='0.5px solid #e0e0da';btn.style.background='#F5F5F2';btn.title='Desbloquear edición';}
+    if(icon){icon.setAttribute('stroke','#888');icon.innerHTML='<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>';}
+    if(label)label.style.display='none';
+  }
   const ci=document.getElementById('r-ci').value;
   const co=document.getElementById('r-co').value;
   let noches=0;
@@ -1181,10 +1199,27 @@ function showNuevaRes(){
   document.getElementById('saldo-fields').style.display='none';
   document.getElementById('saldo-section').style.display='block';
   document.getElementById('r-antifecha').value='';
-  // Reset fiscal lock (hide in new reservation - editable by calcTarifa)
+  // Fiscal lock: show in new reservation too (closed by default)
   window._fiscalUnlocked=false;
-  const lockBtn=document.getElementById('r-lock-btn');if(lockBtn)lockBtn.style.display='none';
-  const lockLabel=document.getElementById('r-lock-label');if(lockLabel)lockLabel.style.display='none';
+  const lockBtn=document.getElementById('r-lock-btn');
+  const lockIcon=document.getElementById('r-lock-icon');
+  const lockLabel=document.getElementById('r-lock-label');
+  const totalElN=document.getElementById('r-total');
+  if(totalElN){
+    totalElN.setAttribute('readonly','readonly');
+    totalElN.style.border='';
+    totalElN.style.background='';
+    totalElN.style.color='#1D9E75';
+    totalElN.style.fontWeight='700';
+  }
+  if(lockBtn){
+    lockBtn.style.display='inline-flex';
+    lockBtn.style.border='0.5px solid #e0e0da';
+    lockBtn.style.background='#F5F5F2';
+    lockBtn.title='Desbloquear edición';
+    if(lockIcon){lockIcon.setAttribute('stroke','#888');lockIcon.innerHTML='<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>';}
+    if(lockLabel)lockLabel.style.display='none';
+  }
   calcTarifa();
   showTab('nueva-reserva');
 }
@@ -1392,7 +1427,7 @@ function guardarRes(){
 
   let base,ish,iva,total;
   const cleanN_=v=>parseFloat(String(v).replace(/[$,\s]/g,''))||0;
-  if(window._fiscalUnlocked&&editId){
+  if(window._fiscalUnlocked){
     // Manual fiscal override: total typed by user, base/ish/iva derived
     total=cleanN_(document.getElementById('r-total').value);
     base=Math.round(total/1.205*100)/100;
@@ -1486,10 +1521,12 @@ function guardarRes(){
       fuente:'manual', fechaCreacion:new Date().toISOString().slice(0,10),
       base:Math.round(base*100)/100, ish:Math.round(ish*100)/100, iva:Math.round(iva*100)/100,
       total:Math.round(total*100)/100, descuento:desc,
+      ...(window._fiscalUnlocked?{hospTotal:Math.round(total*100)/100, tarifaNoche:noches>0?Math.round((base/noches)*100)/100:0}:{}),
       anticipo:Math.round(anti*100)/100, antiPct:total>0?Math.round(anti/total*100):0,
       antiFecha, antiPago, saldo:Math.round(saldo*100)/100, saldFecha, saldPago,
       fechaReserva:document.getElementById('r-fechareserva')?.value||'', pagos:[]
     };
+    window._fiscalUnlocked=false;
     res.push(r);
     sd(KR,res);
     showTab('reservas');
