@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.62-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.63-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.62-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v30.63-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1135,7 +1135,7 @@ function calcTarifa(){
   const base=Math.round(totalDesc/1.205*100)/100;
   const ish=Math.round(base*0.045*100)/100;
   const iva=Math.round(base*0.16*100)/100;
-  const total=Math.round((base+ish+iva)*100)/100;
+  const total=Math.round(totalDesc*100)/100; // exact total from catalog (base/ish/iva are derived for display)
 
   document.getElementById('r-base').value=fmt(base);
   document.getElementById('r-ish').value=fmt(ish);
@@ -1470,7 +1470,7 @@ function guardarRes(){
     base=Math.round(totalConImp/1.205*100)/100;
     ish=Math.round(base*0.045*100)/100;
     iva=Math.round(base*0.16*100)/100;
-    total=Math.round((base+ish+iva)*100)/100;
+    total=totalConImp; // exact total (base/ish/iva derived for display)
   }
 
   const hasAnticipo=document.getElementById('chk-anticipo').checked;
