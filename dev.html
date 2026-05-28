@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.5.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.6.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.5.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.6.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1727,6 +1727,7 @@ function resHtml(r,i){
       </div>
       <p style="font-size:11px;color:#888"><span class="tag">${r.habitacion}</span> ${r.checkin||'?'} → ${r.checkout||'?'} · ${r.noches||'?'} noches · Hosp: ${fmt(r.hospTotal||r.total||0)}</p>
       ${r.cbWarning==='incoherente'?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Pagos incoherentes en Cloudbeds — verificar</p>`:''}
+      ${r.cbWarning==='fiscal-incoherente'?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ ISH/IVA inconsistentes — verificar</p>`:''}
       ${(r.consumoCena||0)>0?`<div style="display:inline-flex;align-items:center;gap:5px;background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:20px;padding:2px 9px;margin-top:5px;font-size:11px;color:#085041">🍽 <strong>${r.consumoCenaCant||0} cena${(r.consumoCenaCant||0)>1?'s':''} incluida${(r.consumoCenaCant||0)>1?'s':''}</strong> · ${fmt(r.consumoCena)}</div>`:''}
       ${r.cbWarning==='sin-pago-info'&&(r.anticipo||0)>0&&(!r.antiFecha||!r.antiPago)?`<p style="font-size:11px;color:#B8860B;margin-top:3px">⚠️ Sin fecha/método de anticipo — completar</p>`:''}
       ${(r.anticipo||0)>0?`<p style="font-size:11px;color:#888;margin-top:2px">Anticipo: ${fmt(r.anticipo||0)} (${r.antiPct||0}%) · ${pagoLabel(r.antiPago||'')}${r.antiFecha?' · '+fmtDate(r.antiFecha):''}</p>`:''}
@@ -2275,7 +2276,7 @@ function toggleIngPagoDD(){
     const all=Object.keys(PAGO_MAP);
     const sel=Array.isArray(window._ingPagoSel)&&window._ingPagoSel.length?window._ingPagoSel:all.slice();
     window._ingPagoSel=sel;
-    dd.innerHTML=`<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer;font-weight:600;border-bottom:0.5px solid #eee;margin-bottom:4px"><input type="checkbox" id="ing-pago-all" ${sel.length===all.length?'checked':''} onchange="ingPagoToggleAll(this.checked)" style="width:14px;height:14px;accent-color:#1D9E75;cursor:pointer">Todos</label>`+
+    dd.innerHTML=`<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer;font-weight:600;border-bottom:0.5px solid #eee;margin-bottom:4px" onclick="ingPagoToggleAll();event.preventDefault()"><input type="checkbox" id="ing-pago-all" ${sel.length===all.length?'checked':''} onclick="event.preventDefault()" style="width:14px;height:14px;accent-color:#1D9E75;pointer-events:none">Todos</label>`+
       all.map(p=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" ${sel.includes(p)?'checked':''} onchange="ingPagoToggle('${p}',this.checked)" style="width:14px;height:14px;accent-color:#1D9E75;cursor:pointer">${PAGO_MAP[p]||p}</label>`).join('');
     dd.style.display='block';
     setTimeout(()=>document.addEventListener('click',_closeIngPagoOnOutside),0);
@@ -2299,10 +2300,15 @@ function ingPagoToggle(p,checked){
   _ingPagoUpdateButton();
   renderIngresos();
 }
-function ingPagoToggleAll(checked){
+function ingPagoToggleAll(){
   const all=Object.keys(PAGO_MAP);
-  window._ingPagoSel=checked?all.slice():[];
-  toggleIngPagoDD();toggleIngPagoDD(); // refresh dropdown
+  const sel=Array.isArray(window._ingPagoSel)?window._ingPagoSel:all.slice();
+  // Toggle: if currently all selected, deselect all; otherwise select all
+  const allSelected=sel.length===all.length;
+  window._ingPagoSel=allSelected?[]:all.slice();
+  // Refresh dropdown content (close and reopen)
+  const dd=document.getElementById('ing-pago-dd');
+  if(dd&&dd.style.display==='block'){dd.style.display='none';toggleIngPagoDD();}
   _ingPagoUpdateButton();
   renderIngresos();
 }
@@ -2549,6 +2555,7 @@ function renderIngresos(){
             <p style="font-size:13px;font-weight:600;margin:0 0 2px">${nombre}</p>
             <p style="font-size:11px;color:#888;margin:0">${subInfo}${nochesTxt}</p>
             ${resData&&resData.cbWarning==='incoherente'?`<p style="font-size:11px;color:#B8860B;margin:2px 0 0">⚠️ Pagos incoherentes en Cloudbeds</p>`:''}
+            ${resData&&resData.cbWarning==='fiscal-incoherente'?`<p style="font-size:11px;color:#B8860B;margin:2px 0 0">⚠️ ISH/IVA inconsistentes</p>`:''}
             ${resData&&resData.cbWarning==='sin-pago-info'&&resData.anticipo>0&&(!resData.antiFecha||!resData.antiPago)?`<p style="font-size:11px;color:#B8860B;margin:2px 0 0">⚠️ Sin fecha/método de anticipo</p>`:''}
           </div>
         </div>
@@ -3428,6 +3435,10 @@ function processImport(rows, preview){
       const iva=ivaCB>0?Math.round((ivaCB-ivaColPunto)*100)/100:Math.round(base*0.16*100)/100;
       const totalConImpuestos=totalGeneral>0?totalGeneral:Math.round(base*1.205*100)/100;
       const calcTotal=Math.round((base+ish+iva)*100)/100; // hospedaje con impuestos
+      // Fiscal validation: ISH = base × 0.045, IVA hosp = base × 0.16 (tolerance $1)
+      const ishExpected=Math.round(base*0.045*100)/100;
+      const ivaExpected=Math.round(base*0.16*100)/100;
+      const fiscalIncoherente=base>0&&(Math.abs(ish-ishExpected)>1||Math.abs(iva-ivaExpected)>1);
 
       // Validation flags
       const near=(a,b)=>Math.abs(a-b)<=(Math.max(a,b)*0.01+1);
@@ -3476,7 +3487,7 @@ function processImport(rows, preview){
         saldo:saldoFinal,
         saldFecha:'', saldPago:'',
         descuento:0, pagos:[],
-        cbWarning:cbDirect?'':isTriple?'incoherente':missingPayInfo?'sin-pago-info':'',
+        cbWarning:fiscalIncoherente?'fiscal-incoherente':(cbDirect?'':isTriple?'incoherente':missingPayInfo?'sin-pago-info':''),
         hospTotal:Math.round(calcTotal*100)/100,
         fechaReserva:fechaReservaVal||'',
         consumoCena:tieneCena?montoCenas:0,
@@ -3518,6 +3529,7 @@ function processImport(rows, preview){
           Total: <strong>${fmt(r.total)}</strong> · Anticipo: ${fmt(r.anticipo)} · Saldo: <span style="color:#C83232">${fmt(r.saldo)}</span>
           ${r.cbWarning==='incoherente'?'<br><span style="color:#B8860B;font-size:11px">⚠️ Anticipo=Saldo=Total en Cloudbeds — pagos no importados, verificar</span>':''}
           ${r.cbWarning==='sin-pago-info'&&r.anticipo>0&&!r.antiPago&&!r.antiFecha?'<br><span style="color:#B8860B;font-size:11px">⚠️ Sin fecha/método de pago — completar después</span>':''}
+          ${r.cbWarning==='fiscal-incoherente'?'<br><span style="color:#B8860B;font-size:11px">⚠️ ISH/IVA inconsistentes con base × 4.5%/16% — verificar</span>':''}
           ${r.consumoCena>0?`<br><span style="color:#1D9E75;font-size:11px">🍽 ${r.consumoCenaCant} cena${r.consumoCenaCant>1?'s':''} incluidas: ${fmt(r.consumoCena)}</span>`:''}
         </div>
       </div>`).join('')}
