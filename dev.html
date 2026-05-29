@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.0.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.0.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.0.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.0.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -580,9 +580,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div><label>Mes</label><select id="rec-mes" onchange="renderReconcil()" style="height:32px;font-size:13px"></select></div>
         <div><label>Año</label><select id="rec-anio" onchange="renderReconcil()" style="height:32px;font-size:13px"></select></div>
-        <div style="flex:1;min-width:280px">
+        <div style="flex:1;min-width:240px">
           <label>Archivo payout Stripe (CSV)</label>
           <input type="file" id="rec-stripe-file" accept=".csv" onchange="loadStripeFile(this)" style="font-size:13px">
+        </div>
+        <div style="flex:1;min-width:240px">
+          <label>Archivo banco BBVA Principal (Excel)</label>
+          <input type="file" id="rec-bbva-file" accept=".xlsx,.xls" onchange="loadBbvaFile(this)" style="font-size:13px">
         </div>
         <button class="btn btn-sm" onclick="clearReconcil()">Limpiar</button>
       </div>
@@ -4576,6 +4580,7 @@ function exportarCierreExcel(modo){
 // RECONCILIACIÓN MODULE
 // ============================================================
 window._recStripeRows=null;
+window._recBbvaRows=null;
 
 function initReconcil(){
   const mesEl=document.getElementById('rec-mes');
@@ -4596,8 +4601,47 @@ function initReconcil(){
 
 function clearReconcil(){
   window._recStripeRows=null;
+  window._recBbvaRows=null;
   const fi=document.getElementById('rec-stripe-file');if(fi)fi.value='';
+  const fb=document.getElementById('rec-bbva-file');if(fb)fb.value='';
   renderReconcil();
+}
+
+function loadBbvaFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('movimiento'))||wb.SheetNames[0];
+      const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:''});
+      // Find header row (FECHA · DESCRIPCIÓN · ABONO · CARGO · SALDO)
+      let hdrIdx=-1;
+      for(let i=0;i<Math.min(aoa.length,15);i++){
+        const r=aoa[i];
+        if(r&&String(r[0]||'').toUpperCase()==='FECHA'&&String(r[1]||'').toUpperCase().includes('DESCRIP')){hdrIdx=i;break;}
+      }
+      if(hdrIdx<0)throw new Error('No se encontró encabezado FECHA/DESCRIPCIÓN');
+      const rows=[];
+      for(let i=hdrIdx+1;i<aoa.length;i++){
+        const r=aoa[i];if(!r||!r[0])continue;
+        rows.push({
+          fecha:String(r[0]||'').slice(0,10),
+          descripcion:String(r[1]||''),
+          abono:parseFloat(r[2])||0,
+          cargo:parseFloat(r[3])||0,
+          saldo:parseFloat(r[4])||0
+        });
+      }
+      window._recBbvaRows=rows;
+      renderReconcil();
+      showAlert('Archivo BBVA cargado: '+rows.length+' movimientos','success');
+    }catch(err){
+      showAlert('Error al leer archivo BBVA: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(f);
 }
 
 function loadStripeFile(input){
@@ -4707,7 +4751,7 @@ function renderReconcil(){
   const detail=document.getElementById('rec-detail');
   if(!summary||!detail)return;
   if(!window._recStripeRows){
-    summary.innerHTML='<p class="empty" style="padding:20px">Sube un archivo de payout Stripe para iniciar la reconciliación.</p>';
+    summary.innerHTML='<p class="empty" style="padding:20px">Sube un archivo de payout Stripe para iniciar la reconciliación. Opcionalmente sube el archivo del banco BBVA Principal para verificar el cuadre 3-vías (app · Stripe · banco).</p>';
     detail.innerHTML='';
     return;
   }
@@ -4757,6 +4801,52 @@ function renderReconcil(){
   const cuadre=Math.abs(appBruto-stripeBruto)<=1;
   const huerfTotal=failMatches.length+huerfanosApp.length;
 
+  // --- Bank reconciliation (if BBVA file is loaded) ---
+  const hasBank=Array.isArray(window._recBbvaRows);
+  let bankStripeDeposits=[];
+  let bankStripeTotal=0;
+  let bankCuadre=false;
+  let bankMatches=[]; // {bank:{...}, payout:{id,fecha,monto}, ok}
+  if(hasBank){
+    bankStripeDeposits=window._recBbvaRows.filter(r=>{
+      const d=String(r.descripcion||'').toUpperCase();
+      const fInMonth=String(r.fecha||'').startsWith(prefix);
+      return r.abono>0&&d.includes('STRIPE')&&!d.includes('CLOUDBEDS')&&fInMonth;
+    });
+    bankStripeTotal=Math.round(bankStripeDeposits.reduce((s,r)=>s+r.abono,0)*100)/100;
+    bankCuadre=Math.abs(bankStripeTotal-stripeNeto)<=1;
+    // Group stripe payouts by payoutId with sum of net
+    const payoutsById={};
+    window._recStripeRows.filter(r=>(r.category==='charge'||r.category==='refund')&&String(r.createdAt||'').startsWith(prefix)).forEach(r=>{
+      if(!r.payoutId)return;
+      if(!payoutsById[r.payoutId])payoutsById[r.payoutId]={id:r.payoutId,fecha:r.effectiveAt||'',monto:0};
+      payoutsById[r.payoutId].monto+=r.net;
+    });
+    const payoutsList=Object.values(payoutsById).map(p=>({...p,monto:Math.round(p.monto*100)/100}));
+    // Match each bank deposit to a payout by amount exact (tolerance $0.01)
+    const usedPayout=new Set();
+    bankStripeDeposits.forEach(bd=>{
+      const p=payoutsList.find(po=>!usedPayout.has(po.id)&&Math.abs(po.monto-bd.abono)<=0.01);
+      if(p)usedPayout.add(p.id);
+      bankMatches.push({bank:bd,payout:p||null,ok:!!p});
+    });
+  }
+
+  const bankCardHtml=hasBank?`
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco recibido</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankStripeTotal)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankStripeDeposits.length} depósito${bankStripeDeposits.length!==1?'s':''} SPEI Stripe</p>
+      </div>`:'';
+  const bankVerifHtml=hasBank?`
+        <div style="background:${bankCuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${bankCuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${bankCuadre?'#1D9E75':'#E24B4A'}">${bankCuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${bankCuadre?'#085041':'#7A1F1D'}">Stripe neto vs Banco BBVA</p>
+            <p style="font-size:11px;color:${bankCuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(stripeNeto)} vs ${fmt(bankStripeTotal)} · ${bankCuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(stripeNeto-bankStripeTotal))}</p>
+          </div>
+        </div>`:'';
+
   summary.innerHTML=`
     <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
       <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
@@ -4772,6 +4862,7 @@ function renderReconcil(){
         <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(stripeNeto)}</p>
         <p style="font-size:10px;color:#888;margin:2px 0 0">−comisión ${fmt(stripeFee)}</p>
       </div>
+      ${bankCardHtml}
       <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FCE8E6'};border:0.5px solid ${cuadre?'#1D9E75':'#E24B4A'};border-radius:8px;padding:10px 14px">
         <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:0">Estado</p>
         <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#7A1F1D'}">${cuadre?'✓ Cuadra':'✗ Diferencia '+fmt(appBruto-stripeBruto)}</p>
@@ -4787,6 +4878,7 @@ function renderReconcil(){
             <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(appBruto)} vs ${fmt(stripeBruto)} · ${cuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(appBruto-stripeBruto))}</p>
           </div>
         </div>
+        ${bankVerifHtml}
         <div style="background:${huerfTotal===0?'#E1F5EE':'#FFF4E5'};border-left:3px solid ${huerfTotal===0?'#1D9E75':'#BA7517'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
           <span style="font-size:16px;color:${huerfTotal===0?'#1D9E75':'#BA7517'}">${huerfTotal===0?'✓':'⚠'}</span>
           <div style="flex:1">
@@ -4797,7 +4889,7 @@ function renderReconcil(){
         <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
           <span style="font-size:16px;color:#888">i</span>
           <div style="flex:1">
-            <p style="font-size:12px;color:#666;margin:0">Total emparejado: ${okMatches.length}/${matches.length} transacciones Stripe</p>
+            <p style="font-size:12px;color:#666;margin:0">Total emparejado: ${okMatches.length}/${matches.length} transacciones Stripe${hasBank?' · '+bankMatches.filter(b=>b.ok).length+'/'+bankMatches.length+' depósitos banco':''}</p>
           </div>
         </div>
       </div>
@@ -4847,7 +4939,31 @@ function renderReconcil(){
         </tr></thead>
         <tbody>${rowsHtml||'<tr><td colspan="7" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin transacciones Stripe en este mes</td></tr>'}${huerfAppHtml}</tbody>
       </table>
-    </div>`;
+    </div>
+    ${hasBank?`
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Depósitos Stripe en banco BBVA — ${bankStripeDeposits.length}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto banco</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Payout Stripe</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+        </tr></thead>
+        <tbody>
+          ${bankMatches.map(b=>{
+            const bg=b.ok?'#E1F5EE':'#FCE8E6';
+            const po=b.payout;
+            return `<tr style="background:${bg}">
+              <td style="padding:7px 8px">${b.bank.fecha}</td>
+              <td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(b.bank.abono)}</td>
+              <td style="padding:7px 8px">${po?`<div style="font-size:11px"><code style="font-size:10px;color:#666">${po.id.substring(0,20)}...</code></div><div style="font-size:11px;color:#666">Efectivo: ${String(po.fecha).slice(0,10)} · ${fmt(po.monto)}</div>`:'<span style="color:#7A1F1D;font-size:11px">✗ Sin payout coincidente</span>'}</td>
+              <td style="padding:7px 8px;text-align:center;color:${b.ok?'#1D9E75':'#E24B4A'};font-size:14px">${b.ok?'✓':'✗'}</td>
+            </tr>`;
+          }).join('')||'<tr><td colspan="4" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin depósitos Stripe en el banco este mes</td></tr>'}
+        </tbody>
+      </table>
+    </div>`:''}`;
 }
 
 </script>
