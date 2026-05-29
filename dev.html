@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.4.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.4.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -746,16 +746,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <script>
 const fmtDate=v=>{if(!v)return'';const s=String(v);return s.includes('T')?s.split('T')[0]:s;};
 function sanitizeDates(arr){return arr.map(r=>{const o={};Object.keys(r).forEach(k=>{const v=r[k];o[k]=(typeof v==='string'&&v.length>10&&v[10]==='T')?v.split('T')[0]:v;});return o;});}
-const KR='KR',KP='KP',KH='KH',KC='KC',KE='KE',KRE='KRE',KCE='KCE';
+const KR='KR',KP='KP',KH='KH',KC='KC',KE='KE',KRE='KRE',KCE='KCE',KRN='KRN';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxQ60YzG4l1kS8pZt7CnzrFALV64BZyWlfSVIbmGiYZY_rCQ-V2jwfrRTKZibLPwOLf/exec';
 const ENV='dev'; // 'dev' | 'prod'
-const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos'};
+const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos',KRN:'reconciliacionNotas'};
 
 // In-memory cache (loaded once at login)
-const CACHE={KR:[],KP:[],KH:[],KC:[],KE:[],KRE:[],KCE:[]};
+const CACHE={KR:[],KP:[],KH:[],KC:[],KE:[],KRE:[],KCE:[],KRN:[]};
 
 // Sync read from cache (same API as before — no code changes needed)
 const gd=(k,d=[])=>CACHE[k]&&CACHE[k].length?CACHE[k]:(d||[]);
@@ -776,7 +776,7 @@ const sd=(k,v)=>{
 
 // Load all sheets into cache
 async function loadAllSheets(){
-  const keys=['KR','KP','KH','KC','KE','KRE','KCE'];
+  const keys=['KR','KP','KH','KC','KE','KRE','KCE','KRN'];
   await Promise.all(keys.map(async k=>{
     try{
       const res=await fetch(SCRIPT_URL+'?action=read&sheet='+SHEET_MAP[k]+'&env='+ENV);
@@ -4658,6 +4658,18 @@ function exportarCierreExcel(modo){
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
   wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
+
+  // ---------- Pestaña Reconciliación (solo si hay archivos cargados) ----------
+  const hasRec=window._recStripeRows||window._recCbRows||window._recBbvaRows||window._recBbvaSndaRows||window._recSantanderRows;
+  if(hasRec){
+    const recRows=_buildReconcilExcelData(prefix);
+    if(recRows.length){
+      const wsRec=XLSX.utils.aoa_to_sheet(recRows);
+      wsRec['!cols']=[{wch:14},{wch:30},{wch:13},{wch:13},{wch:13},{wch:13},{wch:10},{wch:40}];
+      XLSX.utils.book_append_sheet(wb,wsRec,'Reconciliación');
+    }
+  }
+
   XLSX.writeFile(wb,'Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx');
   showAlert('Excel exportado','success');
 }
@@ -4666,6 +4678,139 @@ function exportarCierreExcel(modo){
 // RECONCILIACIÓN MODULE
 // ============================================================
 window._recStripeRows=null;
+
+// --- Sort de tablas por click en header ---
+window._recSort={}; // { tableId: {colIdx, dir} }
+
+function _recSortClick(tableId,colIdx,type){
+  const cur=window._recSort[tableId];
+  let dir='asc';
+  if(cur&&cur.colIdx===colIdx)dir=cur.dir==='asc'?'desc':'asc';
+  window._recSort[tableId]={colIdx,dir,type};
+  _recApplySort(tableId);
+}
+
+function _recApplySort(tableId){
+  const cfg=window._recSort[tableId];if(!cfg)return;
+  const tbl=document.getElementById(tableId);if(!tbl)return;
+  const tbody=tbl.querySelector('tbody');if(!tbody)return;
+  const rows=Array.from(tbody.querySelectorAll('tr')).filter(r=>r.children.length>1);
+  if(rows.length<2)return;
+  const getVal=(tr,idx,type)=>{
+    const td=tr.children[idx];if(!td)return '';
+    const txt=(td.textContent||'').trim();
+    if(type==='num'){
+      const n=parseFloat(txt.replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;
+    }
+    if(type==='date'){
+      // try YYYY-MM-DD pattern first
+      const m=txt.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if(m)return m[1]+m[2]+m[3];
+      return txt;
+    }
+    if(type==='estado'){
+      // ✓ → 0, ⚠ → 1, ✗ → 2 — problemas primero en asc invertido
+      if(txt.includes('✗'))return 0;
+      if(txt.includes('⚠'))return 1;
+      if(txt.includes('✓'))return 2;
+      return 9;
+    }
+    return txt.toLowerCase();
+  };
+  rows.sort((a,b)=>{
+    const va=getVal(a,cfg.colIdx,cfg.type);
+    const vb=getVal(b,cfg.colIdx,cfg.type);
+    let cmp=0;
+    if(typeof va==='number'&&typeof vb==='number')cmp=va-vb;
+    else if(va<vb)cmp=-1;else if(va>vb)cmp=1;
+    return cfg.dir==='asc'?cmp:-cmp;
+  });
+  rows.forEach(r=>tbody.appendChild(r));
+  // Update visual arrows
+  const ths=tbl.querySelectorAll('thead th');
+  ths.forEach((th,i)=>{
+    const span=th.querySelector('.rec-sort-arrow');if(!span)return;
+    if(i===cfg.colIdx)span.textContent=cfg.dir==='asc'?'↑':'↓';
+    else span.textContent='↕';
+  });
+}
+
+function _recSortableTh(label,align,tableId,colIdx,type){
+  const a=align==='right'?'text-align:right':(align==='center'?'text-align:center':'text-align:left');
+  return `<th style="${a};padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase;cursor:pointer;user-select:none" onclick="_recSortClick('${tableId}',${colIdx},'${type}')">${label} <span class="rec-sort-arrow" style="font-size:9px;color:#bbb">↕</span></th>`;
+}
+
+// --- Comentarios persistentes ---
+function _recGetNote(mes,bloque,referencia){
+  const all=gd(KRN)||[];
+  return all.find(n=>n.mes===mes&&n.bloque===bloque&&n.referencia===referencia);
+}
+
+function _recSaveNote(mes,bloque,referencia,nota){
+  const all=(gd(KRN)||[]).slice();
+  const idx=all.findIndex(n=>n.mes===mes&&n.bloque===bloque&&n.referencia===referencia);
+  const trimmed=String(nota||'').trim();
+  if(idx>=0){
+    if(!trimmed){all.splice(idx,1);}
+    else{all[idx]={...all[idx],nota:trimmed,fechaCreacion:all[idx].fechaCreacion||new Date().toISOString().slice(0,10)};}
+  } else if(trimmed){
+    all.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,8),mes,bloque,referencia,nota:trimmed,fechaCreacion:new Date().toISOString().slice(0,10)});
+  } else {
+    return; // nothing to save
+  }
+  sd(KRN,all);
+}
+
+function _recNoteBtn(mes,bloque,referencia){
+  const note=_recGetNote(mes,bloque,referencia);
+  const has=!!note;
+  const escaped=has?String(note.nota).replace(/"/g,'&quot;'):'';
+  const refSafe=String(referencia).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const onclick=`_recOpenNoteModal('${mes}','${bloque}','${refSafe}')`;
+  return `<button onclick="${onclick}" title="${has?escaped:'Agregar nota'}" style="background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;opacity:${has?1:.4}">💬</button>`;
+}
+
+function _recOpenNoteModal(mes,bloque,referencia){
+  const existing=_recGetNote(mes,bloque,referencia);
+  const overlay=document.createElement('div');
+  overlay.id='rec-note-modal-overlay';
+  overlay.dataset.mes=mes;
+  overlay.dataset.bloque=bloque;
+  overlay.dataset.referencia=referencia;
+  overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  const delBtn=existing?'<button onclick="_recDeleteNoteFromModal()" style="background:#fff;color:#7A1F1D;border:0.5px solid #ddd;padding:7px 14px;font-size:12px;border-radius:6px;cursor:pointer">Borrar</button>':'';
+  overlay.innerHTML=`
+    <div style="background:#fff;border-radius:10px;padding:1.4rem;width:94%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+      <h3 style="font-size:14px;font-weight:600;margin:0 0 4px">Nota de reconciliación</h3>
+      <p style="font-size:11px;color:#888;margin:0 0 12px">${mes} · ${bloque}</p>
+      <textarea id="rec-note-textarea" style="width:100%;min-height:120px;padding:10px;border:0.5px solid #e0e0da;border-radius:6px;font-family:inherit;font-size:13px;box-sizing:border-box" placeholder="Escribe tu nota...">${existing?String(existing.nota).replace(/</g,'&lt;'):''}</textarea>
+      ${existing?'<p style="font-size:10px;color:#888;margin:6px 0 0">Creada el '+existing.fechaCreacion+'</p>':''}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button onclick="document.getElementById('rec-note-modal-overlay').remove()" style="background:#fff;border:0.5px solid #e0e0da;padding:7px 14px;font-size:12px;border-radius:6px;cursor:pointer">Cancelar</button>
+        ${delBtn}
+        <button onclick="_recSaveNoteFromModal()" style="background:#1D9E75;color:#fff;border:none;padding:7px 14px;font-size:12px;border-radius:6px;cursor:pointer;font-weight:500">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(()=>{const t=document.getElementById('rec-note-textarea');if(t)t.focus();},50);
+}
+
+function _recSaveNoteFromModal(){
+  const ov=document.getElementById('rec-note-modal-overlay');if(!ov)return;
+  const t=document.getElementById('rec-note-textarea');
+  const txt=t?t.value:'';
+  _recSaveNote(ov.dataset.mes,ov.dataset.bloque,ov.dataset.referencia,txt);
+  ov.remove();
+  renderReconcil();
+}
+
+function _recDeleteNoteFromModal(){
+  const ov=document.getElementById('rec-note-modal-overlay');if(!ov)return;
+  _recSaveNote(ov.dataset.mes,ov.dataset.bloque,ov.dataset.referencia,'');
+  ov.remove();
+  renderReconcil();
+}
 window._recBbvaRows=null;     // BBVA Principal (cuenta ingresos+egresos)
 window._recBbvaSndaRows=null; // BBVA Snda (solo egresos)
 window._recSantanderRows=null;// Santander (ingresos+egresos)
@@ -5225,6 +5370,8 @@ function _renderReconcilStripe(prefix,summary,detail){
       ? `<div style="font-size:12px"><strong>${m.match.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${m.match.tipo} · ${fmtDate(m.match.fecha)||'—'}</div>`
       : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios candidatos en la app':'✗ Sin reserva con monto coincidente'}</div>`;
     const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
+    const ref='s-'+(sr.payoutId||'')+'-'+stripeDt+'-'+Math.round((sr.gross||0)*100);
+    const noteCell=ok?'':_recNoteBtn(prefix,'stripe',ref);
     return `<tr style="background:${bg}">
       <td style="padding:7px 8px;font-size:12px">${stripeDt}</td>
       <td style="padding:7px 8px;font-size:12px">${stripeName||'<span style="color:#999;font-style:italic">(sin nombre)</span>'}</td>
@@ -5233,31 +5380,36 @@ function _renderReconcilStripe(prefix,summary,detail){
       <td style="padding:7px 8px;text-align:right;font-size:11px;color:#888">${fmt(sr.fee)}</td>
       <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(sr.net)}</td>
       <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
     </tr>`;
   }).join('');
-  const huerfAppHtml=huerfanosApp.map(p=>`
-    <tr style="background:#FFF4E5">
+  const huerfAppHtml=huerfanosApp.map(p=>{
+    const ref='s-app-'+(p.reserva.id||'')+'-'+p.tipo+'-'+Math.round((p.monto||0)*100);
+    return `<tr style="background:#FFF4E5">
       <td style="padding:7px 8px;font-size:12px">${fmtDate(p.fecha)||'—'}</td>
       <td style="padding:7px 8px;font-size:12px;color:#999;font-style:italic">(sin transacción Stripe)</td>
       <td style="padding:7px 8px"><div style="font-size:12px"><strong>${p.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${p.tipo}</div></td>
       <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(p.monto)}</td>
       <td style="padding:7px 8px"></td><td style="padding:7px 8px"></td>
       <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
-    </tr>`).join('');
+      <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'stripe',ref)}</td>
+    </tr>`;
+  }).join('');
   detail.innerHTML=`
     <div class="card" style="padding:14px 16px;margin-top:10px">
       <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Stripe — ${stripeAll.length} transacciones${huerfanosApp.length>0?' + '+huerfanosApp.length+' huérfanos en app':''}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <table id="rec-tbl-stripe" style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="border-bottom:2px solid #EEE">
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha cobro</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Huésped Stripe</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Reserva App</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Bruto</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fee</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Neto</th>
-          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+          ${_recSortableTh('Fecha cobro','left','rec-tbl-stripe',0,'date')}
+          ${_recSortableTh('Huésped Stripe','left','rec-tbl-stripe',1,'text')}
+          ${_recSortableTh('↔ Reserva App','left','rec-tbl-stripe',2,'text')}
+          ${_recSortableTh('Bruto','right','rec-tbl-stripe',3,'num')}
+          ${_recSortableTh('Fee','right','rec-tbl-stripe',4,'num')}
+          ${_recSortableTh('Neto','right','rec-tbl-stripe',5,'num')}
+          ${_recSortableTh('Estado','center','rec-tbl-stripe',6,'estado')}
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
         </tr></thead>
-        <tbody>${rowsHtml||'<tr><td colspan="7" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin transacciones Stripe en este mes</td></tr>'}${huerfAppHtml}</tbody>
+        <tbody>${rowsHtml||'<tr><td colspan="8" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin transacciones Stripe en este mes</td></tr>'}${huerfAppHtml}</tbody>
       </table>
     </div>
     ${hasBank?`
@@ -5401,6 +5553,8 @@ function _renderReconcilCb(prefix){
       ? `<div style="font-size:12px"><strong>${m.match.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${m.match.tipo} · ${fmtDate(m.match.fecha)||'—'}</div>`
       : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios candidatos en la app':'✗ Sin reserva con monto coincidente'}</div>`;
     const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
+    const ref='cb-'+(cb.txId||(cb.cbId+'-'+cb.txDate));
+    const noteCell=ok?'':_recNoteBtn(prefix,'cloudbeds',ref);
     return `<tr style="background:${bg}">
       <td style="padding:7px 8px;font-size:12px">${cb.txDate||'—'}</td>
       <td style="padding:7px 8px;font-size:12px">${cb.guestName||'<span style="color:#999;font-style:italic">(sin nombre)</span>'}${cb.cbId?'<br><code style="font-size:10px;color:#666">'+cb.cbId+'</code>':''}</td>
@@ -5409,17 +5563,21 @@ function _renderReconcilCb(prefix){
       <td style="padding:7px 8px;text-align:right;font-size:11px;color:#888">${fmt(cb.tasa)}</td>
       <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(cb.montoDesembolso)}</td>
       <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
     </tr>`;
   }).join('');
-  const huerfAppHtml=huerfanosApp.map(p=>`
-    <tr style="background:#FFF4E5">
+  const huerfAppHtml=huerfanosApp.map(p=>{
+    const ref='cb-app-'+(p.reserva.id||'')+'-'+p.tipo+'-'+Math.round((p.monto||0)*100);
+    return `<tr style="background:#FFF4E5">
       <td style="padding:7px 8px;font-size:12px">${fmtDate(p.fecha)||'—'}</td>
       <td style="padding:7px 8px;font-size:12px;color:#999;font-style:italic">(sin transacción CloudBeds)</td>
       <td style="padding:7px 8px"><div style="font-size:12px"><strong>${p.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${p.tipo}</div></td>
       <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(p.monto)}</td>
       <td style="padding:7px 8px"></td><td style="padding:7px 8px"></td>
       <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
-    </tr>`).join('');
+      <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'cloudbeds',ref)}</td>
+    </tr>`;
+  }).join('');
 
   block.innerHTML=`
     <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">CloudBeds</h3>
@@ -5471,17 +5629,18 @@ function _renderReconcilCb(prefix){
     </div>
     <div class="card" style="padding:14px 16px;margin-top:10px">
       <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle CloudBeds — ${cbAll.length} transacciones${huerfanosApp.length>0?' + '+huerfanosApp.length+' huérfanos en app':''}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <table id="rec-tbl-cb" style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="border-bottom:2px solid #EEE">
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha cobro</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Huésped CloudBeds</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Reserva App</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Bruto</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fee</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Neto</th>
-          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+          ${_recSortableTh('Fecha cobro','left','rec-tbl-cb',0,'date')}
+          ${_recSortableTh('Huésped CloudBeds','left','rec-tbl-cb',1,'text')}
+          ${_recSortableTh('↔ Reserva App','left','rec-tbl-cb',2,'text')}
+          ${_recSortableTh('Bruto','right','rec-tbl-cb',3,'num')}
+          ${_recSortableTh('Fee','right','rec-tbl-cb',4,'num')}
+          ${_recSortableTh('Neto','right','rec-tbl-cb',5,'num')}
+          ${_recSortableTh('Estado','center','rec-tbl-cb',6,'estado')}
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
         </tr></thead>
-        <tbody>${rowsHtml||'<tr><td colspan="7" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin transacciones CloudBeds en este mes</td></tr>'}${huerfAppHtml}</tbody>
+        <tbody>${rowsHtml||'<tr><td colspan="8" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin transacciones CloudBeds en este mes</td></tr>'}${huerfAppHtml}</tbody>
       </table>
     </div>
     ${hasBank?`
@@ -5605,22 +5764,28 @@ function _renderReconcilTrans(prefix){
     const matchTxt=ok
       ? `<div style="font-size:12px"><strong>${m.match.huesped}</strong></div><div style="font-size:11px;color:#666">${fmtDate(m.match.fecha)||'—'} · ${m.match.items.length} item${m.match.items.length!==1?'s':''}</div>`
       : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios grupos con este monto en la app':'✗ Sin grupo en la app con este monto'}</div>`;
+    const ref='t-'+(m.bank._acc||'')+'-'+m.bank.fecha+'-'+Math.round((m.bank.abono||0)*100);
+    const noteCell=ok?'':_recNoteBtn(prefix,'transferencias',ref);
     return `<tr style="background:${bg}">
       <td style="padding:7px 8px;font-size:12px">${m.bank.fecha}</td>
       <td style="padding:7px 8px;font-size:11px;color:#666"><strong style="color:#1A1916">${m.bank._acc||''}</strong> · ${desc.substring(0,70)}${desc.length>70?'…':''}</td>
       <td style="padding:7px 8px">${matchTxt}</td>
       <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(m.bank.abono)}</td>
       <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
     </tr>`;
   }).join('');
-  const huerfAppHtml=huerfanosApp.map(g=>`
-    <tr style="background:#FFF4E5">
+  const huerfAppHtml=huerfanosApp.map(g=>{
+    const ref='t-app-'+(g.reservaId||'')+'-'+g.fecha+'-'+Math.round((g.monto||0)*100);
+    return `<tr style="background:#FFF4E5">
       <td style="padding:7px 8px;font-size:12px">${g.fecha||'—'}</td>
       <td style="padding:7px 8px;font-size:11px;color:#999;font-style:italic">(sin SPEI en el banco)</td>
       <td style="padding:7px 8px"><div style="font-size:12px"><strong>${g.huesped}</strong></div><div style="font-size:11px;color:#666">${g.items.length} item${g.items.length!==1?'s':''}: ${g.items.slice(0,3).map(i=>i.tipo).join(', ')}${g.items.length>3?'…':''}</div></td>
       <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(g.monto)}</td>
       <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
-    </tr>`).join('');
+      <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'transferencias',ref)}</td>
+    </tr>`;
+  }).join('');
 
   block.innerHTML=`
     <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Transferencias</h3>
@@ -5666,15 +5831,16 @@ function _renderReconcilTrans(prefix){
     </div>
     <div class="card" style="padding:14px 16px;margin-top:10px">
       <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Transferencias — ${bankSpei.length} SPEI${huerfanosApp.length>0?' + '+huerfanosApp.length+' grupos huérfanos en app':''}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <table id="rec-tbl-trans" style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="border-bottom:2px solid #EEE">
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción SPEI</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Pago App</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
-          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+          ${_recSortableTh('Fecha','left','rec-tbl-trans',0,'date')}
+          ${_recSortableTh('Descripción SPEI','left','rec-tbl-trans',1,'text')}
+          ${_recSortableTh('↔ Pago App','left','rec-tbl-trans',2,'text')}
+          ${_recSortableTh('Monto','right','rec-tbl-trans',3,'num')}
+          ${_recSortableTh('Estado','center','rec-tbl-trans',4,'estado')}
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
         </tr></thead>
-        <tbody>${rowsHtml||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin SPEI recibidos en este mes</td></tr>'}${huerfAppHtml}</tbody>
+        <tbody>${rowsHtml||'<tr><td colspan="6" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin SPEI recibidos en este mes</td></tr>'}${huerfAppHtml}</tbody>
       </table>
     </div>`;
 }
@@ -6017,22 +6183,27 @@ function _renderReconcilEgresos(prefix){
       : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios cargos con este monto':'✗ Sin cargo coincidente en banco'}</div>`;
     const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
     const estadoIcon=ok?(lejano?'<span style="color:#BA7517;font-size:14px">⚠</span>':'<span style="color:#1D9E75;font-size:14px">✓</span>'):'<span style="color:#E24B4A;font-size:14px">✗</span>';
+    const ref='eg-'+(e.uuid||(e.rfc+'-'+e.fecha+'-'+Math.round(monto*100)));
+    const noteCell=(ok&&!lejano)?'':_recNoteBtn(prefix,'egresos',ref);
     return `<tr style="background:${bg}">
       <td style="padding:7px 8px;font-size:12px">${String(e.fecha||'').slice(0,10)}</td>
       <td style="padding:7px 8px;font-size:12px"><strong>${e.proveedor||''}</strong><br><span style="font-size:10px;color:#888">${e.rfc||''}</span></td>
       <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(monto)}</td>
       <td style="padding:7px 8px">${matchTxt} ${howTag}</td>
       <td style="padding:7px 8px;text-align:center">${estadoIcon}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
     </tr>`;
   }).join('');
   const huerfBankHtml=cargosHuerfanos.map(c=>{
     const rfc=_recExtractRfc(c.descripcion);
+    const ref='eg-bank-'+(c._acc||'')+'-'+c.fecha+'-'+Math.round(Math.abs(c.cargo)*100);
     return `<tr style="background:#FFF4E5">
       <td style="padding:7px 8px;font-size:12px">${c.fecha}</td>
       <td style="padding:7px 8px;font-size:12px;color:#999;font-style:italic">(sin CFDI en app)${rfc?'<br><span style="font-size:10px;color:#888">'+rfc+'</span>':''}</td>
       <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(Math.abs(c.cargo))}</td>
       <td style="padding:7px 8px"><div style="font-size:11px"><strong>${c._acc}</strong></div><div style="font-size:11px;color:#666">${String(c.descripcion||'').substring(0,60)}</div></td>
       <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
+      <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'egresos',ref)}</td>
     </tr>`;
   }).join('');
 
@@ -6044,12 +6215,15 @@ function _renderReconcilEgresos(prefix){
     const matchTxt=ok
       ? `<div style="font-size:11px"><strong>${m.bank._acc}</strong> · ${m.bank.fecha} · ${fmt(m.bank.abono)} abono</div>`
       : `<div style="font-size:11px;color:#7A1F1D">✗ Sin abono coincidente</div>`;
+    const ref='nc-'+(e.uuid||(e.rfc+'-'+e.fecha+'-'+Math.round(monto*100)));
+    const noteCell=ok?'':_recNoteBtn(prefix,'notas_credito',ref);
     return `<tr style="background:${bg}">
       <td style="padding:7px 8px;font-size:12px">${String(e.fecha||'').slice(0,10)}</td>
       <td style="padding:7px 8px;font-size:12px"><strong>${e.proveedor||''}</strong></td>
       <td style="padding:7px 8px;text-align:right;font-size:12px">-${fmt(monto)}</td>
       <td style="padding:7px 8px">${matchTxt}</td>
       <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
     </tr>`;
   }).join('');
 
@@ -6098,15 +6272,16 @@ function _renderReconcilEgresos(prefix){
     </div>
     <div class="card" style="padding:14px 16px;margin-top:10px">
       <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Facturas — ${facturas.length} CFDI${huerfBankCount>0?' + '+huerfBankCount+' huérfanos del banco':''}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <table id="rec-tbl-egresos" style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="border-bottom:2px solid #EEE">
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha CFDI</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Proveedor</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Banco</th>
-          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+          ${_recSortableTh('Fecha CFDI','left','rec-tbl-egresos',0,'date')}
+          ${_recSortableTh('Proveedor','left','rec-tbl-egresos',1,'text')}
+          ${_recSortableTh('Total','right','rec-tbl-egresos',2,'num')}
+          ${_recSortableTh('↔ Banco','left','rec-tbl-egresos',3,'text')}
+          ${_recSortableTh('Estado','center','rec-tbl-egresos',4,'estado')}
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
         </tr></thead>
-        <tbody>${factRowsHtml||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin facturas en este mes</td></tr>'}${huerfBankHtml}</tbody>
+        <tbody>${factRowsHtml||'<tr><td colspan="6" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin facturas en este mes</td></tr>'}${huerfBankHtml}</tbody>
       </table>
     </div>
     ${notasCredito.length>0?`
@@ -6120,10 +6295,154 @@ function _renderReconcilEgresos(prefix){
           <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
           <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Banco (abono)</th>
           <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
         </tr></thead>
         <tbody>${ncRowsHtml}</tbody>
       </table>
     </div>`:''}`;
+}
+
+// --- Excel sheet "Reconciliación" para Cierre Mensual ---
+function _buildReconcilExcelData(prefix){
+  const headers=['BLOQUE','CONCEPTO','APP','PLATAFORMA','BANCO','DIFERENCIA','ESTADO','NOTA'];
+  const rows=[headers];
+  const hb='__hb__'; // bg verde encabezado bloque
+  const getNote=(bloque,ref)=>{
+    const n=_recGetNote(prefix,bloque,ref);return n?n.nota:'';
+  };
+
+  // === STRIPE ===
+  if(window._recStripeRows){
+    const stripeAll=window._recStripeRows.filter(r=>(r.category==='charge'||r.category==='refund')&&String(r.createdAt||'').startsWith(prefix));
+    if(stripeAll.length){
+      const bruto=Math.round(stripeAll.reduce((s,r)=>s+r.gross,0)*100)/100;
+      const neto=Math.round(stripeAll.reduce((s,r)=>s+r.net,0)*100)/100;
+      const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+      let appBruto=0;
+      reservas.forEach(r=>{
+        if((r.anticipo||0)>0&&r.antiPago==='stripe'&&String(r.antiFecha||'').startsWith(prefix))appBruto+=r.anticipo;
+        if((r.saldo||0)>0&&r.saldPago==='stripe'&&String(r.saldFecha||'').startsWith(prefix))appBruto+=r.saldo;
+      });
+      gd(KC).forEach(c=>{
+        let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+        items.forEach(it=>{if(it.pago==='stripe'&&String(it.fechaPago||'').startsWith(prefix))appBruto+=(it.precio||0)*(it.cantidad||0);});
+      });
+      appBruto=Math.round(appBruto*100)/100;
+      rows.push(['Stripe','Total bruto',appBruto,bruto,'',Math.round((appBruto-bruto)*100)/100,Math.abs(appBruto-bruto)<=1?'✓':'✗','']);
+      rows.push(['Stripe','Total neto a banco','',neto,'','','','']);
+      stripeAll.forEach(sr=>{
+        const stripeDt=String(sr.createdAt||'').slice(0,10);
+        const ref='s-'+(sr.payoutId||'')+'-'+stripeDt+'-'+Math.round((sr.gross||0)*100);
+        const nm=sr.customerName||sr.description||'(sin nombre)';
+        rows.push(['Stripe',nm+' · '+stripeDt,'',sr.gross,'',0,'',getNote('stripe',ref)]);
+      });
+    }
+  }
+
+  // === CLOUDBEDS ===
+  if(window._recCbRows){
+    const cbAll=window._recCbRows.filter(r=>String(r.txDate||'').startsWith(prefix));
+    if(cbAll.length){
+      const bruto=Math.round(cbAll.reduce((s,r)=>s+r.montoCobrado,0)*100)/100;
+      const neto=Math.round(cbAll.reduce((s,r)=>s+r.montoDesembolso,0)*100)/100;
+      const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+      let appBruto=0;
+      reservas.forEach(r=>{
+        if((r.anticipo||0)>0&&r.antiPago==='cloudbeds'&&String(r.antiFecha||'').startsWith(prefix))appBruto+=r.anticipo;
+        if((r.saldo||0)>0&&r.saldPago==='cloudbeds'&&String(r.saldFecha||'').startsWith(prefix))appBruto+=r.saldo;
+      });
+      gd(KC).forEach(c=>{
+        let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+        items.forEach(it=>{if(it.pago==='cloudbeds'&&String(it.fechaPago||'').startsWith(prefix))appBruto+=(it.precio||0)*(it.cantidad||0);});
+      });
+      appBruto=Math.round(appBruto*100)/100;
+      rows.push(['CloudBeds','Total bruto',appBruto,bruto,'',Math.round((appBruto-bruto)*100)/100,Math.abs(appBruto-bruto)<=1?'✓':'✗','']);
+      rows.push(['CloudBeds','Total neto a banco','',neto,'','','','']);
+      cbAll.forEach(cb=>{
+        const ref='cb-'+(cb.txId||(cb.cbId+'-'+cb.txDate));
+        rows.push(['CloudBeds',(cb.guestName||'(sin nombre)')+' · '+cb.txDate,'',cb.montoCobrado,'',0,'',getNote('cloudbeds',ref)]);
+      });
+    }
+  }
+
+  // === TRANSFERENCIAS ===
+  const hasAnyBank=Array.isArray(window._recBbvaRows)||Array.isArray(window._recSantanderRows);
+  if(hasAnyBank){
+    const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+    let appT=0;
+    reservas.forEach(r=>{
+      if((r.anticipo||0)>0&&r.antiPago==='transferencia'&&String(r.antiFecha||'').startsWith(prefix))appT+=r.anticipo;
+      if((r.saldo||0)>0&&r.saldPago==='transferencia'&&String(r.saldFecha||'').startsWith(prefix))appT+=r.saldo;
+    });
+    gd(KC).forEach(c=>{
+      let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+      items.forEach(it=>{if(it.pago==='transferencia'&&String(it.fechaPago||'').startsWith(prefix))appT+=(it.precio||0)*(it.cantidad||0);});
+    });
+    appT=Math.round(appT*100)/100;
+    const bankRows=_recAllBankRows(['bbva','santander']);
+    const bankSpei=bankRows.filter(r=>{
+      const d=String(r.descripcion||'').toUpperCase();
+      if(r.abono<=0||!String(r.fecha||'').startsWith(prefix))return false;
+      if(d.includes('STRIPE')||d.includes('CLOUDBEDS'))return false;
+      if(r._acc==='BBVA Principal')return d.includes('SPEI RECIBIDO');
+      return true;
+    });
+    const bankT=Math.round(bankSpei.reduce((s,r)=>s+r.abono,0)*100)/100;
+    if(appT>0||bankSpei.length>0){
+      rows.push(['Transferencias','Total',appT,'',bankT,Math.round((appT-bankT)*100)/100,Math.abs(appT-bankT)<=1?'✓':'⚠','']);
+      bankSpei.forEach(b=>{
+        const ref='t-'+(b._acc||'')+'-'+b.fecha+'-'+Math.round((b.abono||0)*100);
+        rows.push(['Transferencias',b._acc+' · '+b.fecha+' · SPEI','','',b.abono,'','',getNote('transferencias',ref)]);
+      });
+    }
+  }
+
+  // === DÉBITO ===
+  if(Array.isArray(window._recBbvaRows)){
+    const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+    let appD=0;
+    reservas.forEach(r=>{
+      if((r.anticipo||0)>0&&r.antiPago==='debito'&&String(r.antiFecha||'').startsWith(prefix))appD+=r.anticipo;
+      if((r.saldo||0)>0&&r.saldPago==='debito'&&String(r.saldFecha||'').startsWith(prefix))appD+=r.saldo;
+    });
+    gd(KC).forEach(c=>{
+      let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+      items.forEach(it=>{if(it.pago==='debito'&&String(it.fechaPago||'').startsWith(prefix))appD+=(it.precio||0)*(it.cantidad||0);});
+    });
+    appD=Math.round(appD*100)/100;
+    const bankTdc=window._recBbvaRows.filter(r=>{
+      const d=String(r.descripcion||'').toUpperCase();
+      return r.abono>0&&d.includes('VENTAS TDC')&&String(r.fecha||'').startsWith(prefix);
+    });
+    const bankD=Math.round(bankTdc.reduce((s,r)=>s+r.abono,0)*100)/100;
+    if(appD>0||bankTdc.length>0){
+      rows.push(['Débito','Total (banco neto)',appD,'',bankD,Math.round((appD-bankD)*100)/100,'⚠','']);
+    }
+  }
+
+  // === EGRESOS ===
+  if(hasAnyBank||Array.isArray(window._recBbvaSndaRows)){
+    const egresos=gd(KE);
+    const facturas=egresos.filter(e=>{
+      const f=String(e.fecha||'').slice(0,10);
+      if(!f.startsWith(prefix))return false;
+      if(e.tipoDoc==='Nota de crédito')return false;
+      const m=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+      return m>=0.01;
+    });
+    if(facturas.length){
+      const totalApp=Math.round(facturas.reduce((s,e)=>s+Math.abs(parseFloat(e.montoMXN||e.total)||0),0)*100)/100;
+      rows.push(['Egresos','Total facturas',totalApp,'','','','','']);
+      facturas.forEach(e=>{
+        const m=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+        const ref='eg-'+(e.uuid||(e.rfc+'-'+e.fecha+'-'+Math.round(m*100)));
+        const note=getNote('egresos',ref);
+        if(note)rows.push(['Egresos',(e.proveedor||'')+' · '+String(e.fecha||'').slice(0,10),m,'','','','',note]);
+      });
+    }
+  }
+
+  return rows.length>1?rows:[];
 }
 
 </script>
