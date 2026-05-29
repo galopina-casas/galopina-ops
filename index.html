@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.8</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.9</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.8</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.9</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1420,15 +1420,14 @@ function onTotalManualEdit(){
   document.getElementById('r-base').value=fmt2(base);
   document.getElementById('r-ish').value=fmt2(ish);
   document.getElementById('r-iva').value=fmt2(iva);
-  // Recalcular monto de anticipo si hay % definido y anticipo activo
+  // Recalcular monto de anticipo y saldo si hay % definido y anticipo activo
   const chkAnti=document.getElementById('chk-anticipo');
   if(chkAnti&&chkAnti.checked){
     const pctEl=document.getElementById('r-antipct');
     const pct=parseFloat(pctEl?.value)||0;
     if(pct>0){
-      const newAnti=Math.round(total*pct/100*100)/100;
-      const montoEl=document.getElementById('r-antimonto');
-      if(montoEl)montoEl.value=newAnti;
+      // calcAnticipo recalcula monto + saldo basándose en total actual y %
+      calcAnticipo();
     }
   }
 }
