@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.8.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.0.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.8.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.0.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -156,6 +156,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <button class="tab" onclick="showTab('consumos')">Consumos</button>
     <button class="tab" onclick="showTab('ingresos')">Resumen Ingresos</button>
   <button class="tab" id="tab-egresos" onclick="showTab('egresos')">Resumen Egresos</button>
+  <button class="tab" id="tab-reconcil" onclick="showTab('reconcil')">🔗 Reconciliación</button>
     <button class="tab" id="tcierre" onclick="showTab('cierre')">📊 Cierre Mensual</button>
   <button class="tab" id="tchk" style="display:none" onclick="showTab('checkout')">&#x1F3C1; Checkout</button>
   <button class="tab" id="tab-admin" onclick="showTab('admin')">Catálogos</button>
@@ -573,6 +574,23 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     </div>
   </div>
 
+  <div class="sec" id="sec-reconcil">
+    <div class="sh"><h2>Reconciliación</h2></div>
+    <div class="card">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+        <div><label>Mes</label><select id="rec-mes" onchange="renderReconcil()" style="height:32px;font-size:13px"></select></div>
+        <div><label>Año</label><select id="rec-anio" onchange="renderReconcil()" style="height:32px;font-size:13px"></select></div>
+        <div style="flex:1;min-width:280px">
+          <label>Archivo payout Stripe (CSV)</label>
+          <input type="file" id="rec-stripe-file" accept=".csv" onchange="loadStripeFile(this)" style="font-size:13px">
+        </div>
+        <button class="btn btn-sm" onclick="clearReconcil()">Limpiar</button>
+      </div>
+    </div>
+    <div id="rec-summary"></div>
+    <div id="rec-detail"></div>
+  </div>
+
   <div class="sec" id="sec-cierre">
     <div class="sh"><h2>Cierre Mensual</h2></div>
     <div class="card">
@@ -793,6 +811,7 @@ function showTab(t){
   if(t==='ingresos'){populateIngMeses();renderIngresos()}
   if(t==='admin')renderAdmin();
   if(t==='egresos')initEgresos();
+  if(t==='reconcil')setTimeout(initReconcil,50);
   if(t==='nuevo-consumo'){populateAll();}
   if(t==='nueva-reserva'){populateAll();}
 }
@@ -4551,6 +4570,284 @@ function exportarCierreExcel(modo){
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
   XLSX.writeFile(wb,'Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx');
   showAlert('Excel exportado','success');
+}
+
+// ============================================================
+// RECONCILIACIÓN MODULE
+// ============================================================
+window._recStripeRows=null;
+
+function initReconcil(){
+  const mesEl=document.getElementById('rec-mes');
+  const anioEl=document.getElementById('rec-anio');
+  if(!mesEl||!anioEl){setTimeout(initReconcil,100);return;}
+  if(!mesEl.options.length){
+    const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    MN.forEach((n,i)=>{const o=document.createElement('option');o.value=String(i+1).padStart(2,'0');o.textContent=n;mesEl.appendChild(o);});
+    mesEl.value=String(new Date().getMonth()+1).padStart(2,'0');
+  }
+  if(!anioEl.options.length){
+    const y=new Date().getFullYear();
+    for(let i=y-2;i<=y+1;i++){const o=document.createElement('option');o.value=String(i);o.textContent=String(i);anioEl.appendChild(o);}
+    anioEl.value=String(new Date().getFullYear());
+  }
+  renderReconcil();
+}
+
+function clearReconcil(){
+  window._recStripeRows=null;
+  const fi=document.getElementById('rec-stripe-file');if(fi)fi.value='';
+  renderReconcil();
+}
+
+function loadStripeFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      window._recStripeRows=parseStripeCSV(e.target.result);
+      renderReconcil();
+      showAlert('Archivo Stripe cargado: '+window._recStripeRows.length+' transacciones','success');
+    }catch(err){
+      showAlert('Error al leer archivo Stripe: '+err.message,'error');
+    }
+  };
+  reader.readAsText(f);
+}
+
+function parseStripeCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length)throw new Error('Archivo vacío');
+  const parseLine=l=>{
+    const out=[];let cur='',inQ=false;
+    for(let i=0;i<l.length;i++){
+      const c=l[i];
+      if(c==='"'){if(inQ&&l[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+      else if(c===','&&!inQ){out.push(cur);cur='';}
+      else cur+=c;
+    }
+    out.push(cur);
+    return out;
+  };
+  const hdr=parseLine(lines[0]);
+  const idx=name=>hdr.findIndex(h=>h.toLowerCase()===name.toLowerCase());
+  const iPo=idx('automatic_payout_id');
+  const iEff=idx('automatic_payout_effective_at');
+  const iCreated=idx('created');
+  const iGross=idx('gross');
+  const iFee=idx('fee');
+  const iNet=idx('net');
+  const iDesc=idx('description');
+  const iCustName=hdr.findIndex(h=>h.toLowerCase().includes('customer_name'));
+  const iCustEmail=hdr.findIndex(h=>h.toLowerCase().includes('customer_email'));
+  const iCategory=idx('reporting_category');
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const f=parseLine(lines[i]);
+    if(f.length<3)continue;
+    rows.push({
+      payoutId:f[iPo]||'',
+      effectiveAt:f[iEff]||'',
+      createdAt:f[iCreated]||'',
+      gross:parseFloat(f[iGross])||0,
+      fee:parseFloat(f[iFee])||0,
+      net:parseFloat(f[iNet])||0,
+      description:f[iDesc]||'',
+      customerName:iCustName>=0?(f[iCustName]||''):'',
+      customerEmail:iCustEmail>=0?(f[iCustEmail]||''):'',
+      category:f[iCategory]||''
+    });
+  }
+  return rows;
+}
+
+function _recNormName(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/^booking\s+/,'')
+    .replace(/[^a-z0-9 ]/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function _recStripeRowName(r){
+  return r.customerName || r.description || '';
+}
+
+function _matchStripeToReserva(stripeRow, candidates){
+  const stripeName=_recNormName(_recStripeRowName(stripeRow));
+  const stripeAmount=Math.round(stripeRow.gross*100)/100;
+  const stripeDate=String(stripeRow.createdAt||'').slice(0,10);
+  const byAmount=candidates.filter(c=>Math.abs(c.monto-stripeAmount)<=1);
+  if(byAmount.length===1)return {match:byAmount[0],how:'monto'};
+  if(stripeName){
+    const byName=byAmount.filter(c=>{
+      const rn=_recNormName(c.reserva.nombre);
+      return rn===stripeName||rn.includes(stripeName)||stripeName.includes(rn);
+    });
+    if(byName.length===1)return {match:byName[0],how:'nombre+monto'};
+  }
+  if(stripeDate){
+    const byDate=byAmount.filter(c=>{
+      if(!c.fecha)return false;
+      const d1=new Date(stripeDate);
+      const d2=new Date(c.fecha);
+      const diff=Math.abs((d1-d2)/(1000*60*60*24));
+      return diff<=2;
+    });
+    if(byDate.length===1)return {match:byDate[0],how:'fecha+monto'};
+  }
+  return {match:null,candidates:byAmount,how:byAmount.length>1?'ambiguo':'sin_match'};
+}
+
+function renderReconcil(){
+  const mes=document.getElementById('rec-mes')?.value||'';
+  const anio=document.getElementById('rec-anio')?.value||'';
+  const summary=document.getElementById('rec-summary');
+  const detail=document.getElementById('rec-detail');
+  if(!summary||!detail)return;
+  if(!window._recStripeRows){
+    summary.innerHTML='<p class="empty" style="padding:20px">Sube un archivo de payout Stripe para iniciar la reconciliación.</p>';
+    detail.innerHTML='';
+    return;
+  }
+  if(!mes||!anio){summary.innerHTML='';detail.innerHTML='';return;}
+  const prefix=anio+'-'+mes;
+  const stripeAll=window._recStripeRows.filter(r=>(r.category==='charge'||r.category==='refund')&&String(r.createdAt||'').startsWith(prefix));
+  const stripeBruto=Math.round(stripeAll.reduce((s,r)=>s+r.gross,0)*100)/100;
+  const stripeNeto=Math.round(stripeAll.reduce((s,r)=>s+r.net,0)*100)/100;
+  const stripeFee=Math.round(stripeAll.reduce((s,r)=>s+r.fee,0)*100)/100;
+
+  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+  let appBruto=0;
+  const appPagosStripe=[];
+  reservas.forEach(r=>{
+    if((r.anticipo||0)>0&&r.antiPago==='stripe'&&String(r.antiFecha||'').startsWith(prefix)){
+      appPagosStripe.push({reserva:r,monto:r.anticipo,fecha:r.antiFecha,tipo:'Anticipo'});
+      appBruto+=r.anticipo;
+    }
+    if((r.saldo||0)>0&&r.saldPago==='stripe'&&String(r.saldFecha||'').startsWith(prefix)){
+      appPagosStripe.push({reserva:r,monto:r.saldo,fecha:r.saldFecha,tipo:'Saldo'});
+      appBruto+=r.saldo;
+    }
+  });
+  gd(KC).forEach(c=>{
+    let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+    items.forEach(it=>{
+      if(it.pago!=='stripe')return;
+      const fp=String(it.fechaPago||'').slice(0,10);
+      if(!fp.startsWith(prefix))return;
+      const monto=(it.precio||0)*(it.cantidad||0);
+      appPagosStripe.push({reserva:{id:c.id,nombre:c.huesped},monto,fecha:fp,tipo:'Consumo: '+it.nombre});
+      appBruto+=monto;
+    });
+  });
+  appBruto=Math.round(appBruto*100)/100;
+
+  const matches=stripeAll.map(sr=>{
+    const m=_matchStripeToReserva(sr,appPagosStripe);
+    return {stripe:sr,...m};
+  });
+  const matchedKeys=new Set();
+  matches.forEach(m=>{if(m.match){matchedKeys.add(String(m.match.reserva.id)+'-'+m.match.tipo+'-'+m.match.monto);}});
+  const huerfanosApp=appPagosStripe.filter(p=>!matchedKeys.has(String(p.reserva.id)+'-'+p.tipo+'-'+p.monto));
+
+  const okMatches=matches.filter(m=>m.match);
+  const failMatches=matches.filter(m=>!m.match);
+  const cuadre=Math.abs(appBruto-stripeBruto)<=1;
+  const huerfTotal=failMatches.length+huerfanosApp.length;
+
+  summary.innerHTML=`
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Stripe (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(stripeBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Stripe (neto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(stripeNeto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">−comisión ${fmt(stripeFee)}</p>
+      </div>
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FCE8E6'};border:0.5px solid ${cuadre?'#1D9E75':'#E24B4A'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:0">Estado</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#7A1F1D'}">${cuadre?'✓ Cuadra':'✗ Diferencia '+fmt(appBruto-stripeBruto)}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 8px">Verificaciones</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:${cuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${cuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${cuadre?'#1D9E75':'#E24B4A'}">${cuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${cuadre?'#085041':'#7A1F1D'}">App vs Stripe (bruto)</p>
+            <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(appBruto)} vs ${fmt(stripeBruto)} · ${cuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(appBruto-stripeBruto))}</p>
+          </div>
+        </div>
+        <div style="background:${huerfTotal===0?'#E1F5EE':'#FFF4E5'};border-left:3px solid ${huerfTotal===0?'#1D9E75':'#BA7517'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${huerfTotal===0?'#1D9E75':'#BA7517'}">${huerfTotal===0?'✓':'⚠'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${huerfTotal===0?'#085041':'#634009'}">Huérfanos</p>
+            <p style="font-size:11px;color:${huerfTotal===0?'#085041':'#634009'};margin:2px 0 0">${huerfTotal===0?'Todas las transacciones emparejadas':failMatches.length+' Stripe sin reserva · '+huerfanosApp.length+' reserva sin Stripe'}</p>
+          </div>
+        </div>
+        <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:#888">i</span>
+          <div style="flex:1">
+            <p style="font-size:12px;color:#666;margin:0">Total emparejado: ${okMatches.length}/${matches.length} transacciones Stripe</p>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  const rowsHtml=matches.map(m=>{
+    const sr=m.stripe;
+    const stripeDt=String(sr.createdAt||'').slice(0,10);
+    const stripeName=_recStripeRowName(sr);
+    const ok=!!m.match;
+    const bg=ok?'#E1F5EE':'#FCE8E6';
+    const matchTxt=ok
+      ? `<div style="font-size:12px"><strong>${m.match.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${m.match.tipo} · ${fmtDate(m.match.fecha)||'—'}</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios candidatos en la app':'✗ Sin reserva con monto coincidente'}</div>`;
+    const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${stripeDt}</td>
+      <td style="padding:7px 8px;font-size:12px">${stripeName||'<span style="color:#999;font-style:italic">(sin nombre)</span>'}</td>
+      <td style="padding:7px 8px">${matchTxt} ${howTag}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(sr.gross)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:11px;color:#888">${fmt(sr.fee)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(sr.net)}</td>
+      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+    </tr>`;
+  }).join('');
+  const huerfAppHtml=huerfanosApp.map(p=>`
+    <tr style="background:#FFF4E5">
+      <td style="padding:7px 8px;font-size:12px">${fmtDate(p.fecha)||'—'}</td>
+      <td style="padding:7px 8px;font-size:12px;color:#999;font-style:italic">(sin transacción Stripe)</td>
+      <td style="padding:7px 8px"><div style="font-size:12px"><strong>${p.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${p.tipo}</div></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(p.monto)}</td>
+      <td style="padding:7px 8px"></td><td style="padding:7px 8px"></td>
+      <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
+    </tr>`).join('');
+  detail.innerHTML=`
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Stripe — ${stripeAll.length} transacciones${huerfanosApp.length>0?' + '+huerfanosApp.length+' huérfanos en app':''}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha cobro</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Huésped Stripe</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Reserva App</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Bruto</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fee</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Neto</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+        </tr></thead>
+        <tbody>${rowsHtml||'<tr><td colspan="7" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin transacciones Stripe en este mes</td></tr>'}${huerfAppHtml}</tbody>
+      </table>
+    </div>`;
 }
 
 </script>
