@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -4665,7 +4665,7 @@ function exportarCierreExcel(modo){
     const recRows=_buildReconcilExcelData(prefix);
     if(recRows.length){
       const wsRec=XLSX.utils.aoa_to_sheet(recRows);
-      wsRec['!cols']=[{wch:14},{wch:30},{wch:13},{wch:13},{wch:13},{wch:13},{wch:10},{wch:40}];
+      wsRec['!cols']=[{wch:14},{wch:38},{wch:12},{wch:12},{wch:12},{wch:12},{wch:9},{wch:50}];
       XLSX.utils.book_append_sheet(wb,wsRec,'Reconciliación');
     }
   }
@@ -6304,37 +6304,61 @@ function _renderReconcilEgresos(prefix){
 
 // --- Excel sheet "Reconciliación" para Cierre Mensual ---
 function _buildReconcilExcelData(prefix){
+  // Opción B: una fila TOTAL por bloque + solo filas problemáticas (rojas/ámbar) o con nota.
+  // Filas verdes (sin problema, sin nota) NO aparecen.
   const headers=['BLOQUE','CONCEPTO','APP','PLATAFORMA','BANCO','DIFERENCIA','ESTADO','NOTA'];
   const rows=[headers];
-  const hb='__hb__'; // bg verde encabezado bloque
-  const getNote=(bloque,ref)=>{
-    const n=_recGetNote(prefix,bloque,ref);return n?n.nota:'';
+  const sep=()=>rows.push(['','','','','','','','']);
+  const getNote=(bloque,ref)=>{const n=_recGetNote(prefix,bloque,ref);return n?n.nota:'';};
+  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+
+  // App por método de pago
+  const appByMetodo=metodo=>{
+    let tot=0;
+    reservas.forEach(r=>{
+      if((r.anticipo||0)>0&&r.antiPago===metodo&&String(r.antiFecha||'').startsWith(prefix))tot+=r.anticipo;
+      if((r.saldo||0)>0&&r.saldPago===metodo&&String(r.saldFecha||'').startsWith(prefix))tot+=r.saldo;
+    });
+    gd(KC).forEach(c=>{
+      let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+      items.forEach(it=>{if(it.pago===metodo&&String(it.fechaPago||'').startsWith(prefix))tot+=(it.precio||0)*(it.cantidad||0);});
+    });
+    return Math.round(tot*100)/100;
   };
 
   // === STRIPE ===
   if(window._recStripeRows){
     const stripeAll=window._recStripeRows.filter(r=>(r.category==='charge'||r.category==='refund')&&String(r.createdAt||'').startsWith(prefix));
-    if(stripeAll.length){
-      const bruto=Math.round(stripeAll.reduce((s,r)=>s+r.gross,0)*100)/100;
-      const neto=Math.round(stripeAll.reduce((s,r)=>s+r.net,0)*100)/100;
-      const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
-      let appBruto=0;
-      reservas.forEach(r=>{
-        if((r.anticipo||0)>0&&r.antiPago==='stripe'&&String(r.antiFecha||'').startsWith(prefix))appBruto+=r.anticipo;
-        if((r.saldo||0)>0&&r.saldPago==='stripe'&&String(r.saldFecha||'').startsWith(prefix))appBruto+=r.saldo;
-      });
-      gd(KC).forEach(c=>{
-        let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
-        items.forEach(it=>{if(it.pago==='stripe'&&String(it.fechaPago||'').startsWith(prefix))appBruto+=(it.precio||0)*(it.cantidad||0);});
-      });
-      appBruto=Math.round(appBruto*100)/100;
-      rows.push(['Stripe','Total bruto',appBruto,bruto,'',Math.round((appBruto-bruto)*100)/100,Math.abs(appBruto-bruto)<=1?'✓':'✗','']);
-      rows.push(['Stripe','Total neto a banco','',neto,'','','','']);
-      stripeAll.forEach(sr=>{
+    const appStripe=appByMetodo('stripe');
+    const bruto=Math.round(stripeAll.reduce((s,r)=>s+r.gross,0)*100)/100;
+    const neto=Math.round(stripeAll.reduce((s,r)=>s+r.net,0)*100)/100;
+    // Banco: depósitos Stripe en BBVA Principal
+    let bankStripeTot=0;
+    if(window._recBbvaRows){
+      const dep=window._recBbvaRows.filter(r=>r.abono>0&&String(r.descripcion||'').toUpperCase().includes('STRIPE')&&String(r.fecha||'').startsWith(prefix));
+      bankStripeTot=Math.round(dep.reduce((s,r)=>s+r.abono,0)*100)/100;
+    }
+    const diff=Math.round((appStripe-bruto)*100)/100;
+    const estado=Math.abs(diff)<=1?'✓':'✗';
+    if(stripeAll.length||appStripe>0){
+      rows.push(['Stripe','TOTAL',appStripe,bruto,bankStripeTot||'',diff,estado,'']);
+      // Detalle problemático: recompilar matching para detectar huérfanos
+      const _matchedIdx=new Set();
+      stripeAll.forEach((sr,i)=>{
         const stripeDt=String(sr.createdAt||'').slice(0,10);
         const ref='s-'+(sr.payoutId||'')+'-'+stripeDt+'-'+Math.round((sr.gross||0)*100);
-        const nm=sr.customerName||sr.description||'(sin nombre)';
-        rows.push(['Stripe',nm+' · '+stripeDt,'',sr.gross,'',0,'',getNote('stripe',ref)]);
+        const note=getNote('stripe',ref);
+        // Buscar match en reservas por monto
+        const cand=reservas.find(r=>{
+          const m=Math.round((sr.gross||0)*100)/100;
+          if(Math.abs((r.anticipo||0)-m)<=1&&r.antiPago==='stripe')return true;
+          if(Math.abs((r.saldo||0)-m)<=1&&r.saldPago==='stripe')return true;
+          return false;
+        });
+        if(!cand||note){
+          const nm=_recStripeRowName(sr)||'(sin nombre)';
+          rows.push(['Stripe',nm+' · '+stripeDt,'',sr.gross,'',!cand?sr.gross:0,!cand?'✗':'✓',note]);
+        }
       });
     }
   }
@@ -6342,25 +6366,33 @@ function _buildReconcilExcelData(prefix){
   // === CLOUDBEDS ===
   if(window._recCbRows){
     const cbAll=window._recCbRows.filter(r=>String(r.txDate||'').startsWith(prefix));
-    if(cbAll.length){
-      const bruto=Math.round(cbAll.reduce((s,r)=>s+r.montoCobrado,0)*100)/100;
-      const neto=Math.round(cbAll.reduce((s,r)=>s+r.montoDesembolso,0)*100)/100;
-      const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
-      let appBruto=0;
-      reservas.forEach(r=>{
-        if((r.anticipo||0)>0&&r.antiPago==='cloudbeds'&&String(r.antiFecha||'').startsWith(prefix))appBruto+=r.anticipo;
-        if((r.saldo||0)>0&&r.saldPago==='cloudbeds'&&String(r.saldFecha||'').startsWith(prefix))appBruto+=r.saldo;
-      });
-      gd(KC).forEach(c=>{
-        let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
-        items.forEach(it=>{if(it.pago==='cloudbeds'&&String(it.fechaPago||'').startsWith(prefix))appBruto+=(it.precio||0)*(it.cantidad||0);});
-      });
-      appBruto=Math.round(appBruto*100)/100;
-      rows.push(['CloudBeds','Total bruto',appBruto,bruto,'',Math.round((appBruto-bruto)*100)/100,Math.abs(appBruto-bruto)<=1?'✓':'✗','']);
-      rows.push(['CloudBeds','Total neto a banco','',neto,'','','','']);
+    const appCb=appByMetodo('cloudbeds');
+    const bruto=Math.round(cbAll.reduce((s,r)=>s+r.montoCobrado,0)*100)/100;
+    const neto=Math.round(cbAll.reduce((s,r)=>s+r.montoDesembolso,0)*100)/100;
+    let bankCbTot=0;
+    if(window._recBbvaRows){
+      const dep=window._recBbvaRows.filter(r=>r.abono>0&&String(r.descripcion||'').toUpperCase().includes('CLOUDBEDS')&&String(r.fecha||'').startsWith(prefix));
+      bankCbTot=Math.round(dep.reduce((s,r)=>s+r.abono,0)*100)/100;
+    }
+    const diff=Math.round((appCb-bruto)*100)/100;
+    const estado=Math.abs(diff)<=1?'✓':'✗';
+    if(cbAll.length||appCb>0){
+      sep();
+      rows.push(['CloudBeds','TOTAL',appCb,bruto,bankCbTot||'',diff,estado,'']);
+      // Detalle problemático
       cbAll.forEach(cb=>{
         const ref='cb-'+(cb.txId||(cb.cbId+'-'+cb.txDate));
-        rows.push(['CloudBeds',(cb.guestName||'(sin nombre)')+' · '+cb.txDate,'',cb.montoCobrado,'',0,'',getNote('cloudbeds',ref)]);
+        const note=getNote('cloudbeds',ref);
+        // Buscar match
+        const cand=reservas.find(r=>{
+          const m=Math.round((cb.montoCobrado||0)*100)/100;
+          if(Math.abs((r.anticipo||0)-m)<=1&&r.antiPago==='cloudbeds')return true;
+          if(Math.abs((r.saldo||0)-m)<=1&&r.saldPago==='cloudbeds')return true;
+          return false;
+        });
+        if(!cand||note){
+          rows.push(['CloudBeds',(cb.guestName||'(sin nombre)')+' · '+cb.txDate,'',cb.montoCobrado,'',!cand?cb.montoCobrado:0,!cand?'✗':'✓',note]);
+        }
       });
     }
   }
@@ -6368,17 +6400,7 @@ function _buildReconcilExcelData(prefix){
   // === TRANSFERENCIAS ===
   const hasAnyBank=Array.isArray(window._recBbvaRows)||Array.isArray(window._recSantanderRows);
   if(hasAnyBank){
-    const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
-    let appT=0;
-    reservas.forEach(r=>{
-      if((r.anticipo||0)>0&&r.antiPago==='transferencia'&&String(r.antiFecha||'').startsWith(prefix))appT+=r.anticipo;
-      if((r.saldo||0)>0&&r.saldPago==='transferencia'&&String(r.saldFecha||'').startsWith(prefix))appT+=r.saldo;
-    });
-    gd(KC).forEach(c=>{
-      let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
-      items.forEach(it=>{if(it.pago==='transferencia'&&String(it.fechaPago||'').startsWith(prefix))appT+=(it.precio||0)*(it.cantidad||0);});
-    });
-    appT=Math.round(appT*100)/100;
+    const appT=appByMetodo('transferencia');
     const bankRows=_recAllBankRows(['bbva','santander']);
     const bankSpei=bankRows.filter(r=>{
       const d=String(r.descripcion||'').toUpperCase();
@@ -6388,35 +6410,66 @@ function _buildReconcilExcelData(prefix){
       return true;
     });
     const bankT=Math.round(bankSpei.reduce((s,r)=>s+r.abono,0)*100)/100;
+    const diff=Math.round((appT-bankT)*100)/100;
+    const estado=Math.abs(diff)<=1?'✓':'⚠';
     if(appT>0||bankSpei.length>0){
-      rows.push(['Transferencias','Total',appT,'',bankT,Math.round((appT-bankT)*100)/100,Math.abs(appT-bankT)<=1?'✓':'⚠','']);
-      bankSpei.forEach(b=>{
-        const ref='t-'+(b._acc||'')+'-'+b.fecha+'-'+Math.round((b.abono||0)*100);
-        rows.push(['Transferencias',b._acc+' · '+b.fecha+' · SPEI','','',b.abono,'','',getNote('transferencias',ref)]);
+      sep();
+      rows.push(['Transferencias','TOTAL',appT,'',bankT,diff,estado,'']);
+      // Agrupar app por huésped+fecha
+      const appGrupos={};
+      reservas.forEach(r=>{
+        if((r.anticipo||0)>0&&r.antiPago==='transferencia'&&String(r.antiFecha||'').startsWith(prefix)){
+          const k=(r.nombre||'')+'|'+r.antiFecha;
+          appGrupos[k]=(appGrupos[k]||{huesped:r.nombre,fecha:r.antiFecha,monto:0});appGrupos[k].monto+=r.anticipo;
+        }
+        if((r.saldo||0)>0&&r.saldPago==='transferencia'&&String(r.saldFecha||'').startsWith(prefix)){
+          const k=(r.nombre||'')+'|'+r.saldFecha;
+          appGrupos[k]=(appGrupos[k]||{huesped:r.nombre,fecha:r.saldFecha,monto:0});appGrupos[k].monto+=r.saldo;
+        }
+      });
+      gd(KC).forEach(c=>{
+        let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+        items.forEach(it=>{
+          if(it.pago!=='transferencia')return;
+          const fp=String(it.fechaPago||'').slice(0,10);
+          if(!fp.startsWith(prefix))return;
+          const k=(c.huesped||'')+'|'+fp;
+          appGrupos[k]=(appGrupos[k]||{huesped:c.huesped,fecha:fp,monto:0});appGrupos[k].monto+=(it.precio||0)*(it.cantidad||0);
+        });
+      });
+      const grupos=Object.values(appGrupos).map(g=>({...g,monto:Math.round(g.monto*100)/100}));
+      const usedG=new Set();
+      bankSpei.forEach(bs=>{
+        const ref='t-'+(bs._acc||'')+'-'+bs.fecha+'-'+Math.round((bs.abono||0)*100);
+        const note=getNote('transferencias',ref);
+        const matchIdx=grupos.findIndex((g,i)=>!usedG.has(i)&&Math.abs(g.monto-bs.abono)<=1);
+        if(matchIdx<0||note){
+          rows.push(['Transferencias',(bs._acc||'')+' · '+bs.fecha+' · SPEI','','',bs.abono,matchIdx<0?bs.abono:0,matchIdx<0?'✗':'✓',note]);
+        }
+        if(matchIdx>=0)usedG.add(matchIdx);
+      });
+      // Grupos app sin match
+      grupos.forEach((g,i)=>{
+        if(usedG.has(i))return;
+        const ref='t-app-'+(g.huesped||'')+'-'+g.fecha+'-'+Math.round(g.monto*100);
+        const note=getNote('transferencias',ref);
+        rows.push(['Transferencias',(g.huesped||'')+' · '+g.fecha,g.monto,'','',-g.monto,'⚠',note]);
       });
     }
   }
 
   // === DÉBITO ===
   if(Array.isArray(window._recBbvaRows)){
-    const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
-    let appD=0;
-    reservas.forEach(r=>{
-      if((r.anticipo||0)>0&&r.antiPago==='debito'&&String(r.antiFecha||'').startsWith(prefix))appD+=r.anticipo;
-      if((r.saldo||0)>0&&r.saldPago==='debito'&&String(r.saldFecha||'').startsWith(prefix))appD+=r.saldo;
-    });
-    gd(KC).forEach(c=>{
-      let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
-      items.forEach(it=>{if(it.pago==='debito'&&String(it.fechaPago||'').startsWith(prefix))appD+=(it.precio||0)*(it.cantidad||0);});
-    });
-    appD=Math.round(appD*100)/100;
+    const appD=appByMetodo('debito');
     const bankTdc=window._recBbvaRows.filter(r=>{
       const d=String(r.descripcion||'').toUpperCase();
       return r.abono>0&&d.includes('VENTAS TDC')&&String(r.fecha||'').startsWith(prefix);
     });
     const bankD=Math.round(bankTdc.reduce((s,r)=>s+r.abono,0)*100)/100;
+    const diff=Math.round((appD-bankD)*100)/100;
     if(appD>0||bankTdc.length>0){
-      rows.push(['Débito','Total (banco neto)',appD,'',bankD,Math.round((appD-bankD)*100)/100,'⚠','']);
+      sep();
+      rows.push(['Débito','TOTAL (banco neto)',appD,'',bankD,diff,'⚠','']);
     }
   }
 
@@ -6432,12 +6485,21 @@ function _buildReconcilExcelData(prefix){
     });
     if(facturas.length){
       const totalApp=Math.round(facturas.reduce((s,e)=>s+Math.abs(parseFloat(e.montoMXN||e.total)||0),0)*100)/100;
-      rows.push(['Egresos','Total facturas',totalApp,'','','','','']);
+      const allBank=_recAllBankRows();
+      const cargosBank=allBank.filter(r=>r.cargo<0&&!_recIsInternalMovement(r.descripcion));
+      const bankTotal=Math.round(cargosBank.reduce((s,c)=>s+Math.abs(c.cargo),0)*100)/100;
+      const diff=Math.round((totalApp-bankTotal)*100)/100;
+      const estadoEg=Math.abs(diff)<=1?'✓':'⚠';
+      sep();
+      rows.push(['Egresos','TOTAL facturas',totalApp,'',bankTotal,diff,estadoEg,'']);
+      // Detalle: solo facturas con nota o sin match obvio (heurística simple: matching aquí sería costoso, así que confiamos en notas)
       facturas.forEach(e=>{
         const m=Math.abs(parseFloat(e.montoMXN||e.total)||0);
         const ref='eg-'+(e.uuid||(e.rfc+'-'+e.fecha+'-'+Math.round(m*100)));
         const note=getNote('egresos',ref);
-        if(note)rows.push(['Egresos',(e.proveedor||'')+' · '+String(e.fecha||'').slice(0,10),m,'','','','',note]);
+        if(note){
+          rows.push(['Egresos',(e.proveedor||'')+' · '+String(e.fecha||'').slice(0,10),m,'','','','',note]);
+        }
       });
     }
   }
