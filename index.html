@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.8.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.7.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.8.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.7.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -156,6 +156,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <button class="tab" onclick="showTab('consumos')">Consumos</button>
     <button class="tab" onclick="showTab('ingresos')">Resumen Ingresos</button>
   <button class="tab" id="tab-egresos" onclick="showTab('egresos')">Resumen Egresos</button>
+  <button class="tab" id="tab-reconcil" onclick="showTab('reconcil')">🔗 Reconciliación</button>
     <button class="tab" id="tcierre" onclick="showTab('cierre')">📊 Cierre Mensual</button>
   <button class="tab" id="tchk" style="display:none" onclick="showTab('checkout')">&#x1F3C1; Checkout</button>
   <button class="tab" id="tab-admin" onclick="showTab('admin')">Catálogos</button>
@@ -573,6 +574,113 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     </div>
   </div>
 
+  <div class="sec" id="sec-reconcil">
+    <div class="sh"><h2>Reconciliación</h2></div>
+    <div class="card" style="padding:12px 16px;margin-bottom:14px">
+      <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
+        <div><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Mes</label><select id="rec-mes" onchange="renderReconcil()" style="height:32px;font-size:13px;padding:0 8px;border:0.5px solid #e0e0da;border-radius:6px;width:140px"></select></div>
+        <div><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Año</label><select id="rec-anio" onchange="renderReconcil()" style="height:32px;font-size:13px;padding:0 8px;border:0.5px solid #e0e0da;border-radius:6px;width:90px"></select></div>
+        <button class="btn btn-sm" onclick="clearReconcil()" style="margin-left:auto">Limpiar todo</button>
+      </div>
+    </div>
+
+    <!-- Grupo: Plataformas de pago -->
+    <p style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;font-weight:600">Plataformas de pago</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px">
+      <!-- Stripe card -->
+      <div id="rec-card-stripe" style="background:#fff;border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="44" height="18" viewBox="0 0 60 25" xmlns="http://www.w3.org/2000/svg"><path fill="#635BFF" d="M59.64 14.28h-8.06c.19 1.93 1.6 2.55 3.2 2.55 1.64 0 2.96-.37 4.05-.95v3.32a8.33 8.33 0 0 1-4.56 1.1c-4.01 0-6.83-2.5-6.83-7.48 0-4.19 2.39-7.52 6.3-7.52 3.92 0 5.96 3.28 5.96 7.5 0 .4-.04 1.26-.06 1.48zm-5.92-5.62c-1.03 0-2.17.73-2.17 2.58h4.25c0-1.85-1.07-2.58-2.08-2.58zM40.95 20.3c-1.44 0-2.32-.6-2.9-1.04l-.02 4.63-4.12.87V5.57h3.76l.08 1.02a4.7 4.7 0 0 1 3.23-1.29c2.9 0 5.62 2.6 5.62 7.4 0 5.23-2.7 7.6-5.65 7.6zM40 8.95c-.95 0-1.54.34-1.97.81l.02 6.12c.4.44.98.78 1.95.78 1.52 0 2.54-1.65 2.54-3.87 0-2.15-1.04-3.84-2.54-3.84zM28.24 5.57h4.13v14.44h-4.13V5.57zm0-4.7L32.37 0v3.36l-4.13.88V.88zm-4.32 9.35v9.79H19.8V5.57h3.7l.12 1.22c1-1.77 3.07-1.41 3.62-1.22v3.79c-.52-.17-2.29-.43-3.32.86zm-8.55 4.72c0 2.43 2.6 1.68 3.12 1.46v3.36c-.55.3-1.54.54-2.89.54a4.15 4.15 0 0 1-4.27-4.24l.01-13.17 4.02-.86v3.54h3.14V9.1h-3.13v5.85zm-4.91.7c0 2.97-2.31 4.66-5.73 4.66a11.2 11.2 0 0 1-4.46-.93v-3.93c1.38.75 3.1 1.31 4.46 1.31.92 0 1.58-.24 1.58-1C6.31 13.83 0 14.84 0 10.2 0 7.29 2.28 5.57 5.62 5.57c1.36 0 2.72.2 4.09.75v3.88a9.23 9.23 0 0 0-4.1-1.06c-.86 0-1.39.25-1.39.9 0 1.85 6.35.97 6.35 5.6z"/></svg>
+            <span style="font-size:13px;font-weight:600">Stripe</span>
+          </div>
+          <span id="rec-status-stripe" style="font-size:11px;color:#aaa">Opcional</span>
+        </div>
+        <p style="font-size:11px;color:#888;margin:0 0 8px">Payout reconciliation (CSV)</p>
+        <div id="rec-info-stripe" style="margin-bottom:10px"><p style="font-size:11px;color:#999;margin:0;font-style:italic">Sin archivo cargado</p></div>
+        <div id="rec-actions-stripe">
+          <label for="rec-stripe-file" style="display:block;background:#1D9E75;color:#fff;padding:7px 10px;font-size:12px;border-radius:5px;cursor:pointer;text-align:center;font-weight:500">+ Subir archivo</label>
+        </div>
+        <input type="file" id="rec-stripe-file" accept=".csv" onchange="loadStripeFile(this)" style="display:none">
+      </div>
+      <!-- CloudBeds card -->
+      <div id="rec-card-cb" style="background:#fff;border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="#FF595A"/><path fill="#fff" d="M16.8 14.2c-.9 1.2-2.3 1.9-3.9 1.9-2.7 0-4.9-2.1-4.9-4.7s2.2-4.7 4.9-4.7c1.6 0 3 .7 3.9 1.9l-1.7 1.3c-.5-.7-1.3-1.1-2.2-1.1-1.5 0-2.7 1.2-2.7 2.6s1.2 2.6 2.7 2.6c.9 0 1.7-.4 2.2-1.1l1.7 1.3z"/></svg>
+            <span style="font-size:13px;font-weight:600">CloudBeds</span>
+          </div>
+          <span id="rec-status-cb" style="font-size:11px;color:#aaa">Opcional</span>
+        </div>
+        <p style="font-size:11px;color:#888;margin:0 0 8px">Full payout details (.xls)</p>
+        <div id="rec-info-cb" style="margin-bottom:10px"><p style="font-size:11px;color:#999;margin:0;font-style:italic">Sin archivo cargado</p></div>
+        <div id="rec-actions-cb">
+          <label for="rec-cb-file" style="display:block;background:#1D9E75;color:#fff;padding:7px 10px;font-size:12px;border-radius:5px;cursor:pointer;text-align:center;font-weight:500">+ Subir archivo</label>
+        </div>
+        <input type="file" id="rec-cb-file" accept=".xls,.xlsx" onchange="loadCbFile(this)" style="display:none">
+      </div>
+    </div>
+
+    <!-- Grupo: Bancos -->
+    <p style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;font-weight:600">Bancos</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:10px">
+      <!-- BBVA Principal -->
+      <div id="rec-card-bbva" style="background:#fff;border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="40" height="14" viewBox="0 0 100 36" xmlns="http://www.w3.org/2000/svg"><path fill="#004481" d="M0 0h100v36H0z"/><text x="50" y="25" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">BBVA</text></svg>
+            <span style="font-size:13px;font-weight:600">BBVA Principal</span>
+          </div>
+          <span id="rec-status-bbva" style="font-size:11px;color:#aaa">&nbsp;</span>
+        </div>
+        <p style="font-size:11px;color:#888;margin:0 0 8px">Estado de cuenta (Excel)</p>
+        <div id="rec-info-bbva" style="margin-bottom:10px"><p style="font-size:11px;color:#999;margin:0;font-style:italic">Sin archivo cargado</p></div>
+        <div id="rec-actions-bbva">
+          <label for="rec-bbva-file" style="display:block;background:#1D9E75;color:#fff;padding:7px 10px;font-size:12px;border-radius:5px;cursor:pointer;text-align:center;font-weight:500">+ Subir archivo</label>
+        </div>
+        <input type="file" id="rec-bbva-file" accept=".xlsx,.xls" onchange="loadBbvaFile(this)" style="display:none">
+      </div>
+      <!-- BBVA Snda -->
+      <div id="rec-card-bbvasnda" style="background:#fff;border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="40" height="14" viewBox="0 0 100 36" xmlns="http://www.w3.org/2000/svg"><path fill="#004481" d="M0 0h100v36H0z"/><text x="50" y="25" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">BBVA</text></svg>
+            <span style="font-size:13px;font-weight:600">BBVA Snda</span>
+          </div>
+          <span id="rec-status-bbvasnda" style="font-size:11px;color:#aaa">Opcional</span>
+        </div>
+        <p style="font-size:11px;color:#888;margin:0 0 8px">Estado de cuenta (Excel)</p>
+        <div id="rec-info-bbvasnda" style="margin-bottom:10px"><p style="font-size:11px;color:#999;margin:0;font-style:italic">Sin archivo cargado</p></div>
+        <div id="rec-actions-bbvasnda">
+          <label for="rec-bbvasnda-file" style="display:block;background:#1D9E75;color:#fff;padding:7px 10px;font-size:12px;border-radius:5px;cursor:pointer;text-align:center;font-weight:500">+ Subir archivo</label>
+        </div>
+        <input type="file" id="rec-bbvasnda-file" accept=".xlsx,.xls" onchange="loadBbvaSndaFile(this)" style="display:none">
+      </div>
+      <!-- Santander -->
+      <div id="rec-card-santander" style="background:#fff;border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="#EC0000"/><path fill="#fff" d="M7.2 10.4c0-1.05.6-1.8 1.95-1.8h6.05c.97 0 1.7.45 1.7 1.35 0 .6-.45.97-1.05.97l-3.97.07c-.45 0-.82.3-.82.75 0 .53.37.83.9.9l4.05.6c.97.15 1.42.83 1.42 1.65 0 1.05-.83 1.72-2.1 1.72H9.07c-1.05 0-1.95-.6-1.95-1.72"/></svg>
+            <span style="font-size:13px;font-weight:600">Santander</span>
+          </div>
+          <span id="rec-status-santander" style="font-size:11px;color:#aaa">Opcional</span>
+        </div>
+        <p style="font-size:11px;color:#888;margin:0 0 8px">Estado de cuenta (Excel)</p>
+        <div id="rec-info-santander" style="margin-bottom:10px"><p style="font-size:11px;color:#999;margin:0;font-style:italic">Sin archivo cargado</p></div>
+        <div id="rec-actions-santander">
+          <label for="rec-santander-file" style="display:block;background:#1D9E75;color:#fff;padding:7px 10px;font-size:12px;border-radius:5px;cursor:pointer;text-align:center;font-weight:500">+ Subir archivo</label>
+        </div>
+        <input type="file" id="rec-santander-file" accept=".xlsx,.xls" onchange="loadSantanderFile(this)" style="display:none">
+      </div>
+    </div>
+
+    <div id="rec-stripe-block"><div id="rec-summary"></div><div id="rec-detail"></div></div>
+    <div id="rec-cb-block"></div>
+    <div id="rec-trans-block"></div>
+    <div id="rec-debito-block"></div>
+    <div id="rec-egresos-block"></div>
+  </div>
+
   <div class="sec" id="sec-cierre">
     <div class="sh"><h2>Cierre Mensual</h2></div>
     <div class="card">
@@ -588,7 +696,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <div class="card"><p class="ctitle">Desglose fiscal (para CFDI global)</p><div id="cm-fiscal"></div></div>
     <div class="card">
       <p class="ctitle">Reconciliaci&#243;n bancaria</p>
-      <p style="font-size:12px;color:#888;margin-bottom:10px">Ingresa el monto de tu estado de cuenta por m&#233;todo para comparar.</p>
+      <p style="font-size:12px;color:#888;margin-bottom:10px">Basada en los archivos cargados en el m&#243;dulo Reconciliaci&#243;n.</p>
       <div id="cm-recon"></div>
     </div>
   </div>
@@ -638,16 +746,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 <script>
 const fmtDate=v=>{if(!v)return'';const s=String(v);return s.includes('T')?s.split('T')[0]:s;};
 function sanitizeDates(arr){return arr.map(r=>{const o={};Object.keys(r).forEach(k=>{const v=r[k];o[k]=(typeof v==='string'&&v.length>10&&v[10]==='T')?v.split('T')[0]:v;});return o;});}
-const KR='KR',KP='KP',KH='KH',KC='KC',KE='KE',KRE='KRE',KCE='KCE';
+const KR='KR',KP='KP',KH='KH',KC='KC',KE='KE',KRE='KRE',KCE='KCE',KRN='KRN';
 let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,coExtras=[],coExtraCurProd=null;
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyqRMjR05R-36GbofU8oHfemEJcw4KcuR8I6Nfy4_KZr5lj9dvpNZDV0GyHSs5HI-Vk/exec';
 const ENV='prod'; // 'dev' | 'prod'
-const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos'};
+const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos',KRN:'reconciliacionNotas'};
 
 // In-memory cache (loaded once at login)
-const CACHE={KR:[],KP:[],KH:[],KC:[],KE:[],KRE:[],KCE:[]};
+const CACHE={KR:[],KP:[],KH:[],KC:[],KE:[],KRE:[],KCE:[],KRN:[]};
 
 // Sync read from cache (same API as before — no code changes needed)
 const gd=(k,d=[])=>CACHE[k]&&CACHE[k].length?CACHE[k]:(d||[]);
@@ -668,7 +776,7 @@ const sd=(k,v)=>{
 
 // Load all sheets into cache
 async function loadAllSheets(){
-  const keys=['KR','KP','KH','KC','KE','KRE','KCE'];
+  const keys=['KR','KP','KH','KC','KE','KRE','KCE','KRN'];
   await Promise.all(keys.map(async k=>{
     try{
       const res=await fetch(SCRIPT_URL+'?action=read&sheet='+SHEET_MAP[k]+'&env='+ENV);
@@ -793,6 +901,7 @@ function showTab(t){
   if(t==='ingresos'){populateIngMeses();renderIngresos()}
   if(t==='admin')renderAdmin();
   if(t==='egresos')initEgresos();
+  if(t==='reconcil')setTimeout(initReconcil,50);
   if(t==='nuevo-consumo'){populateAll();}
   if(t==='nueva-reserva'){populateAll();}
 }
@@ -843,8 +952,8 @@ function getMonthlyData(months){
     const consumos=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+(c.total||0),0);
     // Consumos base (sin IVA)
     const consumosBase=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+Math.round((c.subtotal||c.total/1.16||0)*100)/100,0);
-    // Egresos (con IVA) — exclude gastos personales unless toggle on
-    const egrFilt=egr.filter(e=>(e.fecha||'').startsWith(prefix)&&(_dashEgrIncludeGP||!e.gastoPersonal));
+    // Egresos (con IVA) — exclude gastos personales unless toggle on; always exclude deducibles anuales
+    const egrFilt=egr.filter(e=>(e.fecha||'').startsWith(prefix)&&!e.deducibleAnual&&(_dashEgrIncludeGP||!e.gastoPersonal));
     const egresos=egrFilt.reduce((s,e)=>s+(e.total||0),0);
     // Egresos base (sin IVA)
     const egresosBase=egrFilt.reduce((s,e)=>s+(e.subtotal||0),0);
@@ -931,7 +1040,7 @@ function dashRenderChart(gId,months){
 
   if(gId==='g9'){
     const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
-    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria&&(_dashEgrIncludeGP||!e.gastoPersonal)).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);});
+    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria&&!e.deducibleAnual&&(_dashEgrIncludeGP||!e.gastoPersonal)).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);});
     const top=Object.entries(catTot).sort((a,b)=>b[1]-a[1]).slice(0,8);
     const tot=top.reduce((s,e)=>s+e[1],0);
     mkChart('cv-g9',{type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{label:'Monto',data:top.map(e=>Math.round(e[1])),backgroundColor:top.map((_,i)=>i===0?'#185FA5':i<3?'#378ADD':i<6?'#85B7EB':'#B5D4F4'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.x.toLocaleString()+' · '+Math.round(ctx.parsed.x/tot*100)+'%'}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
@@ -4199,22 +4308,101 @@ function renderCierre(){
 </p>
 `;
 
-  const bancos=['transferencia','debito','stripe','efectivo'];
-  let reconHtml=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Método</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">En app</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado de cuenta</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Diferencia</th></tr></thead><tbody>`;
-  bancos.forEach(p=>{const enApp=rows.filter(r=>r.pago===p).reduce((s,r)=>s+r.monto,0);
-    reconHtml+=`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${METODOS_LABELS[p]||p}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(enApp)}</td><td style="padding:7px 8px;text-align:right"><input type="number" id="recon-${p}" placeholder="0" oninput="updRecon('${p}',${enApp})" style="width:110px;font-size:12px;text-align:right;border:1px solid #CCC;border-radius:5px;padding:4px 6px"></td><td style="padding:7px 8px;text-align:right;font-weight:700" id="recon-diff-${p}">&mdash;</td></tr>`;
-  });
-  reconHtml+=`</tbody></table>`;
-  document.getElementById('cm-recon').innerHTML=reconHtml;
+  // ---- Reconciliación bancaria (lee del módulo Reconciliación) ----
+  document.getElementById('cm-recon').innerHTML=_renderCmReconcil(prefix);
 }
 
-function updRecon(pago,enApp){
-  const val=parseFloat(document.getElementById('recon-'+pago).value)||0;
-  const diff=val-enApp;
-  const el=document.getElementById('recon-diff-'+pago);
-  if(!el)return;
-  el.textContent=diff===0?'✓ OK':(diff>0?'+':'')+fmt(diff);
-  el.style.color=diff===0?'#1D9E75':'#C83232';
+function _renderCmReconcil(prefix){
+  const sx=window._recLastStripe;
+  const cx=window._recLastCb;
+  const tx=window._recLastTrans;
+  const dx=window._recLastDebito;
+  const recPrefix=window._recLastPrefix;
+  const hasAny=sx||cx||tx||dx;
+
+  if(!hasAny){
+    return `<div style="background:#F5F4F0;border-radius:8px;padding:16px;text-align:center">
+      <p style="font-size:13px;color:#1A1916;margin:0 0 8px">No hay datos de reconciliaci&#243;n cargados para este mes.</p>
+      <p style="font-size:12px;color:#666;margin:0 0 10px">Ve al m&#243;dulo Reconciliaci&#243;n y sube los archivos de plataformas y bancos.</p>
+      <button onclick="showTab('reconcil')" style="background:#1D9E75;color:#fff;padding:7px 16px;font-size:12px;font-weight:500;border-radius:5px;border:none;cursor:pointer">Ir a Reconciliaci&#243;n &rarr;</button>
+    </div>`;
+  }
+
+  const mismatchMonth=recPrefix&&recPrefix!==prefix;
+  const fmtMes=p=>{if(!p)return '';const [y,m]=p.split('-');return MESES[parseInt(m)-1]+' '+y;};
+
+  const warning=mismatchMonth?`<div style="background:#FFF4E5;border-left:3px solid #BA7517;border-radius:0 6px 6px 0;padding:10px 12px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+    <span style="font-size:16px;color:#BA7517">&#9888;</span>
+    <div>
+      <p style="font-size:12px;color:#634009;margin:0;font-weight:500">Los datos cargados en Reconciliaci&#243;n son de ${fmtMes(recPrefix)}, no de ${fmtMes(prefix)}.</p>
+      <p style="font-size:11px;color:#634009;margin:2px 0 0">Selecciona ${fmtMes(prefix)} en Reconciliaci&#243;n o ignora esta secci&#243;n.</p>
+    </div>
+  </div>`:'';
+
+  // Build rows — only methods with data (app>0 OR plataforma>0 OR banco>0)
+  const rowsData=[];
+  if(sx&&(sx.appBruto>0||sx.plataformaBruto>0||sx.bankTotal>0)){
+    const diff=Math.round((sx.appBruto-sx.plataformaBruto)*100)/100;
+    rowsData.push({metodo:'Stripe',app:sx.appBruto,plat:sx.plataformaBruto,bank:sx.bankTotal,diff,bankInfo:true});
+  }
+  if(cx&&(cx.appBruto>0||cx.plataformaBruto>0||cx.bankTotal>0)){
+    const diff=Math.round((cx.appBruto-cx.plataformaBruto)*100)/100;
+    rowsData.push({metodo:'CloudBeds',app:cx.appBruto,plat:cx.plataformaBruto,bank:cx.bankTotal,diff,bankInfo:true});
+  }
+  if(tx&&(tx.appBruto>0||tx.bankTotal>0)){
+    const diff=Math.round((tx.appBruto-tx.bankTotal)*100)/100;
+    rowsData.push({metodo:'Transferencia',app:tx.appBruto,plat:null,bank:tx.bankTotal,diff,bankInfo:false});
+  }
+  if(dx&&(dx.appBruto>0||dx.bankTotal>0)){
+    rowsData.push({metodo:'D&#233;bito',app:dx.appBruto,plat:null,bank:dx.bankTotal,diff:dx.diff,bankInfo:true,bankInfoTxt:'Monto del banco = ventas brutas TDC - comisi&#243;n TDC. La diferencia con la app puede deberse a cierres pendientes.'});
+  }
+
+  if(rowsData.length===0){
+    return `<p style="font-size:13px;color:#666;text-align:center;padding:14px">Sin datos para el mes seleccionado.</p>`;
+  }
+
+  const estadoBadge=(diff)=>{
+    const abs=Math.abs(diff||0);
+    if(abs<=1)return `<span style="background:#E1F5EE;color:#0F6E56;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:500">&check;</span>`;
+    if(abs>1&&abs<=100)return `<span style="background:#FFF4E5;color:#634009;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:500">&#9888;</span>`;
+    return `<span style="background:#FCE8E6;color:#7A1F1D;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:500">&times;</span>`;
+  };
+
+  // Info tooltip helper for bank column
+  const bankInfoIcon=(txt)=>{
+    const safe=String(txt||'').replace(/"/g,'&quot;');
+    return ` <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:#AAA;color:#fff;font-size:9px;font-weight:700;vertical-align:1px;cursor:help" onmouseover="this.querySelector('span').style.display='block'" onmouseout="this.querySelector('span').style.display='none'">i<span style="display:none;position:absolute;right:18px;top:-4px;background:#333;color:#fff;padding:6px 9px;border-radius:5px;font-size:11px;font-weight:400;width:240px;white-space:normal;line-height:1.4;z-index:99;text-align:left">${safe}</span></span>`;
+  };
+  const bankColInfo='El monto del banco es el neto recibido tras descontar las comisiones de la plataforma. La diferencia con "En app" se explica por esa comisi&#243;n.';
+
+  const tableHtml=`<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead>
+      <tr style="border-bottom:1px solid #EEE">
+        <th style="text-align:left;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">M&#233;todo</th>
+        <th style="text-align:right;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">En app</th>
+        <th style="text-align:right;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Plataforma</th>
+        <th style="text-align:right;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Banco${bankInfoIcon(bankColInfo)}</th>
+        <th style="text-align:right;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Diferencia</th>
+        <th style="text-align:center;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${rowsData.map(r=>{
+        const diffColor=Math.abs(r.diff)<=1?'#888':(Math.abs(r.diff)<=100?'#634009':'#7A1F1D');
+        const diffWeight=Math.abs(r.diff)<=1?'400':'500';
+        return `<tr style="border-bottom:1px solid #F5F5F0">
+          <td style="padding:10px 0;font-size:13px">${r.metodo}</td>
+          <td style="padding:10px 0;text-align:right;font-size:13px;font-weight:500">${fmt(r.app)}</td>
+          <td style="padding:10px 0;text-align:right;font-size:13px">${r.plat===null?'<span style="color:#999">—</span>':fmt(r.plat)}</td>
+          <td style="padding:10px 0;text-align:right;font-size:13px">${r.bank===null||r.bank===undefined?'<span style="color:#999">—</span>':fmt(r.bank)}</td>
+          <td style="padding:10px 0;text-align:right;font-size:13px;color:${diffColor};font-weight:${diffWeight}">${fmt(r.diff)}</td>
+          <td style="padding:10px 0;text-align:center">${estadoBadge(r.diff)}</td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+
+  return warning+`<div style="${mismatchMonth?'opacity:.5;pointer-events:none':''}">${tableHtml}</div>`;
 }
 
 function exportarCierreExcel(modo){
@@ -4549,8 +4737,2031 @@ function exportarCierreExcel(modo){
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
   wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
+
+  // ---------- Pestaña Reconciliación (solo si hay archivos cargados) ----------
+  // Solo agregar pestaña Reconciliación si hay archivos cargados Y corresponden al mes exportado
+  const hasRec=window._recStripeRows||window._recCbRows||window._recBbvaRows||window._recBbvaSndaRows||window._recSantanderRows;
+  const recMatchesMonth=window._recLastPrefix===prefix;
+  if(hasRec&&recMatchesMonth){
+    const recRows=_buildReconcilExcelData(prefix);
+    if(recRows.length){
+      const wsRec=XLSX.utils.aoa_to_sheet(recRows);
+      wsRec['!cols']=[{wch:16},{wch:42},{wch:13},{wch:13},{wch:13},{wch:13},{wch:9},{wch:55}];
+      // Alturas dinámicas: si NOTA tiene texto largo, fila más alta
+      wsRec['!rows']=recRows.map((row,idx)=>{
+        if(idx===0)return {hpt:22}; // header alto
+        const noteCell=row[7];
+        const note=noteCell?(typeof noteCell==='object'?noteCell.v:noteCell):'';
+        const len=String(note||'').length;
+        if(len>120)return {hpt:60};
+        if(len>60)return {hpt:42};
+        if(len>0)return {hpt:28};
+        return {hpt:18};
+      });
+      // Freeze first row (panel congelado)
+      wsRec['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+      XLSX.utils.book_append_sheet(wb,wsRec,'Reconciliación');
+    }
+  }
+
   XLSX.writeFile(wb,'Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx');
   showAlert('Excel exportado','success');
+}
+
+// ============================================================
+// RECONCILIACIÓN MODULE
+// ============================================================
+window._recStripeRows=null;
+
+// --- Sort de tablas por click en header ---
+window._recSort={}; // { tableId: {colIdx, dir} }
+
+function _recSortClick(tableId,colIdx,type){
+  const cur=window._recSort[tableId];
+  let dir='asc';
+  if(cur&&cur.colIdx===colIdx)dir=cur.dir==='asc'?'desc':'asc';
+  window._recSort[tableId]={colIdx,dir,type};
+  _recApplySort(tableId);
+}
+
+function _recApplySort(tableId){
+  const cfg=window._recSort[tableId];if(!cfg)return;
+  const tbl=document.getElementById(tableId);if(!tbl)return;
+  const tbody=tbl.querySelector('tbody');if(!tbody)return;
+  const rows=Array.from(tbody.querySelectorAll('tr')).filter(r=>r.children.length>1);
+  if(rows.length<2)return;
+  const getVal=(tr,idx,type)=>{
+    const td=tr.children[idx];if(!td)return '';
+    const txt=(td.textContent||'').trim();
+    if(type==='num'){
+      const n=parseFloat(txt.replace(/[^0-9.\-]/g,''));return isNaN(n)?0:n;
+    }
+    if(type==='date'){
+      // try YYYY-MM-DD pattern first
+      const m=txt.match(/(\d{4})-(\d{2})-(\d{2})/);
+      if(m)return m[1]+m[2]+m[3];
+      return txt;
+    }
+    if(type==='estado'){
+      // ✓ → 0, ⚠ → 1, ✗ → 2 — problemas primero en asc invertido
+      if(txt.includes('✗'))return 0;
+      if(txt.includes('⚠'))return 1;
+      if(txt.includes('✓'))return 2;
+      return 9;
+    }
+    return txt.toLowerCase();
+  };
+  rows.sort((a,b)=>{
+    const va=getVal(a,cfg.colIdx,cfg.type);
+    const vb=getVal(b,cfg.colIdx,cfg.type);
+    let cmp=0;
+    if(typeof va==='number'&&typeof vb==='number')cmp=va-vb;
+    else if(va<vb)cmp=-1;else if(va>vb)cmp=1;
+    return cfg.dir==='asc'?cmp:-cmp;
+  });
+  rows.forEach(r=>tbody.appendChild(r));
+  // Update visual arrows
+  const ths=tbl.querySelectorAll('thead th');
+  ths.forEach((th,i)=>{
+    const span=th.querySelector('.rec-sort-arrow');if(!span)return;
+    if(i===cfg.colIdx)span.textContent=cfg.dir==='asc'?'↑':'↓';
+    else span.textContent='↕';
+  });
+}
+
+function _recSortableTh(label,align,tableId,colIdx,type){
+  const a=align==='right'?'text-align:right':(align==='center'?'text-align:center':'text-align:left');
+  return `<th style="${a};padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase;cursor:pointer;user-select:none" onclick="_recSortClick('${tableId}',${colIdx},'${type}')">${label} <span class="rec-sort-arrow" style="font-size:9px;color:#bbb">↕</span></th>`;
+}
+
+// --- Comentarios persistentes ---
+function _recGetNote(mes,bloque,referencia){
+  const all=gd(KRN)||[];
+  return all.find(n=>n.mes===mes&&n.bloque===bloque&&n.referencia===referencia);
+}
+
+function _recSaveNote(mes,bloque,referencia,nota){
+  const all=(gd(KRN)||[]).slice();
+  const idx=all.findIndex(n=>n.mes===mes&&n.bloque===bloque&&n.referencia===referencia);
+  const trimmed=String(nota||'').trim();
+  if(idx>=0){
+    if(!trimmed){all.splice(idx,1);}
+    else{all[idx]={...all[idx],nota:trimmed,fechaCreacion:all[idx].fechaCreacion||new Date().toISOString().slice(0,10)};}
+  } else if(trimmed){
+    all.push({id:Date.now()+'-'+Math.random().toString(36).slice(2,8),mes,bloque,referencia,nota:trimmed,fechaCreacion:new Date().toISOString().slice(0,10)});
+  } else {
+    return; // nothing to save
+  }
+  sd(KRN,all);
+}
+
+function _recNoteBtn(mes,bloque,referencia){
+  const note=_recGetNote(mes,bloque,referencia);
+  const has=!!note;
+  const escaped=has?String(note.nota).replace(/"/g,'&quot;'):'';
+  const refSafe=String(referencia).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+  const onclick=`_recOpenNoteModal('${mes}','${bloque}','${refSafe}')`;
+  return `<button onclick="${onclick}" title="${has?escaped:'Agregar nota'}" style="background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;opacity:${has?1:.4}">💬</button>`;
+}
+
+function _recOpenNoteModal(mes,bloque,referencia){
+  const existing=_recGetNote(mes,bloque,referencia);
+  const overlay=document.createElement('div');
+  overlay.id='rec-note-modal-overlay';
+  overlay.dataset.mes=mes;
+  overlay.dataset.bloque=bloque;
+  overlay.dataset.referencia=referencia;
+  overlay.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:400;display:flex;align-items:center;justify-content:center';
+  overlay.onclick=e=>{if(e.target===overlay)overlay.remove();};
+  const delBtn=existing?'<button onclick="_recDeleteNoteFromModal()" style="background:#fff;color:#7A1F1D;border:0.5px solid #ddd;padding:7px 14px;font-size:12px;border-radius:6px;cursor:pointer">Borrar</button>':'';
+  overlay.innerHTML=`
+    <div style="background:#fff;border-radius:10px;padding:1.4rem;width:94%;max-width:480px;box-shadow:0 20px 60px rgba(0,0,0,.2)">
+      <h3 style="font-size:14px;font-weight:600;margin:0 0 4px">Nota de reconciliación</h3>
+      <p style="font-size:11px;color:#888;margin:0 0 12px">${mes} · ${bloque}</p>
+      <textarea id="rec-note-textarea" style="width:100%;min-height:120px;padding:10px;border:0.5px solid #e0e0da;border-radius:6px;font-family:inherit;font-size:13px;box-sizing:border-box" placeholder="Escribe tu nota...">${existing?String(existing.nota).replace(/</g,'&lt;'):''}</textarea>
+      ${existing?'<p style="font-size:10px;color:#888;margin:6px 0 0">Creada el '+existing.fechaCreacion+'</p>':''}
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+        <button onclick="document.getElementById('rec-note-modal-overlay').remove()" style="background:#fff;border:0.5px solid #e0e0da;padding:7px 14px;font-size:12px;border-radius:6px;cursor:pointer">Cancelar</button>
+        ${delBtn}
+        <button onclick="_recSaveNoteFromModal()" style="background:#1D9E75;color:#fff;border:none;padding:7px 14px;font-size:12px;border-radius:6px;cursor:pointer;font-weight:500">Guardar</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  setTimeout(()=>{const t=document.getElementById('rec-note-textarea');if(t)t.focus();},50);
+}
+
+function _recSaveNoteFromModal(){
+  const ov=document.getElementById('rec-note-modal-overlay');if(!ov)return;
+  const t=document.getElementById('rec-note-textarea');
+  const txt=t?t.value:'';
+  _recSaveNote(ov.dataset.mes,ov.dataset.bloque,ov.dataset.referencia,txt);
+  ov.remove();
+  renderReconcil();
+}
+
+function _recDeleteNoteFromModal(){
+  const ov=document.getElementById('rec-note-modal-overlay');if(!ov)return;
+  _recSaveNote(ov.dataset.mes,ov.dataset.bloque,ov.dataset.referencia,'');
+  ov.remove();
+  renderReconcil();
+}
+window._recBbvaRows=null;     // BBVA Principal (cuenta ingresos+egresos)
+window._recBbvaSndaRows=null; // BBVA Snda (solo egresos)
+window._recSantanderRows=null;// Santander (ingresos+egresos)
+window._recCbRows=null;
+window._recStripeFilename='';
+window._recBbvaFilename='';
+window._recBbvaSndaFilename='';
+window._recSantanderFilename='';
+window._recCbFilename='';
+
+function _recUpdateCardState(type){
+  const map={
+    stripe:{rows:window._recStripeRows,filename:window._recStripeFilename,countLabel:'transacciones',inputId:'rec-stripe-file',removeFn:'removeStripeFile'},
+    cb:{rows:window._recCbRows,filename:window._recCbFilename,countLabel:'transacciones',inputId:'rec-cb-file',removeFn:'removeCbFile'},
+    bbva:{rows:window._recBbvaRows,filename:window._recBbvaFilename,countLabel:'movimientos',inputId:'rec-bbva-file',removeFn:'removeBbvaFile'},
+    bbvasnda:{rows:window._recBbvaSndaRows,filename:window._recBbvaSndaFilename,countLabel:'movimientos',inputId:'rec-bbvasnda-file',removeFn:'removeBbvaSndaFile'},
+    santander:{rows:window._recSantanderRows,filename:window._recSantanderFilename,countLabel:'movimientos',inputId:'rec-santander-file',removeFn:'removeSantanderFile'}
+  };
+  const cfg=map[type];if(!cfg)return;
+  const card=document.getElementById('rec-card-'+type);
+  const status=document.getElementById('rec-status-'+type);
+  const info=document.getElementById('rec-info-'+type);
+  const actions=document.getElementById('rec-actions-'+type);
+  if(!card||!info||!actions)return;
+  const loaded=Array.isArray(cfg.rows);
+  if(loaded){
+    card.style.border='0.5px solid #1D9E75';
+    card.style.background='#fff';
+    if(status){status.textContent='✓ Cargado';status.style.color='#1D9E75';status.style.fontWeight='500';}
+    info.innerHTML=`<p title="${cfg.filename||''}" style="font-size:11px;color:#1A1916;margin:0 0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><strong>${cfg.filename||'(archivo)'}</strong></p><p style="font-size:11px;color:#666;margin:0">${cfg.rows.length} ${cfg.countLabel}</p>`;
+    actions.innerHTML=`
+      <div style="display:flex;gap:6px">
+        <label for="${cfg.inputId}" style="flex:1;background:#F5F4F0;color:#1A1916;padding:5px 10px;font-size:11px;border-radius:5px;cursor:pointer;text-align:center;border:0.5px solid #e0e0da">Reemplazar</label>
+        <button onclick="${cfg.removeFn}()" style="background:#fff;color:#7A1F1D;padding:5px 10px;font-size:11px;border-radius:5px;border:0.5px solid #ddd;cursor:pointer">Quitar</button>
+      </div>`;
+  } else {
+    card.style.border='1.5px dashed #ccc';
+    card.style.background='#fff';
+    if(status){status.textContent=type==='bbva'?'':'Opcional';status.style.color='#aaa';status.style.fontWeight='400';}
+    info.innerHTML=`<p style="font-size:11px;color:#999;margin:0;font-style:italic">Sin archivo cargado</p>`;
+    actions.innerHTML=`<label for="${cfg.inputId}" style="display:block;background:#1D9E75;color:#fff;padding:7px 10px;font-size:12px;border-radius:5px;cursor:pointer;text-align:center;font-weight:500">+ Subir archivo</label>`;
+  }
+}
+
+function _recUpdateAllCards(){
+  _recUpdateCardState('stripe');
+  _recUpdateCardState('cb');
+  _recUpdateCardState('bbva');
+  _recUpdateCardState('bbvasnda');
+  _recUpdateCardState('santander');
+}
+
+function removeStripeFile(){window._recStripeRows=null;window._recStripeFilename='';_recUpdateCardState('stripe');renderReconcil();}
+function removeCbFile(){window._recCbRows=null;window._recCbFilename='';_recUpdateCardState('cb');renderReconcil();}
+function removeBbvaFile(){window._recBbvaRows=null;window._recBbvaFilename='';_recUpdateCardState('bbva');renderReconcil();}
+function removeBbvaSndaFile(){window._recBbvaSndaRows=null;window._recBbvaSndaFilename='';_recUpdateCardState('bbvasnda');renderReconcil();}
+function removeSantanderFile(){window._recSantanderRows=null;window._recSantanderFilename='';_recUpdateCardState('santander');renderReconcil();}
+
+function initReconcil(){
+  const mesEl=document.getElementById('rec-mes');
+  const anioEl=document.getElementById('rec-anio');
+  if(!mesEl||!anioEl){setTimeout(initReconcil,100);return;}
+  if(!mesEl.options.length){
+    const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    MN.forEach((n,i)=>{const o=document.createElement('option');o.value=String(i+1).padStart(2,'0');o.textContent=n;mesEl.appendChild(o);});
+    mesEl.value=String(new Date().getMonth()+1).padStart(2,'0');
+  }
+  if(!anioEl.options.length){
+    const y=new Date().getFullYear();
+    for(let i=y-2;i<=y+1;i++){const o=document.createElement('option');o.value=String(i);o.textContent=String(i);anioEl.appendChild(o);}
+    anioEl.value=String(new Date().getFullYear());
+  }
+  _recUpdateAllCards();
+  renderReconcil();
+}
+
+function clearReconcil(){
+  window._recStripeRows=null;
+  window._recBbvaRows=null;
+  window._recBbvaSndaRows=null;
+  window._recSantanderRows=null;
+  window._recCbRows=null;
+  window._recStripeFilename='';
+  window._recBbvaFilename='';
+  window._recBbvaSndaFilename='';
+  window._recSantanderFilename='';
+  window._recCbFilename='';
+  ['rec-stripe-file','rec-bbva-file','rec-bbvasnda-file','rec-santander-file','rec-cb-file'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  _recUpdateAllCards();
+  renderReconcil();
+}
+
+function _parseBbvaSheet(arrBuf){
+  const data=new Uint8Array(arrBuf);
+  const wb=XLSX.read(data,{type:'array'});
+  const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('movimiento'))||wb.SheetNames[0];
+  const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:''});
+  let hdrIdx=-1;
+  for(let i=0;i<Math.min(aoa.length,15);i++){
+    const r=aoa[i];
+    if(r&&String(r[0]||'').toUpperCase()==='FECHA'&&String(r[1]||'').toUpperCase().includes('DESCRIP')){hdrIdx=i;break;}
+  }
+  if(hdrIdx<0)throw new Error('No se encontró encabezado FECHA/DESCRIPCIÓN');
+  const rows=[];
+  for(let i=hdrIdx+1;i<aoa.length;i++){
+    const r=aoa[i];if(!r||!r[0])continue;
+    rows.push({
+      fecha:String(r[0]||'').slice(0,10),
+      descripcion:String(r[1]||''),
+      abono:parseFloat(r[2])||0,
+      cargo:parseFloat(r[3])||0,
+      saldo:parseFloat(r[4])||0
+    });
+  }
+  return rows;
+}
+
+function loadBbvaFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const fname=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const rows=_parseBbvaSheet(e.target.result);
+      window._recBbvaRows=rows;
+      window._recBbvaFilename=fname;
+      _recUpdateCardState('bbva');
+      renderReconcil();
+      showAlert('Archivo BBVA Principal cargado: '+rows.length+' movimientos','success');
+    }catch(err){
+      showAlert('Error al leer archivo BBVA Principal: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function loadBbvaSndaFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const fname=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const rows=_parseBbvaSheet(e.target.result);
+      window._recBbvaSndaRows=rows;
+      window._recBbvaSndaFilename=fname;
+      _recUpdateCardState('bbvasnda');
+      renderReconcil();
+      showAlert('Archivo BBVA Snda cargado: '+rows.length+' movimientos','success');
+    }catch(err){
+      showAlert('Error al leer archivo BBVA Snda: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function _parseSantanderSheet(arrBuf){
+  const data=new Uint8Array(arrBuf);
+  const wb=XLSX.read(data,{type:'array'});
+  const sheetName=wb.SheetNames[0];
+  const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:''});
+  // Header: FECHA · HORA · CONCEPTO · RETIRO · DEPOSITO · MONEDA
+  let hdrIdx=-1;
+  for(let i=0;i<Math.min(aoa.length,15);i++){
+    const r=aoa[i];
+    if(r&&String(r[0]||'').toUpperCase()==='FECHA'&&String(r[2]||'').toUpperCase().includes('CONCEPTO')){hdrIdx=i;break;}
+  }
+  if(hdrIdx<0)throw new Error('No se encontró encabezado FECHA/CONCEPTO');
+  const rows=[];
+  // Santander format: FECHA "DD/mmm/YY" (e.g. "29/abr/26") → convert to YYYY-MM-DD
+  const meses={'ene':'01','feb':'02','mar':'03','abr':'04','may':'05','jun':'06','jul':'07','ago':'08','sep':'09','oct':'10','nov':'11','dic':'12'};
+  const parseSantDate=s=>{
+    const m=String(s||'').match(/(\d{1,2})\/([a-z]+)\/(\d{2,4})/i);
+    if(!m)return '';
+    const mm=meses[m[2].toLowerCase().substring(0,3)];if(!mm)return '';
+    let yy=m[3];if(yy.length===2)yy='20'+yy;
+    return yy+'-'+mm+'-'+String(m[1]).padStart(2,'0');
+  };
+  for(let i=hdrIdx+1;i<aoa.length;i++){
+    const r=aoa[i];if(!r||!r[0])continue;
+    const retiro=parseFloat(r[3])||0; // negative
+    const deposito=parseFloat(r[4])||0; // positive
+    rows.push({
+      fecha:parseSantDate(r[0]),
+      descripcion:String(r[2]||''),
+      abono:deposito,
+      cargo:retiro, // already negative
+      saldo:0
+    });
+  }
+  return rows;
+}
+
+function loadSantanderFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const fname=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const rows=_parseSantanderSheet(e.target.result);
+      window._recSantanderRows=rows;
+      window._recSantanderFilename=fname;
+      _recUpdateCardState('santander');
+      renderReconcil();
+      showAlert('Archivo Santander cargado: '+rows.length+' movimientos','success');
+    }catch(err){
+      showAlert('Error al leer archivo Santander: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function _parseCbDate(s){
+  // CloudBeds format: "Apr 09, 2026" or "Apr 09, 2026, 07:57:34 AM"
+  if(!s)return '';
+  const m=String(s).match(/(\w+)\s+(\d+),\s*(\d+)/);
+  if(!m)return '';
+  const months={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+  const mm=months[m[1].substring(0,3)];if(!mm)return '';
+  return m[3]+'-'+mm+'-'+String(m[2]).padStart(2,'0');
+}
+
+function _extractCbId(infoStr){
+  // "Silke Boger - 49EU8KXFHP" → "49EU8KXFHP"
+  const m=String(infoStr||'').match(/-\s*([A-Z0-9]{8,})\s*$/i);
+  return m?m[1].toUpperCase():'';
+}
+
+function _extractCbGuestName(infoStr){
+  // "Silke Boger - 49EU8KXFHP" → "Silke Boger"
+  const s=String(infoStr||'');
+  const idx=s.lastIndexOf(' - ');
+  return idx>0?s.substring(0,idx).trim():s.trim();
+}
+
+function loadCbFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const fname=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('payout')||n.toLowerCase().includes('detail'))||wb.SheetNames[0];
+      const arr=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{defval:''});
+      const rows=arr.map(r=>{
+        const info=r['Información de la reserva']||r['Information de la reserva']||'';
+        return {
+          payoutDate:_parseCbDate(r['Fecha del desembolso']),
+          payoutId:String(r['ID del desembolso']||''),
+          status:String(r['Estado del desembolso']||''),
+          txId:String(r['ID de la transacción']||''),
+          txDate:_parseCbDate(r['Fecha']),
+          guestName:String(r['Nombre del huésped']||'').trim()||_extractCbGuestName(info),
+          info:String(info),
+          cbId:_extractCbId(info),
+          metodo:String(r['Metodo']||r['Método']||''),
+          tipo:String(r['Tipo']||''),
+          montoCobrado:parseFloat(r['Monto cobrado'])||0,
+          tasa:parseFloat(r['Tasa'])||0,
+          montoDesembolso:parseFloat(r['Monto del desembolso'])||0,
+          moneda:String(r['Moneda']||'')
+        };
+      }).filter(r=>r.txId);
+      window._recCbRows=rows;
+      window._recCbFilename=fname;
+      _recUpdateCardState('cb');
+      renderReconcil();
+      showAlert('Archivo CloudBeds cargado: '+rows.length+' transacciones','success');
+    }catch(err){
+      showAlert('Error al leer archivo CloudBeds: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function loadStripeFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const fname=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      window._recStripeRows=parseStripeCSV(e.target.result);
+      window._recStripeFilename=fname;
+      _recUpdateCardState('stripe');
+      renderReconcil();
+      showAlert('Archivo Stripe cargado: '+window._recStripeRows.length+' transacciones','success');
+    }catch(err){
+      showAlert('Error al leer archivo Stripe: '+err.message,'error');
+    }
+  };
+  reader.readAsText(f);
+}
+
+function parseStripeCSV(text){
+  const lines=text.split(/\r?\n/).filter(l=>l.trim());
+  if(!lines.length)throw new Error('Archivo vacío');
+  const parseLine=l=>{
+    const out=[];let cur='',inQ=false;
+    for(let i=0;i<l.length;i++){
+      const c=l[i];
+      if(c==='"'){if(inQ&&l[i+1]==='"'){cur+='"';i++;}else inQ=!inQ;}
+      else if(c===','&&!inQ){out.push(cur);cur='';}
+      else cur+=c;
+    }
+    out.push(cur);
+    return out;
+  };
+  const hdr=parseLine(lines[0]);
+  const idx=name=>hdr.findIndex(h=>h.toLowerCase()===name.toLowerCase());
+  const iPo=idx('automatic_payout_id');
+  const iEff=idx('automatic_payout_effective_at');
+  const iCreated=idx('created');
+  const iGross=idx('gross');
+  const iFee=idx('fee');
+  const iNet=idx('net');
+  const iDesc=idx('description');
+  const iCustName=hdr.findIndex(h=>h.toLowerCase().includes('customer_name'));
+  const iCustEmail=hdr.findIndex(h=>h.toLowerCase().includes('customer_email'));
+  const iCategory=idx('reporting_category');
+  const rows=[];
+  for(let i=1;i<lines.length;i++){
+    const f=parseLine(lines[i]);
+    if(f.length<3)continue;
+    rows.push({
+      payoutId:f[iPo]||'',
+      effectiveAt:f[iEff]||'',
+      createdAt:f[iCreated]||'',
+      gross:parseFloat(f[iGross])||0,
+      fee:parseFloat(f[iFee])||0,
+      net:parseFloat(f[iNet])||0,
+      description:f[iDesc]||'',
+      customerName:iCustName>=0?(f[iCustName]||''):'',
+      customerEmail:iCustEmail>=0?(f[iCustEmail]||''):'',
+      category:f[iCategory]||''
+    });
+  }
+  return rows;
+}
+
+function _recNormName(s){
+  return String(s||'').toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/^booking\s+/,'')
+    .replace(/[^a-z0-9 ]/g,'')
+    .replace(/\s+/g,' ')
+    .trim();
+}
+
+function _recStripeRowName(r){
+  return r.customerName || r.description || '';
+}
+
+function _matchStripeToReserva(stripeRow, candidates){
+  const stripeName=_recNormName(_recStripeRowName(stripeRow));
+  const stripeAmount=Math.round(stripeRow.gross*100)/100;
+  const stripeDate=String(stripeRow.createdAt||'').slice(0,10);
+  const byAmount=candidates.filter(c=>Math.abs(c.monto-stripeAmount)<=1);
+  if(byAmount.length===1)return {match:byAmount[0],how:'monto'};
+  if(stripeName){
+    const byName=byAmount.filter(c=>{
+      const rn=_recNormName(c.reserva.nombre);
+      return rn===stripeName||rn.includes(stripeName)||stripeName.includes(rn);
+    });
+    if(byName.length===1)return {match:byName[0],how:'nombre+monto'};
+  }
+  if(stripeDate){
+    const byDate=byAmount.filter(c=>{
+      if(!c.fecha)return false;
+      const d1=new Date(stripeDate);
+      const d2=new Date(c.fecha);
+      const diff=Math.abs((d1-d2)/(1000*60*60*24));
+      return diff<=2;
+    });
+    if(byDate.length===1)return {match:byDate[0],how:'fecha+monto'};
+  }
+  return {match:null,candidates:byAmount,how:byAmount.length>1?'ambiguo':'sin_match'};
+}
+
+function renderReconcil(){
+  const mes=document.getElementById('rec-mes')?.value||'';
+  const anio=document.getElementById('rec-anio')?.value||'';
+  const summary=document.getElementById('rec-summary');
+  const detail=document.getElementById('rec-detail');
+  if(!summary||!detail)return;
+  if(!window._recStripeRows&&!window._recCbRows){
+    summary.innerHTML='<p class="empty" style="padding:20px">Sube un archivo de payout (Stripe CSV y/o CloudBeds .xls) para iniciar la reconciliación. Opcionalmente sube el archivo del banco BBVA Principal para verificar el cuadre 3-vías (app · plataforma · banco).</p>';
+    detail.innerHTML='';
+    const cbBlock=document.getElementById('rec-cb-block');if(cbBlock)cbBlock.innerHTML='';
+    const transBlock=document.getElementById('rec-trans-block');if(transBlock)transBlock.innerHTML='';
+    const debBlock=document.getElementById('rec-debito-block');if(debBlock)debBlock.innerHTML='';
+    const egBlock=document.getElementById('rec-egresos-block');if(egBlock)egBlock.innerHTML='';
+    if(!Array.isArray(window._recBbvaRows)&&!Array.isArray(window._recBbvaSndaRows)&&!Array.isArray(window._recSantanderRows))return;
+    // Si solo hay banco, igual permitimos transferencias, débito y egresos
+    summary.innerHTML='';
+  }
+  if(!window._recStripeRows){
+    summary.innerHTML='';
+    detail.innerHTML='';
+  }
+  if(!mes||!anio){summary.innerHTML='';detail.innerHTML='';return;}
+  const prefix=anio+'-'+mes;
+
+  // Reset captura de resultados para Excel
+  window._recLastStripe=null;
+  window._recLastCb=null;
+  window._recLastTrans=null;
+  window._recLastDebito=null;
+  window._recLastEgresos=null;
+  window._recLastPrefix=prefix;
+
+  if(window._recStripeRows){_renderReconcilStripe(prefix,summary,detail);}
+  _renderReconcilCb(prefix);
+  _renderReconcilTrans(prefix);
+  _renderReconcilDebito(prefix);
+  _renderReconcilEgresos(prefix);
+}
+
+function _renderReconcilStripe(prefix,summary,detail){
+  const stripeAll=window._recStripeRows.filter(r=>(r.category==='charge'||r.category==='refund')&&String(r.createdAt||'').startsWith(prefix));
+  const stripeBruto=Math.round(stripeAll.reduce((s,r)=>s+r.gross,0)*100)/100;
+  const stripeNeto=Math.round(stripeAll.reduce((s,r)=>s+r.net,0)*100)/100;
+  const stripeFee=Math.round(stripeAll.reduce((s,r)=>s+r.fee,0)*100)/100;
+
+  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+  let appBruto=0;
+  const appPagosStripe=[];
+  reservas.forEach(r=>{
+    if((r.anticipo||0)>0&&r.antiPago==='stripe'&&String(r.antiFecha||'').startsWith(prefix)){
+      appPagosStripe.push({reserva:r,monto:r.anticipo,fecha:r.antiFecha,tipo:'Anticipo'});
+      appBruto+=r.anticipo;
+    }
+    if((r.saldo||0)>0&&r.saldPago==='stripe'&&String(r.saldFecha||'').startsWith(prefix)){
+      appPagosStripe.push({reserva:r,monto:r.saldo,fecha:r.saldFecha,tipo:'Saldo'});
+      appBruto+=r.saldo;
+    }
+  });
+  gd(KC).forEach(c=>{
+    let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+    items.forEach(it=>{
+      if(it.pago!=='stripe')return;
+      const fp=String(it.fechaPago||'').slice(0,10);
+      if(!fp.startsWith(prefix))return;
+      const monto=(it.precio||0)*(it.cantidad||0);
+      appPagosStripe.push({reserva:{id:c.id,nombre:c.huesped},monto,fecha:fp,tipo:'Consumo: '+it.nombre});
+      appBruto+=monto;
+    });
+  });
+  appBruto=Math.round(appBruto*100)/100;
+
+  const matches=stripeAll.map(sr=>{
+    const m=_matchStripeToReserva(sr,appPagosStripe);
+    return {stripe:sr,...m};
+  });
+  const matchedKeys=new Set();
+  matches.forEach(m=>{if(m.match){matchedKeys.add(String(m.match.reserva.id)+'-'+m.match.tipo+'-'+m.match.monto);}});
+  const huerfanosApp=appPagosStripe.filter(p=>!matchedKeys.has(String(p.reserva.id)+'-'+p.tipo+'-'+p.monto));
+
+  const okMatches=matches.filter(m=>m.match);
+  const failMatches=matches.filter(m=>!m.match);
+  const cuadre=Math.abs(appBruto-stripeBruto)<=1;
+  const huerfTotal=failMatches.length+huerfanosApp.length;
+
+  // --- Bank reconciliation (if BBVA file is loaded) ---
+  const hasBank=Array.isArray(window._recBbvaRows);
+  let bankStripeDeposits=[];
+  let bankStripeTotal=0;
+  let bankCuadre=false;
+  let bankMatches=[]; // {bank:{...}, payout:{id,fecha,monto}, ok}
+  if(hasBank){
+    bankStripeDeposits=window._recBbvaRows.filter(r=>{
+      const d=String(r.descripcion||'').toUpperCase();
+      const fInMonth=String(r.fecha||'').startsWith(prefix);
+      return r.abono>0&&d.includes('STRIPE')&&!d.includes('CLOUDBEDS')&&fInMonth;
+    });
+    bankStripeTotal=Math.round(bankStripeDeposits.reduce((s,r)=>s+r.abono,0)*100)/100;
+    bankCuadre=Math.abs(bankStripeTotal-stripeNeto)<=1;
+    // Group stripe payouts by payoutId with sum of net
+    const payoutsById={};
+    window._recStripeRows.filter(r=>(r.category==='charge'||r.category==='refund')&&String(r.createdAt||'').startsWith(prefix)).forEach(r=>{
+      if(!r.payoutId)return;
+      if(!payoutsById[r.payoutId])payoutsById[r.payoutId]={id:r.payoutId,fecha:r.effectiveAt||'',monto:0};
+      payoutsById[r.payoutId].monto+=r.net;
+    });
+    const payoutsList=Object.values(payoutsById).map(p=>({...p,monto:Math.round(p.monto*100)/100}));
+    // Match each bank deposit to a payout by amount exact (tolerance $0.01)
+    const usedPayout=new Set();
+    bankStripeDeposits.forEach(bd=>{
+      const p=payoutsList.find(po=>!usedPayout.has(po.id)&&Math.abs(po.monto-bd.abono)<=0.01);
+      if(p)usedPayout.add(p.id);
+      bankMatches.push({bank:bd,payout:p||null,ok:!!p});
+    });
+  }
+
+  const bankCardHtml=hasBank?`
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco recibido</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankStripeTotal)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankStripeDeposits.length} depósito${bankStripeDeposits.length!==1?'s':''} SPEI Stripe</p>
+      </div>`:'';
+  const bankVerifHtml=hasBank?`
+        <div style="background:${bankCuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${bankCuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${bankCuadre?'#1D9E75':'#E24B4A'}">${bankCuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${bankCuadre?'#085041':'#7A1F1D'}">Stripe neto vs Banco BBVA</p>
+            <p style="font-size:11px;color:${bankCuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(stripeNeto)} vs ${fmt(bankStripeTotal)} · ${bankCuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(stripeNeto-bankStripeTotal))}</p>
+          </div>
+        </div>`:'';
+
+  summary.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Stripe</h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Stripe (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(stripeBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Stripe (neto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(stripeNeto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">−comisión ${fmt(stripeFee)}</p>
+      </div>
+      ${bankCardHtml}
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FCE8E6'};border:0.5px solid ${cuadre?'#1D9E75':'#E24B4A'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:0">Estado</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#7A1F1D'}">${cuadre?'✓ Cuadra':'✗ Diferencia '+fmt(appBruto-stripeBruto)}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 8px">Verificaciones</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:${cuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${cuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${cuadre?'#1D9E75':'#E24B4A'}">${cuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${cuadre?'#085041':'#7A1F1D'}">App vs Stripe (bruto)</p>
+            <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(appBruto)} vs ${fmt(stripeBruto)} · ${cuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(appBruto-stripeBruto))}</p>
+          </div>
+        </div>
+        ${bankVerifHtml}
+        <div style="background:${huerfTotal===0?'#E1F5EE':'#FFF4E5'};border-left:3px solid ${huerfTotal===0?'#1D9E75':'#BA7517'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${huerfTotal===0?'#1D9E75':'#BA7517'}">${huerfTotal===0?'✓':'⚠'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${huerfTotal===0?'#085041':'#634009'}">Huérfanos</p>
+            <p style="font-size:11px;color:${huerfTotal===0?'#085041':'#634009'};margin:2px 0 0">${huerfTotal===0?'Todas las transacciones emparejadas':failMatches.length+' Stripe sin reserva · '+huerfanosApp.length+' reserva sin Stripe'}</p>
+          </div>
+        </div>
+        <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:#888">i</span>
+          <div style="flex:1">
+            <p style="font-size:12px;color:#666;margin:0">Total emparejado: ${okMatches.length}/${matches.length} transacciones Stripe${hasBank?' · '+bankMatches.filter(b=>b.ok).length+'/'+bankMatches.length+' depósitos banco':''}</p>
+          </div>
+        </div>
+      </div>
+    </div>`;
+
+  const rowsHtml=matches.map(m=>{
+    const sr=m.stripe;
+    const stripeDt=String(sr.createdAt||'').slice(0,10);
+    const stripeName=_recStripeRowName(sr);
+    const ok=!!m.match;
+    const bg=ok?'#E1F5EE':'#FCE8E6';
+    const matchTxt=ok
+      ? `<div style="font-size:12px"><strong>${m.match.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${m.match.tipo} · ${fmtDate(m.match.fecha)||'—'}</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios candidatos en la app':'✗ Sin reserva con monto coincidente'}</div>`;
+    const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
+    const ref='s-'+(sr.payoutId||'')+'-'+stripeDt+'-'+Math.round((sr.gross||0)*100);
+    const noteCell=ok?'':_recNoteBtn(prefix,'stripe',ref);
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${stripeDt}</td>
+      <td style="padding:7px 8px;font-size:12px">${stripeName||'<span style="color:#999;font-style:italic">(sin nombre)</span>'}</td>
+      <td style="padding:7px 8px">${matchTxt} ${howTag}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(sr.gross)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:11px;color:#888">${fmt(sr.fee)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(sr.net)}</td>
+      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
+    </tr>`;
+  }).join('');
+  const huerfAppHtml=huerfanosApp.map(p=>{
+    const ref='s-app-'+(p.reserva.id||'')+'-'+p.tipo+'-'+Math.round((p.monto||0)*100);
+    return `<tr style="background:#FFF4E5">
+      <td style="padding:7px 8px;font-size:12px">${fmtDate(p.fecha)||'—'}</td>
+      <td style="padding:7px 8px;font-size:12px;color:#999;font-style:italic">(sin transacción Stripe)</td>
+      <td style="padding:7px 8px"><div style="font-size:12px"><strong>${p.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${p.tipo}</div></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(p.monto)}</td>
+      <td style="padding:7px 8px"></td><td style="padding:7px 8px"></td>
+      <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
+      <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'stripe',ref)}</td>
+    </tr>`;
+  }).join('');
+  // Captura resultados para Excel
+  window._recLastStripe={
+    appBruto:appBruto,
+    plataformaBruto:stripeBruto,
+    plataformaNeto:stripeNeto,
+    bankTotal:hasBank?bankStripeTotal:null,
+    matches:matches.map(m=>({
+      stripe:m.stripe,
+      stripeDt:String(m.stripe.createdAt||'').slice(0,10),
+      stripeName:_recStripeRowName(m.stripe),
+      gross:m.stripe.gross,
+      fee:m.stripe.fee,
+      net:m.stripe.net,
+      ok:!!m.match,
+      how:m.how,
+      matchName:m.match?m.match.reserva.nombre:'',
+      matchTipo:m.match?m.match.tipo:'',
+      matchFecha:m.match?m.match.fecha:''
+    })),
+    huerfanosApp:huerfanosApp.map(p=>({
+      fecha:p.fecha,
+      nombre:p.reserva.nombre,
+      tipo:p.tipo,
+      monto:p.monto
+    }))
+  };
+  detail.innerHTML=`
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Stripe — ${stripeAll.length} transacciones${huerfanosApp.length>0?' + '+huerfanosApp.length+' huérfanos en app':''}</p>
+      <table id="rec-tbl-stripe" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          ${_recSortableTh('Fecha cobro','left','rec-tbl-stripe',0,'date')}
+          ${_recSortableTh('Huésped Stripe','left','rec-tbl-stripe',1,'text')}
+          ${_recSortableTh('↔ Reserva App','left','rec-tbl-stripe',2,'text')}
+          ${_recSortableTh('Bruto','right','rec-tbl-stripe',3,'num')}
+          ${_recSortableTh('Fee','right','rec-tbl-stripe',4,'num')}
+          ${_recSortableTh('Neto','right','rec-tbl-stripe',5,'num')}
+          ${_recSortableTh('Estado','center','rec-tbl-stripe',6,'estado')}
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
+        </tr></thead>
+        <tbody>${rowsHtml||'<tr><td colspan="8" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin transacciones Stripe en este mes</td></tr>'}${huerfAppHtml}</tbody>
+      </table>
+    </div>
+    ${hasBank?`
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Depósitos Stripe en banco BBVA — ${bankStripeDeposits.length}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto banco</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Payout Stripe</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+        </tr></thead>
+        <tbody>
+          ${bankMatches.map(b=>{
+            const bg=b.ok?'#E1F5EE':'#FCE8E6';
+            const po=b.payout;
+            return `<tr style="background:${bg}">
+              <td style="padding:7px 8px">${b.bank.fecha}</td>
+              <td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(b.bank.abono)}</td>
+              <td style="padding:7px 8px">${po?`<div style="font-size:11px"><code style="font-size:10px;color:#666">${po.id.substring(0,20)}...</code></div><div style="font-size:11px;color:#666">Efectivo: ${String(po.fecha).slice(0,10)} · ${fmt(po.monto)}</div>`:'<span style="color:#7A1F1D;font-size:11px">✗ Sin payout coincidente</span>'}</td>
+              <td style="padding:7px 8px;text-align:center;color:${b.ok?'#1D9E75':'#E24B4A'};font-size:14px">${b.ok?'✓':'✗'}</td>
+            </tr>`;
+          }).join('')||'<tr><td colspan="4" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin depósitos Stripe en el banco este mes</td></tr>'}
+        </tbody>
+      </table>
+    </div>`:''}`;
+}
+
+function _renderReconcilCb(prefix){
+  const block=document.getElementById('rec-cb-block');if(!block)return;
+  if(!window._recCbRows){block.innerHTML='';return;}
+
+  const cbAll=window._recCbRows.filter(r=>String(r.txDate||'').startsWith(prefix));
+  const cbBruto=Math.round(cbAll.reduce((s,r)=>s+r.montoCobrado,0)*100)/100;
+  const cbFee=Math.round(cbAll.reduce((s,r)=>s+r.tasa,0)*100)/100;
+  const cbNeto=Math.round(cbAll.reduce((s,r)=>s+r.montoDesembolso,0)*100)/100;
+
+  // App: pagos con método cloudbeds en el mes
+  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+  let appBruto=0;
+  const appPagosCb=[];
+  reservas.forEach(r=>{
+    if((r.anticipo||0)>0&&r.antiPago==='cloudbeds'&&String(r.antiFecha||'').startsWith(prefix)){
+      appPagosCb.push({reserva:r,monto:r.anticipo,fecha:r.antiFecha,tipo:'Anticipo'});
+      appBruto+=r.anticipo;
+    }
+    if((r.saldo||0)>0&&r.saldPago==='cloudbeds'&&String(r.saldFecha||'').startsWith(prefix)){
+      appPagosCb.push({reserva:r,monto:r.saldo,fecha:r.saldFecha,tipo:'Saldo'});
+      appBruto+=r.saldo;
+    }
+  });
+  gd(KC).forEach(c=>{
+    let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+    items.forEach(it=>{
+      if(it.pago!=='cloudbeds')return;
+      const fp=String(it.fechaPago||'').slice(0,10);
+      if(!fp.startsWith(prefix))return;
+      const monto=(it.precio||0)*(it.cantidad||0);
+      appPagosCb.push({reserva:{id:c.id,nombre:c.huesped,cbId:''},monto,fecha:fp,tipo:'Consumo: '+it.nombre});
+      appBruto+=monto;
+    });
+  });
+  appBruto=Math.round(appBruto*100)/100;
+
+  // Match each CB transaction to a reservation in app
+  // Priority: 1) by cbId, 2) by name+amount, 3) by amount
+  const matches=cbAll.map(cb=>{
+    const amount=Math.round(cb.montoCobrado*100)/100;
+    // candidates with matching amount (tolerance 1 peso)
+    const byAmount=appPagosCb.filter(c=>Math.abs(c.monto-amount)<=1);
+    if(cb.cbId){
+      const byCbId=byAmount.filter(c=>String(c.reserva.cbId||'').toUpperCase()===cb.cbId);
+      if(byCbId.length===1)return {cb,match:byCbId[0],how:'cbId+monto'};
+    }
+    const cbName=_recNormName(cb.guestName);
+    if(cbName){
+      const byName=byAmount.filter(c=>{
+        const rn=_recNormName(c.reserva.nombre);
+        return rn===cbName||rn.includes(cbName)||cbName.includes(rn);
+      });
+      if(byName.length===1)return {cb,match:byName[0],how:'nombre+monto'};
+    }
+    if(byAmount.length===1)return {cb,match:byAmount[0],how:'monto'};
+    return {cb,match:null,how:byAmount.length>1?'ambiguo':'sin_match'};
+  });
+  const matchedKeys=new Set();
+  matches.forEach(m=>{if(m.match)matchedKeys.add(String(m.match.reserva.id)+'-'+m.match.tipo+'-'+m.match.monto);});
+  const huerfanosApp=appPagosCb.filter(p=>!matchedKeys.has(String(p.reserva.id)+'-'+p.tipo+'-'+p.monto));
+
+  const okMatches=matches.filter(m=>m.match);
+  const failMatches=matches.filter(m=>!m.match);
+  const cuadre=Math.abs(appBruto-cbBruto)<=1;
+  const huerfTotal=failMatches.length+huerfanosApp.length;
+
+  // Bank reconciliation
+  const hasBank=Array.isArray(window._recBbvaRows);
+  let bankCbDeposits=[],bankCbTotal=0,bankCuadre=false,bankMatches=[];
+  if(hasBank){
+    bankCbDeposits=window._recBbvaRows.filter(r=>{
+      const d=String(r.descripcion||'').toUpperCase();
+      return r.abono>0&&d.includes('CLOUDBEDS')&&String(r.fecha||'').startsWith(prefix);
+    });
+    bankCbTotal=Math.round(bankCbDeposits.reduce((s,r)=>s+r.abono,0)*100)/100;
+    bankCuadre=Math.abs(bankCbTotal-cbNeto)<=1;
+    // Group cb rows by payoutId with sum of net
+    const payoutsById={};
+    cbAll.forEach(r=>{
+      if(!r.payoutId)return;
+      if(!payoutsById[r.payoutId])payoutsById[r.payoutId]={id:r.payoutId,fecha:r.payoutDate||'',monto:0};
+      payoutsById[r.payoutId].monto+=r.montoDesembolso;
+    });
+    const payoutsList=Object.values(payoutsById).map(p=>({...p,monto:Math.round(p.monto*100)/100}));
+    const usedPayout=new Set();
+    bankCbDeposits.forEach(bd=>{
+      const p=payoutsList.find(po=>!usedPayout.has(po.id)&&Math.abs(po.monto-bd.abono)<=0.01);
+      if(p)usedPayout.add(p.id);
+      bankMatches.push({bank:bd,payout:p||null,ok:!!p});
+    });
+  }
+
+  const bankCardHtml=hasBank?`
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco recibido</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankCbTotal)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankCbDeposits.length} depósito${bankCbDeposits.length!==1?'s':''} SPEI CloudBeds</p>
+      </div>`:'';
+  const bankVerifHtml=hasBank?`
+        <div style="background:${bankCuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${bankCuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${bankCuadre?'#1D9E75':'#E24B4A'}">${bankCuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${bankCuadre?'#085041':'#7A1F1D'}">CloudBeds neto vs Banco BBVA</p>
+            <p style="font-size:11px;color:${bankCuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(cbNeto)} vs ${fmt(bankCbTotal)} · ${bankCuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(cbNeto-bankCbTotal))}</p>
+          </div>
+        </div>`:'';
+
+  const rowsHtml=matches.map(m=>{
+    const cb=m.cb;
+    const ok=!!m.match;
+    const bg=ok?'#E1F5EE':'#FCE8E6';
+    const matchTxt=ok
+      ? `<div style="font-size:12px"><strong>${m.match.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${m.match.tipo} · ${fmtDate(m.match.fecha)||'—'}</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios candidatos en la app':'✗ Sin reserva con monto coincidente'}</div>`;
+    const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
+    const ref='cb-'+(cb.txId||(cb.cbId+'-'+cb.txDate));
+    const noteCell=ok?'':_recNoteBtn(prefix,'cloudbeds',ref);
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${cb.txDate||'—'}</td>
+      <td style="padding:7px 8px;font-size:12px">${cb.guestName||'<span style="color:#999;font-style:italic">(sin nombre)</span>'}${cb.cbId?'<br><code style="font-size:10px;color:#666">'+cb.cbId+'</code>':''}</td>
+      <td style="padding:7px 8px">${matchTxt} ${howTag}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(cb.montoCobrado)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:11px;color:#888">${fmt(cb.tasa)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(cb.montoDesembolso)}</td>
+      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
+    </tr>`;
+  }).join('');
+  const huerfAppHtml=huerfanosApp.map(p=>{
+    const ref='cb-app-'+(p.reserva.id||'')+'-'+p.tipo+'-'+Math.round((p.monto||0)*100);
+    return `<tr style="background:#FFF4E5">
+      <td style="padding:7px 8px;font-size:12px">${fmtDate(p.fecha)||'—'}</td>
+      <td style="padding:7px 8px;font-size:12px;color:#999;font-style:italic">(sin transacción CloudBeds)</td>
+      <td style="padding:7px 8px"><div style="font-size:12px"><strong>${p.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${p.tipo}</div></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(p.monto)}</td>
+      <td style="padding:7px 8px"></td><td style="padding:7px 8px"></td>
+      <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
+      <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'cloudbeds',ref)}</td>
+    </tr>`;
+  }).join('');
+
+  // Captura resultados para Excel
+  window._recLastCb={
+    appBruto:appBruto,
+    plataformaBruto:cbBruto,
+    plataformaNeto:cbNeto,
+    bankTotal:hasBank?bankCbTotal:null,
+    matches:matches.map(m=>({
+      cb:m.cb,
+      cbDate:m.cb.txDate,
+      cbName:m.cb.guestName||'(sin nombre)',
+      cbId:m.cb.cbId||'',
+      bruto:m.cb.montoCobrado,
+      fee:m.cb.tasa,
+      neto:m.cb.montoDesembolso,
+      ok:!!m.match,
+      how:m.how,
+      matchName:m.match?m.match.reserva.nombre:'',
+      matchTipo:m.match?m.match.tipo:'',
+      matchFecha:m.match?m.match.fecha:''
+    })),
+    huerfanosApp:huerfanosApp.map(p=>({
+      fecha:p.fecha,
+      nombre:p.reserva.nombre,
+      tipo:p.tipo,
+      monto:p.monto
+    }))
+  };
+
+  block.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">CloudBeds</h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">CloudBeds (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(cbBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">CloudBeds (neto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(cbNeto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">−comisión ${fmt(cbFee)}</p>
+      </div>
+      ${bankCardHtml}
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FCE8E6'};border:0.5px solid ${cuadre?'#1D9E75':'#E24B4A'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:0">Estado</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#7A1F1D'}">${cuadre?'✓ Cuadra':'✗ Diferencia '+fmt(appBruto-cbBruto)}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 8px">Verificaciones</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:${cuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${cuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${cuadre?'#1D9E75':'#E24B4A'}">${cuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${cuadre?'#085041':'#7A1F1D'}">App vs CloudBeds (bruto)</p>
+            <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(appBruto)} vs ${fmt(cbBruto)} · ${cuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(appBruto-cbBruto))}</p>
+          </div>
+        </div>
+        ${bankVerifHtml}
+        <div style="background:${huerfTotal===0?'#E1F5EE':'#FFF4E5'};border-left:3px solid ${huerfTotal===0?'#1D9E75':'#BA7517'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${huerfTotal===0?'#1D9E75':'#BA7517'}">${huerfTotal===0?'✓':'⚠'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${huerfTotal===0?'#085041':'#634009'}">Huérfanos</p>
+            <p style="font-size:11px;color:${huerfTotal===0?'#085041':'#634009'};margin:2px 0 0">${huerfTotal===0?'Todas las transacciones emparejadas':failMatches.length+' CloudBeds sin reserva · '+huerfanosApp.length+' reserva sin CloudBeds'}</p>
+          </div>
+        </div>
+        <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:#888">i</span>
+          <div style="flex:1">
+            <p style="font-size:12px;color:#666;margin:0">Total emparejado: ${okMatches.length}/${matches.length} transacciones CloudBeds${hasBank?' · '+bankMatches.filter(b=>b.ok).length+'/'+bankMatches.length+' depósitos banco':''}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle CloudBeds — ${cbAll.length} transacciones${huerfanosApp.length>0?' + '+huerfanosApp.length+' huérfanos en app':''}</p>
+      <table id="rec-tbl-cb" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          ${_recSortableTh('Fecha cobro','left','rec-tbl-cb',0,'date')}
+          ${_recSortableTh('Huésped CloudBeds','left','rec-tbl-cb',1,'text')}
+          ${_recSortableTh('↔ Reserva App','left','rec-tbl-cb',2,'text')}
+          ${_recSortableTh('Bruto','right','rec-tbl-cb',3,'num')}
+          ${_recSortableTh('Fee','right','rec-tbl-cb',4,'num')}
+          ${_recSortableTh('Neto','right','rec-tbl-cb',5,'num')}
+          ${_recSortableTh('Estado','center','rec-tbl-cb',6,'estado')}
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
+        </tr></thead>
+        <tbody>${rowsHtml||'<tr><td colspan="8" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin transacciones CloudBeds en este mes</td></tr>'}${huerfAppHtml}</tbody>
+      </table>
+    </div>
+    ${hasBank?`
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Depósitos CloudBeds en banco BBVA — ${bankCbDeposits.length}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto banco</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Payout CloudBeds</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+        </tr></thead>
+        <tbody>
+          ${bankMatches.map(b=>{
+            const bg=b.ok?'#E1F5EE':'#FCE8E6';
+            const po=b.payout;
+            return `<tr style="background:${bg}">
+              <td style="padding:7px 8px">${b.bank.fecha}</td>
+              <td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(b.bank.abono)}</td>
+              <td style="padding:7px 8px">${po?`<div style="font-size:11px"><code style="font-size:10px;color:#666">${po.id.substring(0,20)}...</code></div><div style="font-size:11px;color:#666">Desembolso: ${po.fecha} · ${fmt(po.monto)}</div>`:'<span style="color:#7A1F1D;font-size:11px">✗ Sin payout coincidente</span>'}</td>
+              <td style="padding:7px 8px;text-align:center;color:${b.ok?'#1D9E75':'#E24B4A'};font-size:14px">${b.ok?'✓':'✗'}</td>
+            </tr>`;
+          }).join('')||'<tr><td colspan="4" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin depósitos CloudBeds en el banco este mes</td></tr>'}
+        </tbody>
+      </table>
+    </div>`:''}`;
+}
+
+function _recAllBankRows(includeAccounts){
+  // includeAccounts: array de keys: 'bbva','bbvasnda','santander'
+  const out=[];
+  const addAll=(rows,acc)=>{(rows||[]).forEach(r=>out.push({...r,_acc:acc}));};
+  if(!includeAccounts||includeAccounts.includes('bbva'))addAll(window._recBbvaRows,'BBVA Principal');
+  if(!includeAccounts||includeAccounts.includes('bbvasnda'))addAll(window._recBbvaSndaRows,'BBVA Snda');
+  if(!includeAccounts||includeAccounts.includes('santander'))addAll(window._recSantanderRows,'Santander');
+  return out;
+}
+
+// ----- Transferencias -----
+function _renderReconcilTrans(prefix){
+  const block=document.getElementById('rec-trans-block');if(!block)return;
+  const hasAnyBank=Array.isArray(window._recBbvaRows)||Array.isArray(window._recSantanderRows);
+  if(!hasAnyBank){block.innerHTML='';return;}
+
+  // App: pagos con método transferencia en el mes
+  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+  const appPagos=[];
+  reservas.forEach(r=>{
+    if((r.anticipo||0)>0&&r.antiPago==='transferencia'&&String(r.antiFecha||'').startsWith(prefix)){
+      appPagos.push({reserva:r,monto:r.anticipo,fecha:r.antiFecha,tipo:'Anticipo'});
+    }
+    if((r.saldo||0)>0&&r.saldPago==='transferencia'&&String(r.saldFecha||'').startsWith(prefix)){
+      appPagos.push({reserva:r,monto:r.saldo,fecha:r.saldFecha,tipo:'Saldo'});
+    }
+  });
+  gd(KC).forEach(c=>{
+    let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+    items.forEach(it=>{
+      if(it.pago!=='transferencia')return;
+      const fp=String(it.fechaPago||'').slice(0,10);
+      if(!fp.startsWith(prefix))return;
+      const monto=(it.precio||0)*(it.cantidad||0);
+      appPagos.push({reserva:{id:c.id,nombre:c.huesped},monto,fecha:fp,tipo:'Consumo: '+it.nombre});
+    });
+  });
+  const appBruto=Math.round(appPagos.reduce((s,p)=>s+p.monto,0)*100)/100;
+
+  // Agrupar pagos app por huésped + fecha exacta
+  const grupos={};
+  appPagos.forEach(p=>{
+    const key=(p.reserva.nombre||'')+'|'+(String(p.fecha||'').slice(0,10));
+    if(!grupos[key])grupos[key]={huesped:p.reserva.nombre,fecha:String(p.fecha||'').slice(0,10),monto:0,items:[],reservaId:p.reserva.id};
+    grupos[key].monto+=p.monto;
+    grupos[key].items.push(p);
+  });
+  const appGrupos=Object.values(grupos).map(g=>({...g,monto:Math.round(g.monto*100)/100}));
+
+  // Banco: SPEI recibidos del mes (BBVA Principal + Santander) que NO son Stripe ni CloudBeds
+  const bankRows=_recAllBankRows(['bbva','santander']);
+  const bankSpei=bankRows.filter(r=>{
+    const d=String(r.descripcion||'').toUpperCase();
+    if(r.abono<=0||!String(r.fecha||'').startsWith(prefix))return false;
+    // BBVA: descripción típica "SPEI RECIBIDO ..."
+    // Santander: descripción puede no traer "SPEI" pero es un depósito sin Stripe/CloudBeds
+    if(d.includes('STRIPE')||d.includes('CLOUDBEDS'))return false;
+    // En BBVA, queremos SPEI RECIBIDO. En Santander, cualquier depósito que no sea claramente otra cosa.
+    if(r._acc==='BBVA Principal')return d.includes('SPEI RECIBIDO');
+    return true; // Santander: aceptamos todos los abonos
+  });
+  const bankTotal=Math.round(bankSpei.reduce((s,r)=>s+r.abono,0)*100)/100;
+
+  // Matching: cada SPEI ↔ grupo app por monto (tolerancia 1 peso)
+  const usedGrupo=new Set();
+  const matches=bankSpei.map(bs=>{
+    const amount=Math.round(bs.abono*100)/100;
+    const cand=appGrupos.filter((g,i)=>!usedGrupo.has(i)&&Math.abs(g.monto-amount)<=1);
+    if(cand.length===1){
+      const idx=appGrupos.indexOf(cand[0]);
+      usedGrupo.add(idx);
+      return {bank:bs,match:cand[0],how:'monto'};
+    }
+    return {bank:bs,match:null,how:cand.length>1?'ambiguo':'sin_match'};
+  });
+  const huerfanosApp=appGrupos.filter((g,i)=>!usedGrupo.has(i));
+
+  const okMatches=matches.filter(m=>m.match);
+  const failMatches=matches.filter(m=>!m.match);
+  const cuadre=Math.abs(appBruto-bankTotal)<=1;
+  const huerfTotal=failMatches.length+huerfanosApp.length;
+
+  // Si no hay datos en ninguna parte, mostrar bloque vacío informativo
+  if(appPagos.length===0&&bankSpei.length===0){
+    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Transferencias</h3><p class="empty" style="padding:14px;font-size:12px">Sin pagos por transferencia ni SPEI recibidos en este mes.</p>`;
+    return;
+  }
+
+  const rowsHtml=matches.map(m=>{
+    const ok=!!m.match;
+    const bg=ok?'#E1F5EE':'#FCE8E6';
+    const desc=String(m.bank.descripcion||'');
+    const matchTxt=ok
+      ? `<div style="font-size:12px"><strong>${m.match.huesped}</strong></div><div style="font-size:11px;color:#666">${fmtDate(m.match.fecha)||'—'} · ${m.match.items.length} item${m.match.items.length!==1?'s':''}</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios grupos con este monto en la app':'✗ Sin grupo en la app con este monto'}</div>`;
+    const ref='t-'+(m.bank._acc||'')+'-'+m.bank.fecha+'-'+Math.round((m.bank.abono||0)*100);
+    const noteCell=ok?'':_recNoteBtn(prefix,'transferencias',ref);
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${m.bank.fecha}</td>
+      <td style="padding:7px 8px;font-size:11px;color:#666"><strong style="color:#1A1916">${m.bank._acc||''}</strong> · ${desc.substring(0,70)}${desc.length>70?'…':''}</td>
+      <td style="padding:7px 8px">${matchTxt}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(m.bank.abono)}</td>
+      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
+    </tr>`;
+  }).join('');
+  const huerfAppHtml=huerfanosApp.map(g=>{
+    const ref='t-app-'+(g.reservaId||'')+'-'+g.fecha+'-'+Math.round((g.monto||0)*100);
+    return `<tr style="background:#FFF4E5">
+      <td style="padding:7px 8px;font-size:12px">${g.fecha||'—'}</td>
+      <td style="padding:7px 8px;font-size:11px;color:#999;font-style:italic">(sin SPEI en el banco)</td>
+      <td style="padding:7px 8px"><div style="font-size:12px"><strong>${g.huesped}</strong></div><div style="font-size:11px;color:#666">${g.items.length} item${g.items.length!==1?'s':''}: ${g.items.slice(0,3).map(i=>i.tipo).join(', ')}${g.items.length>3?'…':''}</div></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(g.monto)}</td>
+      <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
+      <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'transferencias',ref)}</td>
+    </tr>`;
+  }).join('');
+
+  // Captura resultados para Excel
+  window._recLastTrans={
+    appBruto:appBruto,
+    bankTotal:bankTotal,
+    matches:matches.map(m=>({
+      bankAcc:m.bank._acc||'',
+      bankFecha:m.bank.fecha,
+      bankDesc:String(m.bank.descripcion||''),
+      bankAbono:m.bank.abono,
+      ok:!!m.match,
+      how:m.how,
+      matchName:m.match?m.match.huesped:'',
+      matchFecha:m.match?m.match.fecha:'',
+      matchItems:m.match?m.match.items.length:0
+    })),
+    huerfanosApp:huerfanosApp.map(g=>({
+      huesped:g.huesped,
+      fecha:g.fecha,
+      monto:g.monto,
+      reservaId:g.reservaId,
+      itemsDesc:g.items.slice(0,3).map(i=>i.tipo).join(', ')+(g.items.length>3?'…':''),
+      itemsCount:g.items.length
+    }))
+  };
+
+  block.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Transferencias</h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco recibido</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankTotal)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankSpei.length} SPEI recibido${bankSpei.length!==1?'s':''}</p>
+      </div>
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FCE8E6'};border:0.5px solid ${cuadre?'#1D9E75':'#E24B4A'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:0">Estado</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#7A1F1D'}">${cuadre?'✓ Cuadra':'✗ Diferencia '+fmt(appBruto-bankTotal)}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 8px">Verificaciones</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:${cuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${cuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${cuadre?'#1D9E75':'#E24B4A'}">${cuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${cuadre?'#085041':'#7A1F1D'}">App vs Banco</p>
+            <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(appBruto)} vs ${fmt(bankTotal)} · ${cuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(appBruto-bankTotal))}</p>
+          </div>
+        </div>
+        <div style="background:${huerfTotal===0?'#E1F5EE':'#FFF4E5'};border-left:3px solid ${huerfTotal===0?'#1D9E75':'#BA7517'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${huerfTotal===0?'#1D9E75':'#BA7517'}">${huerfTotal===0?'✓':'⚠'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${huerfTotal===0?'#085041':'#634009'}">Huérfanos</p>
+            <p style="font-size:11px;color:${huerfTotal===0?'#085041':'#634009'};margin:2px 0 0">${huerfTotal===0?'Todos los movimientos emparejados':failMatches.length+' SPEI sin grupo en app · '+huerfanosApp.length+' grupo app sin SPEI'}</p>
+          </div>
+        </div>
+        <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:#888">i</span>
+          <div style="flex:1">
+            <p style="font-size:12px;color:#666;margin:0">Total emparejado: ${okMatches.length}/${matches.length} SPEI del banco</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Transferencias — ${bankSpei.length} SPEI${huerfanosApp.length>0?' + '+huerfanosApp.length+' grupos huérfanos en app':''}</p>
+      <table id="rec-tbl-trans" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          ${_recSortableTh('Fecha','left','rec-tbl-trans',0,'date')}
+          ${_recSortableTh('Descripción SPEI','left','rec-tbl-trans',1,'text')}
+          ${_recSortableTh('↔ Pago App','left','rec-tbl-trans',2,'text')}
+          ${_recSortableTh('Monto','right','rec-tbl-trans',3,'num')}
+          ${_recSortableTh('Estado','center','rec-tbl-trans',4,'estado')}
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
+        </tr></thead>
+        <tbody>${rowsHtml||'<tr><td colspan="6" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin SPEI recibidos en este mes</td></tr>'}${huerfAppHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+// ----- Débito -----
+function _renderReconcilDebito(prefix){
+  const block=document.getElementById('rec-debito-block');if(!block)return;
+  if(!Array.isArray(window._recBbvaRows)){block.innerHTML='';return;}
+
+  // App: pagos con método débito en el mes
+  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+  let appBruto=0;
+  reservas.forEach(r=>{
+    if((r.anticipo||0)>0&&r.antiPago==='debito'&&String(r.antiFecha||'').startsWith(prefix))appBruto+=r.anticipo;
+    if((r.saldo||0)>0&&r.saldPago==='debito'&&String(r.saldFecha||'').startsWith(prefix))appBruto+=r.saldo;
+  });
+  gd(KC).forEach(c=>{
+    let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+    items.forEach(it=>{
+      if(it.pago!=='debito')return;
+      const fp=String(it.fechaPago||'').slice(0,10);
+      if(!fp.startsWith(prefix))return;
+      appBruto+=(it.precio||0)*(it.cantidad||0);
+    });
+  });
+  appBruto=Math.round(appBruto*100)/100;
+
+  // Banco: VENTAS TDC INTER del mes (neto, ya con comisión descontada)
+  const bankTdc=window._recBbvaRows.filter(r=>{
+    const d=String(r.descripcion||'').toUpperCase();
+    return r.abono>0&&d.includes('VENTAS TDC')&&String(r.fecha||'').startsWith(prefix);
+  });
+  const bankTdcTotal=Math.round(bankTdc.reduce((s,r)=>s+r.abono,0)*100)/100;
+
+  // Comisión TDC del mes (cargos COM VTAS TDC + IVA COM VTAS TDC)
+  const comTdc=window._recBbvaRows.filter(r=>{
+    const d=String(r.descripcion||'').toUpperCase();
+    return r.cargo<0&&(d.includes('COM VTAS TDC')||d.includes('COM VTAS TDC INTER'))&&String(r.fecha||'').startsWith(prefix);
+  });
+  const comTdcTotal=Math.round(comTdc.reduce((s,r)=>s+Math.abs(r.cargo),0)*100)/100;
+
+  const diff=appBruto-bankTdcTotal;
+
+  if(appBruto===0&&bankTdc.length===0){
+    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3><p class="empty" style="padding:14px;font-size:12px">Sin pagos por débito ni ventas TDC en este mes.</p>`;
+    return;
+  }
+
+  const tdcRowsHtml=bankTdc.map(b=>`
+    <tr>
+      <td style="padding:7px 8px;font-size:12px">${b.fecha}</td>
+      <td style="padding:7px 8px;font-size:11px;color:#666">${String(b.descripcion||'').substring(0,80)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(b.abono)}</td>
+    </tr>`).join('');
+  const comRowsHtml=comTdc.map(b=>`
+    <tr>
+      <td style="padding:7px 8px;font-size:12px">${b.fecha}</td>
+      <td style="padding:7px 8px;font-size:11px;color:#666">${String(b.descripcion||'').substring(0,80)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;color:#7A1F1D">${fmt(Math.abs(b.cargo))}</td>
+    </tr>`).join('');
+
+  // Captura resultados para Excel
+  window._recLastDebito={
+    appBruto:appBruto,
+    bankTotal:bankTdcTotal,
+    comisionTotal:comTdcTotal,
+    diff:diff
+  };
+
+  block.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco (neto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankTdcTotal)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankTdc.length} cierre${bankTdc.length!==1?'s':''} TDC</p>
+      </div>
+      <div style="flex:1;min-width:160px;background:#F5F4F0;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Diferencia</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:#1A1916">${fmt(diff)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">comisión TDC mes: ${fmt(comTdcTotal)}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:12px;color:#666;margin:0;background:#F5F4F0;padding:8px 12px;border-radius:6px"><strong>Nota:</strong> el banco recibe el monto neto de comisión TDC (~3-3.5%). La app registra el bruto. La diferencia esperada es del orden de la comisión TDC del mes. Si la diferencia es muy superior, puede haber cierres de terminal pendientes o cobros mal etiquetados.</p>
+    </div>
+    ${tdcRowsHtml?`<div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Cierres TDC en banco — ${bankTdc.length}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto neto</th>
+        </tr></thead>
+        <tbody>${tdcRowsHtml}</tbody>
+      </table>
+    </div>`:''}
+    ${comRowsHtml?`<div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Comisiones TDC en banco — ${comTdc.length}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
+        </tr></thead>
+        <tbody>${comRowsHtml}</tbody>
+      </table>
+    </div>`:''}`;
+}
+
+// ----- Egresos (Facturas + Notas de crédito) -----
+function _recExtractRfc(desc){
+  // Banco: extrae RFC tipo "TCH 850701RM1" o "ANE 140618P37"
+  const m=String(desc||'').match(/RFC:\s*([A-Z&Ñ]{3,4})\s*(\d{6})([A-Z0-9]{3})/i);
+  return m?(m[1]+m[2]+m[3]).toUpperCase():'';
+}
+
+function _recIsInternalMovement(desc){
+  // Movimientos internos del banco a excluir del matching de egresos
+  const d=String(desc||'').toUpperCase();
+  return d.includes('TRASPASO CUENTAS PROPIAS')
+      || d.includes('SERV BCA INTERNET')
+      || d.includes('IVA COM SERV BCA')
+      || d.includes('COM SERV BCA')
+      || d.includes('SPEI ENVIADO')&&d.includes('CUENTAS PROPIAS')
+      || d.includes('VENTAS TDC INTER')      // ingresos
+      || d.includes('COM VTAS TDC')          // ya tratado en débito
+      || d.includes('IVA COM VTAS TDC')
+      || d.includes('SPEI RECIBIDO');        // ingresos
+}
+
+function _renderReconcilEgresos(prefix){
+  const block=document.getElementById('rec-egresos-block');if(!block)return;
+  const hasAnyBank=Array.isArray(window._recBbvaRows)||Array.isArray(window._recBbvaSndaRows)||Array.isArray(window._recSantanderRows);
+  if(!hasAnyBank){block.innerHTML='';return;}
+
+  // App: egresos (facturas + notas de crédito + noCFDI) del mes
+  const egresos=gd(KE);
+  const facturas=egresos.filter(e=>{
+    const fecha=String(e.fecha||'').slice(0,10);
+    if(!fecha.startsWith(prefix))return false;
+    if(e.tipoDoc==='Nota de crédito')return false;
+    // Excluir facturas con monto 0 (no representan un pago real)
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    if(monto<0.01)return false;
+    return true;
+  });
+  const notasCredito=egresos.filter(e=>{
+    const fecha=String(e.fecha||'').slice(0,10);
+    if(!fecha.startsWith(prefix))return false;
+    if(e.tipoDoc!=='Nota de crédito')return false;
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    if(monto<0.01)return false;
+    return true;
+  });
+
+  // Banco: todos los cargos (excluyendo movimientos internos) en los 3 archivos
+  const allBank=_recAllBankRows();
+  // Para egresos: incluir cargos del mes Y los 60 días siguientes (puede pagar después)
+  // Pero el banco actual es solo el mes; aceptamos esto y rastreamos por monto.
+  // Filtro cargos elegibles: cualquier cargo del mes O posterior pero antes de prefix+60d
+  const cargosBank=allBank.filter(r=>r.cargo<0&&!_recIsInternalMovement(r.descripcion));
+  // abonos para notas de crédito
+  const abonosBank=allBank.filter(r=>r.abono>0&&!_recIsInternalMovement(r.descripcion));
+
+  // Matching facturas → cargo banco — lógica en 4 pasadas + greedy por proximidad
+  //   Pasada 1: match único RFC+monto+ventana
+  //   Pasada 2: match greedy N:N entre facturas con mismo RFC+monto y sus cargos elegibles
+  //   Pasada 3: match único por monto solo (sin RFC)
+  //   Pasada 4: match greedy N:N por monto solo (distintos proveedores con mismo monto)
+  // Después de match: si la diferencia de fecha es >30 días, se etiqueta el match como "lejano"
+
+  const usedCargo=new Set();
+  const facturaMatches=new Array(facturas.length).fill(null);
+  const ventana=60*24*60*60*1000;
+
+  // Pre-cálculo por cada factura
+  const facData=facturas.map(e=>{
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    const monedaOrig=String(e.monedaOriginal||e.moneda||'MXN').toUpperCase();
+    const isUSD=monedaOrig!=='MXN'&&monedaOrig!=='';
+    const tolerancia=isUSD?Math.max(monto*0.03,5):1;
+    const rfc=String(e.rfc||'').toUpperCase().replace(/[^A-Z0-9Ñ&]/g,'');
+    const cfdiDate=new Date(String(e.fecha||'').slice(0,10));
+    return {e,monto,tolerancia,rfc,cfdiDate};
+  });
+
+  const elegiblesFor=(d,useRfc)=>{
+    return cargosBank.map((c,i)=>({c,i})).filter(({c,i})=>{
+      if(usedCargo.has(i))return false;
+      if(Math.abs(Math.abs(c.cargo)-d.monto)>d.tolerancia)return false;
+      const bd=new Date(c.fecha);
+      const diff=bd-d.cfdiDate;
+      if(diff<-ventana||diff>ventana)return false;
+      if(useRfc&&d.rfc&&_recExtractRfc(c.descripcion)!==d.rfc)return false;
+      return true;
+    });
+  };
+
+  const dayDiff=(a,b)=>Math.abs((new Date(a)-new Date(b))/(1000*60*60*24));
+
+  // --- Pasada 1: único RFC+monto ---
+  facData.forEach((d,fi)=>{
+    if(facturaMatches[fi])return;
+    if(!d.rfc)return;
+    const el=elegiblesFor(d,true);
+    if(el.length===1){
+      usedCargo.add(el[0].i);
+      const dd=Math.round(dayDiff(el[0].c.fecha,d.cfdiDate));
+      facturaMatches[fi]={egreso:d.e,bank:el[0].c,how:'RFC+monto',dateDiffDays:dd};
+    }
+  });
+
+  // --- Pasada 2: greedy N:N por RFC+monto ---
+  // Agrupar facturas pendientes por RFC + monto redondeado
+  const pendientesPasada2=facData.map((d,fi)=>({d,fi})).filter(({fi,d})=>!facturaMatches[fi]&&d.rfc);
+  const gruposRfcMonto={};
+  pendientesPasada2.forEach(({d,fi})=>{
+    const key=d.rfc+'|'+Math.round(d.monto*100);
+    if(!gruposRfcMonto[key])gruposRfcMonto[key]=[];
+    gruposRfcMonto[key].push({d,fi});
+  });
+  Object.values(gruposRfcMonto).forEach(grupo=>{
+    if(grupo.length<2)return; // solo 1, no aplica greedy
+    // Cargos candidatos comunes (mismo RFC+monto, no usados)
+    const sample=grupo[0].d;
+    const candidatos=elegiblesFor(sample,true);
+    if(candidatos.length===0)return;
+    // Asignación greedy: ordenar pares (factura, cargo) por proximidad de fecha
+    const pares=[];
+    grupo.forEach(({d,fi})=>{
+      candidatos.forEach(({c,i})=>{
+        pares.push({fi,ci:i,c,d,dd:dayDiff(c.fecha,d.cfdiDate)});
+      });
+    });
+    pares.sort((a,b)=>a.dd-b.dd);
+    const usadosFi=new Set(),usadosCi=new Set();
+    pares.forEach(p=>{
+      if(usadosFi.has(p.fi)||usadosCi.has(p.ci)||usedCargo.has(p.ci))return;
+      usadosFi.add(p.fi);usadosCi.add(p.ci);
+      usedCargo.add(p.ci);
+      facturaMatches[p.fi]={egreso:p.d.e,bank:p.c,how:'RFC+monto · greedy',dateDiffDays:Math.round(p.dd)};
+    });
+  });
+
+  // --- Pasada 3: único por monto solo ---
+  facData.forEach((d,fi)=>{
+    if(facturaMatches[fi])return;
+    const el=elegiblesFor(d,false);
+    if(el.length===1){
+      usedCargo.add(el[0].i);
+      const dd=Math.round(dayDiff(el[0].c.fecha,d.cfdiDate));
+      facturaMatches[fi]={egreso:d.e,bank:el[0].c,how:'monto',dateDiffDays:dd};
+    }
+  });
+
+  // --- Pasada 4: greedy N:N por monto solo (sin RFC) ---
+  const pendientesPasada4=facData.map((d,fi)=>({d,fi})).filter(({fi})=>!facturaMatches[fi]);
+  const gruposMonto={};
+  pendientesPasada4.forEach(({d,fi})=>{
+    const key=Math.round(d.monto*100);
+    if(!gruposMonto[key])gruposMonto[key]=[];
+    gruposMonto[key].push({d,fi});
+  });
+  Object.values(gruposMonto).forEach(grupo=>{
+    if(grupo.length===0)return;
+    const sample=grupo[0].d;
+    const candidatos=elegiblesFor(sample,false);
+    if(candidatos.length===0)return;
+    const pares=[];
+    grupo.forEach(({d,fi})=>{
+      candidatos.forEach(({c,i})=>{
+        pares.push({fi,ci:i,c,d,dd:dayDiff(c.fecha,d.cfdiDate)});
+      });
+    });
+    pares.sort((a,b)=>a.dd-b.dd);
+    const usadosFi=new Set(),usadosCi=new Set();
+    pares.forEach(p=>{
+      if(usadosFi.has(p.fi)||usadosCi.has(p.ci)||usedCargo.has(p.ci))return;
+      usadosFi.add(p.fi);usadosCi.add(p.ci);
+      usedCargo.add(p.ci);
+      facturaMatches[p.fi]={egreso:p.d.e,bank:p.c,how:'monto · greedy',dateDiffDays:Math.round(p.dd)};
+    });
+  });
+
+  // Rellenar los que quedaron sin match
+  facturaMatches.forEach((m,fi)=>{
+    if(m)return;
+    const d=facData[fi];
+    const el=elegiblesFor(d,false);
+    facturaMatches[fi]={egreso:d.e,bank:null,how:el.length>1?'ambiguo':'sin_match'};
+  });
+
+  const cargosHuerfanos=cargosBank.filter((c,i)=>!usedCargo.has(i)&&String(c.fecha||'').startsWith(prefix));
+
+  // Matching notas de crédito → abono banco
+  const usedAbono=new Set();
+  const ncMatches=notasCredito.map(e=>{
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    const cfdiDate=new Date(String(e.fecha||'').slice(0,10));
+    const ventana=60*24*60*60*1000;
+    const elegibles=abonosBank.filter((a,i)=>{
+      if(usedAbono.has(i))return false;
+      if(Math.abs(a.abono-monto)>1)return false;
+      const bd=new Date(a.fecha);
+      const diff=bd-cfdiDate;
+      return diff>=-ventana&&diff<=ventana;
+    });
+    if(elegibles.length>=1){
+      const idx=abonosBank.indexOf(elegibles[0]);
+      usedAbono.add(idx);
+      return {egreso:e,bank:elegibles[0],how:'monto'};
+    }
+    return {egreso:e,bank:null,how:'sin_match'};
+  });
+
+  // Totales
+  const appBruto=Math.round(facturas.reduce((s,e)=>s+Math.abs(parseFloat(e.montoMXN||e.total)||0),0)*100)/100;
+  const bankBruto=Math.round(cargosBank.reduce((s,c)=>s+Math.abs(c.cargo),0)*100)/100;
+  const diff=appBruto-bankBruto;
+  const fokFact=facturaMatches.filter(m=>m.bank).length;
+  const failFact=facturaMatches.length-fokFact;
+  const huerfBankCount=cargosHuerfanos.length;
+  const cuadre=Math.abs(diff)<=1;
+  const accountsLoaded=[
+    Array.isArray(window._recBbvaRows)?'BBVA Principal':null,
+    Array.isArray(window._recBbvaSndaRows)?'BBVA Snda':null,
+    Array.isArray(window._recSantanderRows)?'Santander':null
+  ].filter(Boolean);
+
+  if(facturas.length===0&&notasCredito.length===0&&cargosBank.length===0){
+    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Egresos</h3><p class="empty" style="padding:14px;font-size:12px">Sin egresos ni cargos bancarios en este mes.</p>`;
+    return;
+  }
+
+  // Captura resultados para Excel
+  window._recLastEgresos={
+    appBruto:appBruto,
+    bankTotal:bankBruto,
+    facturaMatches:facturaMatches.map(m=>({
+      egreso:m.egreso,
+      proveedor:m.egreso.proveedor||'',
+      rfc:m.egreso.rfc||'',
+      fecha:String(m.egreso.fecha||'').slice(0,10),
+      total:Math.abs(parseFloat(m.egreso.montoMXN||m.egreso.total)||0),
+      ok:!!m.bank,
+      lejano:m.bank&&typeof m.dateDiffDays==='number'&&m.dateDiffDays>30,
+      dateDiffDays:m.dateDiffDays||null,
+      how:m.how,
+      bankAcc:m.bank?m.bank._acc:'',
+      bankFecha:m.bank?m.bank.fecha:'',
+      bankDesc:m.bank?String(m.bank.descripcion||''):''
+    })),
+    huerfanosBank:cargosHuerfanos.map(c=>({
+      fecha:c.fecha,
+      acc:c._acc,
+      desc:String(c.descripcion||''),
+      monto:Math.abs(c.cargo),
+      rfc:_recExtractRfc(c.descripcion)
+    })),
+    ncMatches:ncMatches.map(m=>({
+      egreso:m.egreso,
+      proveedor:m.egreso.proveedor||'',
+      fecha:String(m.egreso.fecha||'').slice(0,10),
+      monto:Math.abs(parseFloat(m.egreso.montoMXN||m.egreso.total)||0),
+      ok:!!m.bank,
+      bankAcc:m.bank?m.bank._acc:'',
+      bankFecha:m.bank?m.bank.fecha:'',
+      bankAbono:m.bank?m.bank.abono:0
+    }))
+  };
+
+  const factRowsHtml=facturaMatches.map(m=>{
+    const e=m.egreso;
+    const ok=!!m.bank;
+    const lejano=ok&&typeof m.dateDiffDays==='number'&&m.dateDiffDays>30;
+    const bg=ok?(lejano?'#FFF4E5':'#E1F5EE'):'#FCE8E6';
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    const matchTxt=ok
+      ? `<div style="font-size:11px"><strong style="color:#1A1916">${m.bank._acc}</strong> · ${m.bank.fecha}${lejano?' <span style="color:#BA7517;font-weight:600">⚠ '+m.dateDiffDays+' días</span>':''}</div><div style="font-size:11px;color:#666">${String(m.bank.descripcion||'').substring(0,60)}${String(m.bank.descripcion||'').length>60?'…':''}</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios cargos con este monto':'✗ Sin cargo coincidente en banco'}</div>`;
+    const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
+    const estadoIcon=ok?(lejano?'<span style="color:#BA7517;font-size:14px">⚠</span>':'<span style="color:#1D9E75;font-size:14px">✓</span>'):'<span style="color:#E24B4A;font-size:14px">✗</span>';
+    const ref='eg-'+(e.uuid||(e.rfc+'-'+e.fecha+'-'+Math.round(monto*100)));
+    const noteCell=(ok&&!lejano)?'':_recNoteBtn(prefix,'egresos',ref);
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${String(e.fecha||'').slice(0,10)}</td>
+      <td style="padding:7px 8px;font-size:12px"><strong>${e.proveedor||''}</strong><br><span style="font-size:10px;color:#888">${e.rfc||''}</span></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(monto)}</td>
+      <td style="padding:7px 8px">${matchTxt} ${howTag}</td>
+      <td style="padding:7px 8px;text-align:center">${estadoIcon}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
+    </tr>`;
+  }).join('');
+  const huerfBankHtml=cargosHuerfanos.map(c=>{
+    const rfc=_recExtractRfc(c.descripcion);
+    const ref='eg-bank-'+(c._acc||'')+'-'+c.fecha+'-'+Math.round(Math.abs(c.cargo)*100);
+    return `<tr style="background:#FFF4E5">
+      <td style="padding:7px 8px;font-size:12px">${c.fecha}</td>
+      <td style="padding:7px 8px;font-size:12px;color:#999;font-style:italic">(sin CFDI en app)${rfc?'<br><span style="font-size:10px;color:#888">'+rfc+'</span>':''}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(Math.abs(c.cargo))}</td>
+      <td style="padding:7px 8px"><div style="font-size:11px"><strong>${c._acc}</strong></div><div style="font-size:11px;color:#666">${String(c.descripcion||'').substring(0,60)}</div></td>
+      <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
+      <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'egresos',ref)}</td>
+    </tr>`;
+  }).join('');
+
+  const ncRowsHtml=ncMatches.map(m=>{
+    const e=m.egreso;
+    const ok=!!m.bank;
+    const bg=ok?'#E1F5EE':'#FCE8E6';
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    const matchTxt=ok
+      ? `<div style="font-size:11px"><strong>${m.bank._acc}</strong> · ${m.bank.fecha} · ${fmt(m.bank.abono)} abono</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">✗ Sin abono coincidente</div>`;
+    const ref='nc-'+(e.uuid||(e.rfc+'-'+e.fecha+'-'+Math.round(monto*100)));
+    const noteCell=ok?'':_recNoteBtn(prefix,'notas_credito',ref);
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${String(e.fecha||'').slice(0,10)}</td>
+      <td style="padding:7px 8px;font-size:12px"><strong>${e.proveedor||''}</strong></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">-${fmt(monto)}</td>
+      <td style="padding:7px 8px">${matchTxt}</td>
+      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+      <td style="padding:7px 8px;text-align:center">${noteCell}</td>
+    </tr>`;
+  }).join('');
+
+  block.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Egresos</h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App (facturas)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${facturas.length} factura${facturas.length!==1?'s':''}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco (cargos elegibles)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankBruto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${accountsLoaded.length} cuenta${accountsLoaded.length!==1?'s':''} · ${cargosBank.length} cargos</p>
+      </div>
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FFF4E5'};border:0.5px solid ${cuadre?'#1D9E75':'#BA7517'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#634009'};margin:0">Estado</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#634009'}">${cuadre?'✓ Cuadra':'⚠ Diferencia '+fmt(Math.abs(diff))}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 8px">Verificaciones</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:${failFact===0?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${failFact===0?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${failFact===0?'#1D9E75':'#E24B4A'}">${failFact===0?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${failFact===0?'#085041':'#7A1F1D'}">Facturas emparejadas</p>
+            <p style="font-size:11px;color:${failFact===0?'#085041':'#7A1F1D'};margin:2px 0 0">${fokFact} de ${facturas.length} facturas encontradas en banco (±60 días)</p>
+          </div>
+        </div>
+        <div style="background:${huerfBankCount===0?'#E1F5EE':'#FFF4E5'};border-left:3px solid ${huerfBankCount===0?'#1D9E75':'#BA7517'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${huerfBankCount===0?'#1D9E75':'#BA7517'}">${huerfBankCount===0?'✓':'⚠'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${huerfBankCount===0?'#085041':'#634009'}">Cargos en banco sin CFDI</p>
+            <p style="font-size:11px;color:${huerfBankCount===0?'#085041':'#634009'};margin:2px 0 0">${huerfBankCount===0?'Todos los cargos tienen factura':huerfBankCount+' cargos del mes sin factura en la app'}</p>
+          </div>
+        </div>
+        <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:#888">i</span>
+          <div style="flex:1">
+            <p style="font-size:12px;color:#666;margin:0">Cuentas analizadas: ${accountsLoaded.join(' · ')||'ninguna'}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Facturas — ${facturas.length} CFDI${huerfBankCount>0?' + '+huerfBankCount+' huérfanos del banco':''}</p>
+      <table id="rec-tbl-egresos" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          ${_recSortableTh('Fecha CFDI','left','rec-tbl-egresos',0,'date')}
+          ${_recSortableTh('Proveedor','left','rec-tbl-egresos',1,'text')}
+          ${_recSortableTh('Total','right','rec-tbl-egresos',2,'num')}
+          ${_recSortableTh('↔ Banco','left','rec-tbl-egresos',3,'text')}
+          ${_recSortableTh('Estado','center','rec-tbl-egresos',4,'estado')}
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
+        </tr></thead>
+        <tbody>${factRowsHtml||'<tr><td colspan="6" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin facturas en este mes</td></tr>'}${huerfBankHtml}</tbody>
+      </table>
+    </div>
+    ${notasCredito.length>0?`
+    <div style="background:#F5F4F0;border:0.5px solid #e0e0da;border-radius:10px;padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 4px">Notas de crédito</p>
+      <p style="font-size:11px;color:#666;margin:0 0 10px">Reembolsos del proveedor — buscan abonos en el banco (no cargos)</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px;overflow:hidden">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha NC</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Proveedor</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Banco (abono)</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
+        </tr></thead>
+        <tbody>${ncRowsHtml}</tbody>
+      </table>
+    </div>`:''}`;
+}
+
+// --- Excel sheet "Reconciliación" para Cierre Mensual ---
+function _buildReconcilExcelData(prefix){
+  // Lee resultados capturados por los renderers (window._recLast*).
+  // Diseño: TOTAL en gris claro, detalles sin fondo, solo celda ESTADO pintada por gravedad.
+  const getNote=(bloque,ref)=>{const n=_recGetNote(prefix,bloque,ref);return n?n.nota:'';};
+  const data=[];
+
+  // ---- Colores y estilos ----
+  const DARK='1A1916';
+  const HEADER_BG=DARK;
+  const TOTAL_BG='EAEAE8';        // gris claro para totales
+  const SECTION_BG='D8D8D5';       // gris medio para "DETALLE ERRORES X"
+  const ESTADO_OK_BG='C6EFCE';     // verde ✓
+  const ESTADO_WARN_BG='FFEB9C';   // ámbar ⚠
+  const ESTADO_FAIL_BG='F4B7B7';   // rojo ✗
+  const moneyFmt='"$"#,##0.00';
+
+  const borderThin={style:'thin',color:{rgb:'CCCCCC'}};
+  const fullBorder={top:borderThin,bottom:borderThin,left:borderThin,right:borderThin};
+
+  // Estilos
+  const stHeader={
+    font:{bold:true,color:{rgb:'FFFFFF'},sz:11},
+    fill:{fgColor:{rgb:HEADER_BG}},
+    alignment:{horizontal:'center',vertical:'center'},
+    border:fullBorder
+  };
+  const stTotalBase={font:{bold:true,sz:11},fill:{fgColor:{rgb:TOTAL_BG}}};
+  const stSection={font:{bold:true,sz:10,color:{rgb:'444444'}},fill:{fgColor:{rgb:SECTION_BG}}};
+  const stDetailBase={font:{sz:10}};
+  const stNoteBase={font:{sz:10,italic:true,color:{rgb:'444444'}},alignment:{wrapText:true,vertical:'top'}};
+
+  // Estados con fondo coloreado en celda ESTADO únicamente
+  const stEstadoOk={font:{bold:true,sz:11,color:{rgb:'006100'}},fill:{fgColor:{rgb:ESTADO_OK_BG}},alignment:{horizontal:'center',vertical:'center'}};
+  const stEstadoWarn={font:{bold:true,sz:11,color:{rgb:'9C5700'}},fill:{fgColor:{rgb:ESTADO_WARN_BG}},alignment:{horizontal:'center',vertical:'center'}};
+  const stEstadoFail={font:{bold:true,sz:11,color:{rgb:'9C0006'}},fill:{fgColor:{rgb:ESTADO_FAIL_BG}},alignment:{horizontal:'center',vertical:'center'}};
+  const stEstadoFor=v=>v==='✓'?stEstadoOk:(v==='✗'?stEstadoFail:stEstadoWarn);
+
+  const merge=(...objs)=>{
+    const r={};
+    objs.forEach(o=>{
+      if(!o)return;
+      for(const k of Object.keys(o)){
+        if(typeof o[k]==='object'&&!Array.isArray(o[k])&&o[k]!==null){
+          r[k]={...(r[k]||{}),...o[k]};
+        } else r[k]=o[k];
+      }
+    });
+    return r;
+  };
+
+  // Construir fila aplicando estilo correcto por columna
+  // cells: [BLOQUE, CONCEPTO, APP, PLATAFORMA, BANCO, DIFERENCIA, ESTADO, NOTA]
+  const mkRow=(cells,rowStyle,isTotal)=>{
+    return cells.map((c,i)=>{
+      const isMoney=[2,3,4,5].includes(i);
+      const isEstado=i===6;
+      const isNote=i===7;
+      let style=rowStyle||stDetailBase;
+      // Celda ESTADO con color propio si hay valor
+      if(isEstado&&c){
+        style=stEstadoFor(c);
+      } else if(isNote){
+        // NOTA: combina background de la fila + estilo de nota
+        const baseFill=rowStyle&&rowStyle.fill?{fill:rowStyle.fill}:{};
+        style=merge(baseFill,stNoteBase);
+      } else if(isMoney&&typeof c==='number'){
+        style=merge(style,{alignment:{horizontal:'right'}});
+      }
+      const isEmpty=(c===null||c===undefined||c==='');
+      if(isEmpty)return {v:'',s:style};
+      if(isMoney&&typeof c==='number')return {v:c,t:'n',z:moneyFmt,s:style};
+      return {v:c,s:style};
+    });
+  };
+
+  // HEADER
+  data.push(['BLOQUE','CONCEPTO','APP','PLATAFORMA','BANCO','DIFERENCIA','ESTADO','NOTA'].map(h=>({v:h,s:stHeader})));
+
+  const sep=()=>data.push([{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}}]);
+  const sectionRow=(bloque,label)=>{
+    data.push([bloque,label,'','','','','',''].map((v,i)=>({v:v||'',s:stSection})));
+  };
+
+  // ====== STRIPE ======
+  const sx=window._recLastStripe;
+  if(sx){
+    // TOTAL bruto: APP vs PLATAFORMA (BANCO vacío en esta línea)
+    const diffBruto=Math.round((sx.appBruto-sx.plataformaBruto)*100)/100;
+    const estBruto=Math.abs(diffBruto)<=1?'✓':'✗';
+    data.push(mkRow(['Stripe','TOTAL bruto',sx.appBruto,sx.plataformaBruto,'',diffBruto,estBruto,''],stTotalBase,true));
+    // TOTAL neto (banco) si hay archivo BBVA
+    if(sx.bankTotal!==null){
+      const diffNeto=Math.round((sx.plataformaNeto-sx.bankTotal)*100)/100;
+      const estNeto=Math.abs(diffNeto)<=1?'✓':'✗';
+      data.push(mkRow(['Stripe','TOTAL neto (banco)','',sx.plataformaNeto,sx.bankTotal,diffNeto,estNeto,''],stTotalBase,true));
+    }
+    // Detalle problemas
+    const probs=[];
+    sx.matches.forEach(m=>{
+      const ref='s-'+(m.stripe.payoutId||'')+'-'+m.stripeDt+'-'+Math.round((m.gross||0)*100);
+      const note=getNote('stripe',ref);
+      if(!m.ok||note){
+        const concept=(m.stripeName||'(sin nombre)')+' · '+m.stripeDt+(m.ok?' ↔ '+m.matchName:'');
+        probs.push({bloque:'Stripe',concept,app:'',plat:m.gross,bank:'',diff:m.ok?0:m.gross,est:m.ok?'✓':'✗',note});
+      }
+    });
+    sx.huerfanosApp.forEach(h=>{
+      const ref='s-app-'+(h.nombre||'')+'-'+h.tipo+'-'+Math.round((h.monto||0)*100);
+      const note=getNote('stripe',ref);
+      const concept=(h.nombre||'')+' · '+h.fecha+' · '+h.tipo+' (sin Stripe)';
+      probs.push({bloque:'Stripe',concept,app:h.monto,plat:'',bank:'',diff:-h.monto,est:'⚠',note});
+    });
+    if(probs.length){
+      sectionRow('Stripe','DETALLE ERRORES STRIPE');
+      probs.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+    }
+    sep();
+  }
+
+  // ====== CLOUDBEDS ======
+  const cx=window._recLastCb;
+  if(cx){
+    const diffBruto=Math.round((cx.appBruto-cx.plataformaBruto)*100)/100;
+    const estBruto=Math.abs(diffBruto)<=1?'✓':'✗';
+    data.push(mkRow(['CloudBeds','TOTAL bruto',cx.appBruto,cx.plataformaBruto,'',diffBruto,estBruto,''],stTotalBase,true));
+    if(cx.bankTotal!==null){
+      const diffNeto=Math.round((cx.plataformaNeto-cx.bankTotal)*100)/100;
+      const estNeto=Math.abs(diffNeto)<=1?'✓':'✗';
+      data.push(mkRow(['CloudBeds','TOTAL neto (banco)','',cx.plataformaNeto,cx.bankTotal,diffNeto,estNeto,''],stTotalBase,true));
+    }
+    const probs=[];
+    cx.matches.forEach(m=>{
+      const ref='cb-'+(m.cb.txId||(m.cbId+'-'+m.cbDate));
+      const note=getNote('cloudbeds',ref);
+      if(!m.ok||note){
+        const concept=(m.cbName||'(sin nombre)')+' · '+m.cbDate+(m.ok?' ↔ '+m.matchName:'');
+        probs.push({bloque:'CloudBeds',concept,app:'',plat:m.bruto,bank:'',diff:m.ok?0:m.bruto,est:m.ok?'✓':'✗',note});
+      }
+    });
+    cx.huerfanosApp.forEach(h=>{
+      const ref='cb-app-'+(h.nombre||'')+'-'+h.tipo+'-'+Math.round((h.monto||0)*100);
+      const note=getNote('cloudbeds',ref);
+      const concept=(h.nombre||'')+' · '+h.fecha+' · '+h.tipo+' (sin CloudBeds)';
+      probs.push({bloque:'CloudBeds',concept,app:h.monto,plat:'',bank:'',diff:-h.monto,est:'⚠',note});
+    });
+    if(probs.length){
+      sectionRow('CloudBeds','DETALLE ERRORES CLOUDBEDS');
+      probs.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+    }
+    sep();
+  }
+
+  // ====== TRANSFERENCIAS ======
+  const tx=window._recLastTrans;
+  if(tx){
+    const diff=Math.round((tx.appBruto-tx.bankTotal)*100)/100;
+    const est=Math.abs(diff)<=1?'✓':'⚠';
+    data.push(mkRow(['Transferencias','TOTAL',tx.appBruto,'',tx.bankTotal,diff,est,''],stTotalBase,true));
+    const probs=[];
+    tx.matches.forEach(m=>{
+      const ref='t-'+(m.bankAcc||'')+'-'+m.bankFecha+'-'+Math.round((m.bankAbono||0)*100);
+      const note=getNote('transferencias',ref);
+      if(!m.ok||note){
+        const concept=(m.bankAcc||'')+' · '+m.bankFecha+' · SPEI'+(m.ok?' ↔ '+m.matchName:'');
+        probs.push({bloque:'Transferencias',concept,app:'',plat:'',bank:m.bankAbono,diff:m.ok?0:m.bankAbono,est:m.ok?'✓':'✗',note});
+      }
+    });
+    tx.huerfanosApp.forEach(h=>{
+      const ref='t-app-'+(h.reservaId||'')+'-'+h.fecha+'-'+Math.round(h.monto*100);
+      const note=getNote('transferencias',ref);
+      const concept=(h.huesped||'')+' · '+h.fecha+' · '+h.itemsCount+' item'+(h.itemsCount!==1?'s':'')+' (sin SPEI banco)';
+      probs.push({bloque:'Transferencias',concept,app:h.monto,plat:'',bank:'',diff:-h.monto,est:'⚠',note});
+    });
+    if(probs.length){
+      sectionRow('Transferencias','DETALLE ERRORES TRANSFERENCIAS');
+      probs.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+    }
+    sep();
+  }
+
+  // ====== DÉBITO ======
+  const dx=window._recLastDebito;
+  if(dx){
+    const est=Math.abs(dx.diff)<=1?'✓':'⚠';
+    data.push(mkRow(['Débito','TOTAL (banco neto)',dx.appBruto,'',dx.bankTotal,dx.diff,est,''],stTotalBase,true));
+    if(dx.comisionTotal){
+      data.push(mkRow(['Débito','Comisión TDC (cargo banco)','','',dx.comisionTotal,'','',''],stDetailBase,false));
+    }
+    sep();
+  }
+
+  // ====== EGRESOS ======
+  const ex=window._recLastEgresos;
+  if(ex){
+    const diff=Math.round((ex.appBruto-ex.bankTotal)*100)/100;
+    const est=Math.abs(diff)<=1?'✓':'⚠';
+    data.push(mkRow(['Egresos','TOTAL facturas',ex.appBruto,'',ex.bankTotal,diff,est,''],stTotalBase,true));
+    const probsFact=[];
+    ex.facturaMatches.forEach(m=>{
+      const ref='eg-'+(m.egreso.uuid||(m.rfc+'-'+m.fecha+'-'+Math.round(m.total*100)));
+      const note=getNote('egresos',ref);
+      const isProblem=!m.ok||m.lejano;
+      if(!isProblem&&!note)return;
+      const concept=m.proveedor+' · '+m.fecha+(m.ok?' ↔ '+m.bankAcc+' '+m.bankFecha+(m.lejano?' ⚠ '+m.dateDiffDays+'d':''):' ✗ sin banco');
+      probsFact.push({bloque:'Egresos',concept,app:m.total,plat:'',bank:'',diff:m.ok?0:m.total,est:!m.ok?'✗':(m.lejano?'⚠':'✓'),note});
+    });
+    ex.huerfanosBank.forEach(h=>{
+      const ref='eg-bank-'+(h.acc||'')+'-'+h.fecha+'-'+Math.round(h.monto*100);
+      const note=getNote('egresos',ref);
+      const concept=(h.acc||'')+' · '+h.fecha+' · '+(h.rfc?'RFC: '+h.rfc:'sin RFC')+' (sin CFDI app)';
+      probsFact.push({bloque:'Egresos',concept,app:'',plat:'',bank:h.monto,diff:h.monto,est:'⚠',note});
+    });
+    if(probsFact.length){
+      sectionRow('Egresos','DETALLE ERRORES EGRESOS');
+      probsFact.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+    }
+    if(ex.ncMatches.length){
+      const probsNc=[];
+      ex.ncMatches.forEach(m=>{
+        const ref='nc-'+(m.egreso.uuid||(m.proveedor+'-'+m.fecha+'-'+Math.round(m.monto*100)));
+        const note=getNote('notas_credito',ref);
+        if(m.ok&&!note)return;
+        const concept=m.proveedor+' · '+m.fecha+(m.ok?' ↔ '+m.bankAcc+' '+m.bankFecha+' (abono)':' ✗ sin abono');
+        probsNc.push({bloque:'NC',concept,app:'',plat:'',bank:-m.monto,diff:m.ok?0:-m.monto,est:m.ok?'✓':'✗',note});
+      });
+      if(probsNc.length){
+        sectionRow('NC','DETALLE ERRORES NOTAS DE CRÉDITO');
+        probsNc.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+      }
+    }
+  }
+
+  return data.length>1?data:[];
 }
 
 </script>
