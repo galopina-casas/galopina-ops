@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -6085,51 +6085,40 @@ function _renderReconcilDebito(prefix){
   // Comisiones huérfanas (sin cierre del mismo día) van apilladas como "no asociadas"
   const comHuerfanas=comisionesAll.filter((cm,i)=>!usedCom.has(i));
 
-  // Subset-sum: para cada cierre, buscar combinación de cobros app que sume bruto (tolerancia $1)
-  // Cobros candidatos: del mismo mes, fecha ≤ fecha del cierre
-  // Algoritmo: backtracking con poda (limit 25 cobros; greedy si más)
+  // Acumulación greedy por fecha: para cada cierre TDC (ordenado por fecha asc),
+  // acumular cobros app por fechas ascendentes hasta llegar al bruto del cierre.
+  // Si la suma cuadra → match (con tolerancia $1). Si se pasa o no llega → no match.
   const usedPago=new Set();
-  function findSubset(items,target,tol){
-    // items: [{idx, monto}] orden descendente; devuelve subset de índices o null
-    // Para evitar explosión, usamos backtracking ordenado
-    let best=null;
-    const seen=new Set();
-    function bt(i,remaining,chosen){
-      if(best)return; // cortar al primer match
-      if(Math.abs(remaining)<=tol){best=[...chosen];return;}
-      if(i>=items.length||remaining<-tol)return;
-      // Sin item i
-      bt(i+1,remaining,chosen);
-      if(best)return;
-      // Con item i
-      chosen.push(items[i].idx);
-      bt(i+1,remaining-items[i].monto,chosen);
-      chosen.pop();
-    }
-    bt(0,target,[]);
-    return best;
-  }
+  // Ordenar cierres por fecha ascendente para procesar en orden cronológico
+  cierresInfo.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
 
   cierresInfo.forEach(ci=>{
-    // Cobros app candidatos: fecha ≤ fecha cierre, no usados
+    // Cobros candidatos: no usados, fecha ≤ fecha del cierre. Agrupar por fecha asc.
     const cands=appPagos.map((p,idx)=>({idx,monto:p.monto,fecha:p.fecha}))
       .filter(c=>!usedPago.has(c.idx)&&c.fecha<=ci.fecha)
-      .sort((a,b)=>b.monto-a.monto);
-    let subset=null;
-    if(cands.length<=25){
-      subset=findSubset(cands,ci.bruto,1);
-    } else {
-      // Demasiados cobros: heurístico greedy por monto descendente
-      let acc=0;const sel=[];
-      for(const c of cands){
-        if(Math.abs(acc-ci.bruto)<=1)break;
-        if(acc+c.monto<=ci.bruto+1){acc+=c.monto;sel.push(c.idx);}
-      }
-      if(Math.abs(acc-ci.bruto)<=1)subset=sel;
+      .sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+    // Acumular por fecha completa (atómicamente día por día)
+    const byDate={};
+    cands.forEach(c=>{(byDate[c.fecha]=byDate[c.fecha]||[]).push(c);});
+    const dates=Object.keys(byDate).sort();
+    let acc=0;
+    const selectedIdx=[];
+    let matched=false;
+    for(const d of dates){
+      const dayItems=byDate[d];
+      const daySum=dayItems.reduce((s,c)=>s+c.monto,0);
+      acc+=daySum;
+      dayItems.forEach(c=>selectedIdx.push(c.idx));
+      if(Math.abs(acc-ci.bruto)<=1){matched=true;break;}
+      if(acc>ci.bruto+1){matched=false;break;} // se pasó: no cuadra
     }
-    ci.cobrosIdx=subset||[];
-    ci.matchOk=!!subset;
-    if(subset)subset.forEach(idx=>usedPago.add(idx));
+    ci.cobrosIdx=matched?selectedIdx:[];
+    ci.matchOk=matched;
+    ci.brutoCalculado=Math.round(acc*100)/100;
+    // Guardamos también los huéspedes "tentativamente" involucrados aunque no cuadre,
+    // para mostrar la lista resumida en caso de no-match
+    ci.huespedesTentativos=matched?[]:[...new Set(selectedIdx.map(i=>appPagos[i].huesped))];
+    if(matched)selectedIdx.forEach(idx=>usedPago.add(idx));
   });
 
   // Cobros app no emparejados a ningún cierre
@@ -6162,29 +6151,56 @@ function _renderReconcilDebito(prefix){
     const bg=ci.matchOk?'#E1F5EE':'#FCE8E6';
     const headerColor=ci.matchOk?'#085041':'#7A1F1D';
     const headerIcon=ci.matchOk?'✓':'✗';
-    const cobrosHtml=cobros.length?cobros.map(c=>`
-      <tr>
-        <td style="padding:5px 8px;font-size:11px">${c.fecha}</td>
-        <td style="padding:5px 8px;font-size:11px"><strong>${c.huesped}</strong></td>
-        <td style="padding:5px 8px;font-size:11px;color:#666">${c.tipo}</td>
-        <td style="padding:5px 8px;text-align:right;font-size:11px;font-weight:600">${fmt(c.monto)}</td>
-      </tr>`).join(''):`<tr><td colspan="4" style="padding:8px;font-size:11px;color:#7A1F1D;text-align:center">No se encontró combinación de cobros que sume el bruto del cierre ${fmt(ci.bruto)}</td></tr>`;
-    return `<div style="background:${bg};border-radius:8px;padding:12px 14px;margin-bottom:8px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
-        <div>
-          <p style="font-size:12px;font-weight:600;margin:0;color:${headerColor}">${headerIcon} Cierre ${ci.fecha} · ${ci.cobros?ci.cobros.length:cobros.length} cobro${cobros.length!==1?'s':''} emparejado${cobros.length!==1?'s':''}</p>
-          <p style="font-size:11px;color:${headerColor};margin:2px 0 0">Neto banco ${fmt(ci.neto)} + comisión ${fmt(ci.comisionTotal)} = bruto ${fmt(ci.bruto)}${cobros.length?' · cobros app suman '+fmt(sumCobros):''}</p>
-        </div>
-      </div>
-      <table style="width:100%;background:#fff;border-radius:6px">
+
+    // Si cuadra: tabla detallada. Si no cuadra: solo lista de huéspedes involucrados.
+    let bodyHtml='';
+    if(ci.matchOk){
+      // Agrupar por huésped + fecha + tipo para reducir filas
+      const grouped={};
+      cobros.forEach(c=>{
+        const key=c.fecha+'|'+c.huesped;
+        if(!grouped[key])grouped[key]={fecha:c.fecha,huesped:c.huesped,total:0,nItems:0};
+        grouped[key].total+=c.monto;
+        grouped[key].nItems++;
+      });
+      const groupedList=Object.values(grouped).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+      bodyHtml=`<table style="width:100%;background:#fff;border-radius:6px">
         <thead><tr style="border-bottom:1px solid #EEE">
           <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Fecha</th>
           <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Huésped</th>
-          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Tipo</th>
-          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Monto</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Items</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Total</th>
         </tr></thead>
-        <tbody>${cobrosHtml}</tbody>
-      </table>
+        <tbody>${groupedList.map(g=>`<tr>
+          <td style="padding:5px 8px;font-size:11px">${g.fecha}</td>
+          <td style="padding:5px 8px;font-size:11px"><strong>${g.huesped}</strong></td>
+          <td style="padding:5px 8px;text-align:right;font-size:11px;color:#666">${g.nItems}</td>
+          <td style="padding:5px 8px;text-align:right;font-size:11px;font-weight:600">${fmt(g.total)}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+    } else {
+      // No match: solo huéspedes involucrados, sin detalle
+      const huespedes=ci.huespedesTentativos||[];
+      if(huespedes.length){
+        bodyHtml=`<div style="background:#fff;border-radius:6px;padding:10px 12px">
+          <p style="font-size:11px;color:#7A1F1D;margin:0 0 6px">No se encontró combinación de cobros que sume el bruto ${fmt(ci.bruto)}. Suma acumulada de cobros previos al cierre: ${fmt(ci.brutoCalculado||0)}.</p>
+          <p style="font-size:11px;color:#666;margin:6px 0 4px"><strong>Huéspedes con cobros débito en el rango:</strong></p>
+          <ul style="margin:0;padding-left:18px">${huespedes.map(h=>`<li style="font-size:11px;margin:2px 0">${h}</li>`).join('')}</ul>
+        </div>`;
+      } else {
+        bodyHtml=`<p style="font-size:11px;color:#7A1F1D;text-align:center;padding:10px">Sin cobros débito en la app antes de este cierre.</p>`;
+      }
+    }
+
+    const cobrosLabel=ci.matchOk?`${cobros.length} cobro${cobros.length!==1?'s':''} emparejado${cobros.length!==1?'s':''}`:'sin emparejar';
+    return `<div style="background:${bg};border-radius:8px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+        <div>
+          <p style="font-size:12px;font-weight:600;margin:0;color:${headerColor}">${headerIcon} Cierre ${ci.fecha} · ${cobrosLabel}</p>
+          <p style="font-size:11px;color:${headerColor};margin:2px 0 0">Neto banco ${fmt(ci.neto)} + comisión ${fmt(ci.comisionTotal)} = bruto ${fmt(ci.bruto)}${ci.matchOk?' · cobros app suman '+fmt(sumCobros):''}</p>
+        </div>
+      </div>
+      ${bodyHtml}
     </div>`;
   }).join('');
 
@@ -6195,13 +6211,20 @@ function _renderReconcilDebito(prefix){
         <thead><tr style="border-bottom:1px solid #EEE">
           <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Fecha</th>
           <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Huésped</th>
-          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Tipo</th>
-          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Monto</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Items</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Total</th>
         </tr></thead>
-        <tbody>${pendientesIdx.map(i=>{
-          const c=appPagos[i];
-          return `<tr><td style="padding:5px 8px;font-size:11px">${c.fecha}</td><td style="padding:5px 8px;font-size:11px"><strong>${c.huesped}</strong></td><td style="padding:5px 8px;font-size:11px;color:#666">${c.tipo}</td><td style="padding:5px 8px;text-align:right;font-size:11px;font-weight:600">${fmt(c.monto)}</td></tr>`;
-        }).join('')}</tbody>
+        <tbody>${(()=>{
+          const grouped={};
+          pendientesIdx.forEach(i=>{
+            const c=appPagos[i];
+            const k=c.fecha+'|'+c.huesped;
+            if(!grouped[k])grouped[k]={fecha:c.fecha,huesped:c.huesped,total:0,nItems:0};
+            grouped[k].total+=c.monto;grouped[k].nItems++;
+          });
+          return Object.values(grouped).sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(g=>
+            `<tr><td style="padding:5px 8px;font-size:11px">${g.fecha}</td><td style="padding:5px 8px;font-size:11px"><strong>${g.huesped}</strong></td><td style="padding:5px 8px;text-align:right;font-size:11px;color:#666">${g.nItems}</td><td style="padding:5px 8px;text-align:right;font-size:11px;font-weight:600">${fmt(g.total)}</td></tr>`).join('');
+        })()}</tbody>
       </table>
     </div>`:'';
 
