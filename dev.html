@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.2-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.2-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -4354,7 +4354,7 @@ function _renderCmReconcil(prefix){
     rowsData.push({metodo:'Transferencia',app:tx.appBruto,plat:null,bank:tx.bankTotal,diff,bankInfo:false});
   }
   if(dx&&(dx.appBruto>0||dx.bankTotal>0)){
-    rowsData.push({metodo:'D&#233;bito',app:dx.appBruto,plat:null,bank:dx.bankTotal,diff:dx.diff,bankInfo:true,bankInfoTxt:'Monto del banco = ventas brutas TDC - comisi&#243;n TDC. La diferencia con la app puede deberse a cierres pendientes.'});
+    rowsData.push({metodo:'D&#233;bito',app:dx.appBruto,plat:null,bank:dx.bankTotal,diff:dx.diff,bankInfo:true,bankInfoTxt:'Monto del banco = bruto cobrado en la terminal TDC. La comisi&#243;n TDC se carga aparte (no afecta el bruto). La diferencia con la app puede deberse a cierres pendientes.'});
   }
 
   if(rowsData.length===0){
@@ -6063,11 +6063,12 @@ function _renderReconcilDebito(prefix){
     const d=String(r.descripcion||'').toUpperCase();
     return r.cargo<0&&d.includes('COM VTAS TDC')&&String(r.fecha||'').startsWith(prefix);
   });
-  const bankNetoTotal=Math.round(cierres.reduce((s,r)=>s+r.abono,0)*100)/100;
+  // El abono de VENTAS TDC INTER ES el bruto cobrado en la terminal (lo que pagaron los huéspedes).
+  // Las comisiones (COM VTAS TDC + IVA COM VTAS TDC) son cargos aparte: costo de Galopina, NO se restan ni suman al bruto.
+  const bankBruto=Math.round(cierres.reduce((s,r)=>s+r.abono,0)*100)/100;
   const bankComTotal=Math.round(comisionesAll.reduce((s,r)=>s+Math.abs(r.cargo),0)*100)/100;
-  const bankBruto=Math.round((bankNetoTotal+bankComTotal)*100)/100;
 
-  // Asociar comisiones a cada cierre por mismo día
+  // Asociar comisiones a cada cierre por mismo día (solo informativo)
   const usedCom=new Set();
   const cierresInfo=cierres.map(c=>{
     const sameDayCom=comisionesAll.filter((cm,i)=>!usedCom.has(i)&&cm.fecha===c.fecha);
@@ -6076,10 +6077,9 @@ function _renderReconcilDebito(prefix){
     return {
       cierre:c,
       fecha:c.fecha,
-      neto:c.abono,
+      bruto:c.abono,                              // lo que pagaron los huéspedes
       comisiones:sameDayCom,
-      comisionTotal:Math.round(comTotal*100)/100,
-      bruto:Math.round((c.abono+comTotal)*100)/100
+      comisionTotal:Math.round(comTotal*100)/100  // costo de Galopina, informativo
     };
   });
   // Comisiones huérfanas (sin cierre del mismo día) van apilladas como "no asociadas"
@@ -6129,8 +6129,7 @@ function _renderReconcilDebito(prefix){
   const diff=appBruto-bankBruto;
   window._recLastDebito={
     appBruto:appBruto,
-    bankTotal:bankNetoTotal,
-    bankBruto:bankBruto,
+    bankTotal:bankBruto,
     comisionTotal:bankComTotal,
     diff:diff,
     cierres:cierresInfo,
@@ -6197,7 +6196,7 @@ function _renderReconcilDebito(prefix){
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
         <div>
           <p style="font-size:12px;font-weight:600;margin:0;color:${headerColor}">${headerIcon} Cierre ${ci.fecha} · ${cobrosLabel}</p>
-          <p style="font-size:11px;color:${headerColor};margin:2px 0 0">Neto banco ${fmt(ci.neto)} + comisión ${fmt(ci.comisionTotal)} = bruto ${fmt(ci.bruto)}${ci.matchOk?' · cobros app suman '+fmt(sumCobros):''}</p>
+          <p style="font-size:11px;color:${headerColor};margin:2px 0 0">Bruto banco ${fmt(ci.bruto)}${ci.comisionTotal?' · comisión TDC (aparte) '+fmt(ci.comisionTotal):''}${ci.matchOk?' · cobros app suman '+fmt(sumCobros):''}</p>
         </div>
       </div>
       ${bodyHtml}
@@ -6243,9 +6242,9 @@ function _renderReconcilDebito(prefix){
         <p style="font-size:10px;color:#888;margin:2px 0 0">${appPagos.length} cobro${appPagos.length!==1?'s':''}</p>
       </div>
       <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
-        <p style="font-size:11px;color:#888;margin:0">Banco (bruto)</p>
+        <p style="font-size:11px;color:#888;margin:0">Banco (bruto cobrado)</p>
         <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankBruto)}</p>
-        <p style="font-size:10px;color:#888;margin:2px 0 0">${cierres.length} cierre${cierres.length!==1?'s':''} TDC · neto ${fmt(bankNetoTotal)} + com ${fmt(bankComTotal)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${cierres.length} cierre${cierres.length!==1?'s':''} TDC${bankComTotal?' · comisión TDC aparte: '+fmt(bankComTotal):''}</p>
       </div>
       <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FFF4E5'};border:0.5px solid ${cuadre?'#1D9E75':'#BA7517'};border-radius:8px;padding:10px 14px">
         <p style="font-size:11px;color:${cuadre?'#085041':'#634009'};margin:0">Diferencia</p>
