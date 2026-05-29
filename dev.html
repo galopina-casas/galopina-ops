@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.2-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.3-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.2-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.3-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -6449,187 +6449,234 @@ function _renderReconcilEgresos(prefix){
 
 // --- Excel sheet "Reconciliación" para Cierre Mensual ---
 function _buildReconcilExcelData(prefix){
-  // Estructura: una fila TOTAL por bloque + solo filas problemáticas o con nota.
-  // Estilos: B=bold; t=type, z=format; s=style (fill, font, alignment, border).
   // Lee resultados capturados por los renderers (window._recLast*).
+  // Diseño: TOTAL en gris claro, detalles sin fondo, solo celda ESTADO pintada por gravedad.
   const getNote=(bloque,ref)=>{const n=_recGetNote(prefix,bloque,ref);return n?n.nota:'';};
   const data=[];
 
-  // ---- Estilos reutilizables ----
-  const RED='FCE8E6',AMB='FFF4E5',GRN='E1F5EE',GRY='F0F0EE',DARK='1A1916';
+  // ---- Colores y estilos ----
+  const DARK='1A1916';
+  const HEADER_BG=DARK;
+  const TOTAL_BG='EAEAE8';        // gris claro para totales
+  const SECTION_BG='D8D8D5';       // gris medio para "DETALLE ERRORES X"
+  const ESTADO_OK_BG='C6EFCE';     // verde ✓
+  const ESTADO_WARN_BG='FFEB9C';   // ámbar ⚠
+  const ESTADO_FAIL_BG='F4B7B7';   // rojo ✗
   const moneyFmt='"$"#,##0.00';
+
+  const borderThin={style:'thin',color:{rgb:'CCCCCC'}};
+  const fullBorder={top:borderThin,bottom:borderThin,left:borderThin,right:borderThin};
+
+  // Estilos
   const stHeader={
     font:{bold:true,color:{rgb:'FFFFFF'},sz:11},
-    fill:{fgColor:{rgb:DARK}},
+    fill:{fgColor:{rgb:HEADER_BG}},
     alignment:{horizontal:'center',vertical:'center'},
-    border:{top:{style:'thin',color:{rgb:'888888'}},bottom:{style:'thin',color:{rgb:'888888'}}}
+    border:fullBorder
   };
-  const stTotalRow=bg=>({
-    font:{bold:true,sz:11},
-    fill:{fgColor:{rgb:bg||GRY}},
-    border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}}}
-  });
-  const stDetailRow=bg=>({
-    fill:{fgColor:{rgb:bg}},
-    font:{sz:10}
-  });
-  const stNoteCell=bg=>({
-    fill:{fgColor:{rgb:bg}},
-    font:{sz:10,italic:true,color:{rgb:'444444'}},
-    alignment:{wrapText:true,vertical:'top'}
-  });
-  const stMoney=base=>({...base,alignment:{...(base.alignment||{}),horizontal:'right'}});
-  const stCenter=base=>({...base,alignment:{...(base.alignment||{}),horizontal:'center'}});
+  const stTotalBase={font:{bold:true,sz:11},fill:{fgColor:{rgb:TOTAL_BG}}};
+  const stSection={font:{bold:true,sz:10,color:{rgb:'444444'}},fill:{fgColor:{rgb:SECTION_BG}}};
+  const stDetailBase={font:{sz:10}};
+  const stNoteBase={font:{sz:10,italic:true,color:{rgb:'444444'}},alignment:{wrapText:true,vertical:'top'}};
 
-  const mkRow=(cells,rowStyle)=>{
+  // Estados con fondo coloreado en celda ESTADO únicamente
+  const stEstadoOk={font:{bold:true,sz:11,color:{rgb:'006100'}},fill:{fgColor:{rgb:ESTADO_OK_BG}},alignment:{horizontal:'center',vertical:'center'}};
+  const stEstadoWarn={font:{bold:true,sz:11,color:{rgb:'9C5700'}},fill:{fgColor:{rgb:ESTADO_WARN_BG}},alignment:{horizontal:'center',vertical:'center'}};
+  const stEstadoFail={font:{bold:true,sz:11,color:{rgb:'9C0006'}},fill:{fgColor:{rgb:ESTADO_FAIL_BG}},alignment:{horizontal:'center',vertical:'center'}};
+  const stEstadoFor=v=>v==='✓'?stEstadoOk:(v==='✗'?stEstadoFail:stEstadoWarn);
+
+  const merge=(...objs)=>{
+    const r={};
+    objs.forEach(o=>{
+      if(!o)return;
+      for(const k of Object.keys(o)){
+        if(typeof o[k]==='object'&&!Array.isArray(o[k])&&o[k]!==null){
+          r[k]={...(r[k]||{}),...o[k]};
+        } else r[k]=o[k];
+      }
+    });
+    return r;
+  };
+
+  // Construir fila aplicando estilo correcto por columna
+  // cells: [BLOQUE, CONCEPTO, APP, PLATAFORMA, BANCO, DIFERENCIA, ESTADO, NOTA]
+  const mkRow=(cells,rowStyle,isTotal)=>{
     return cells.map((c,i)=>{
-      if(c===null||c===undefined||c==='')return {v:'',s:rowStyle||{}};
       const isMoney=[2,3,4,5].includes(i);
-      const isCenter=i===6;
+      const isEstado=i===6;
       const isNote=i===7;
-      let style=rowStyle||{};
-      if(isNote)style=stNoteCell(rowStyle&&rowStyle.fill?rowStyle.fill.fgColor.rgb:'FFFFFF');
-      else if(isMoney&&typeof c==='number')style=stMoney(style);
-      else if(isCenter)style=stCenter(style);
+      let style=rowStyle||stDetailBase;
+      // Celda ESTADO con color propio si hay valor
+      if(isEstado&&c){
+        style=stEstadoFor(c);
+      } else if(isNote){
+        // NOTA: combina background de la fila + estilo de nota
+        const baseFill=rowStyle&&rowStyle.fill?{fill:rowStyle.fill}:{};
+        style=merge(baseFill,stNoteBase);
+      } else if(isMoney&&typeof c==='number'){
+        style=merge(style,{alignment:{horizontal:'right'}});
+      }
+      const isEmpty=(c===null||c===undefined||c==='');
+      if(isEmpty)return {v:'',s:style};
       if(isMoney&&typeof c==='number')return {v:c,t:'n',z:moneyFmt,s:style};
       return {v:c,s:style};
     });
   };
 
-  // ---- HEADER ----
+  // HEADER
   data.push(['BLOQUE','CONCEPTO','APP','PLATAFORMA','BANCO','DIFERENCIA','ESTADO','NOTA'].map(h=>({v:h,s:stHeader})));
 
-  const sep=()=>data.push(['','','','','','','',''].map(()=>({v:'',s:{}})));
+  const sep=()=>data.push([{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}},{v:'',s:{}}]);
+  const sectionRow=(bloque,label)=>{
+    data.push([bloque,label,'','','','','',''].map((v,i)=>({v:v||'',s:stSection})));
+  };
 
-  // === STRIPE ===
+  // ====== STRIPE ======
   const sx=window._recLastStripe;
   if(sx){
-    const diff=Math.round((sx.appBruto-sx.plataformaBruto)*100)/100;
-    const estado=Math.abs(diff)<=1?'✓':'✗';
-    const totalBg=Math.abs(diff)<=1?GRN:RED;
-    data.push(mkRow(['Stripe','TOTAL bruto',sx.appBruto,sx.plataformaBruto,sx.bankTotal||'',diff,estado,''],stTotalRow(totalBg)));
+    // TOTAL bruto: APP vs PLATAFORMA (BANCO vacío en esta línea)
+    const diffBruto=Math.round((sx.appBruto-sx.plataformaBruto)*100)/100;
+    const estBruto=Math.abs(diffBruto)<=1?'✓':'✗';
+    data.push(mkRow(['Stripe','TOTAL bruto',sx.appBruto,sx.plataformaBruto,'',diffBruto,estBruto,''],stTotalBase,true));
+    // TOTAL neto (banco) si hay archivo BBVA
     if(sx.bankTotal!==null){
       const diffNeto=Math.round((sx.plataformaNeto-sx.bankTotal)*100)/100;
-      data.push(mkRow(['Stripe','TOTAL neto (banco)','',sx.plataformaNeto,sx.bankTotal,diffNeto,Math.abs(diffNeto)<=1?'✓':'✗',''],stTotalRow(GRY)));
+      const estNeto=Math.abs(diffNeto)<=1?'✓':'✗';
+      data.push(mkRow(['Stripe','TOTAL neto (banco)','',sx.plataformaNeto,sx.bankTotal,diffNeto,estNeto,''],stTotalBase,true));
     }
-    // Filas problemáticas o con nota
+    // Detalle problemas
+    const probs=[];
     sx.matches.forEach(m=>{
       const ref='s-'+(m.stripe.payoutId||'')+'-'+m.stripeDt+'-'+Math.round((m.gross||0)*100);
       const note=getNote('stripe',ref);
-      if(m.ok&&!note)return;
-      const bg=m.ok?GRN:RED;
-      const concept=(m.stripeName||'(sin nombre)')+' · '+m.stripeDt+(m.ok?' ↔ '+m.matchName:'');
-      const diff=m.ok?0:m.gross;
-      data.push(mkRow(['Stripe',concept,'',m.gross,'',diff,m.ok?'✓':'✗',note],stDetailRow(bg)));
+      if(!m.ok||note){
+        const concept=(m.stripeName||'(sin nombre)')+' · '+m.stripeDt+(m.ok?' ↔ '+m.matchName:'');
+        probs.push({bloque:'Stripe',concept,app:'',plat:m.gross,bank:'',diff:m.ok?0:m.gross,est:m.ok?'✓':'✗',note});
+      }
     });
     sx.huerfanosApp.forEach(h=>{
       const ref='s-app-'+(h.nombre||'')+'-'+h.tipo+'-'+Math.round((h.monto||0)*100);
       const note=getNote('stripe',ref);
       const concept=(h.nombre||'')+' · '+h.fecha+' · '+h.tipo+' (sin Stripe)';
-      data.push(mkRow(['Stripe',concept,h.monto,'','',-h.monto,'⚠',note],stDetailRow(AMB)));
+      probs.push({bloque:'Stripe',concept,app:h.monto,plat:'',bank:'',diff:-h.monto,est:'⚠',note});
     });
+    if(probs.length){
+      sectionRow('Stripe','DETALLE ERRORES STRIPE');
+      probs.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+    }
+    sep();
   }
 
-  // === CLOUDBEDS ===
+  // ====== CLOUDBEDS ======
   const cx=window._recLastCb;
   if(cx){
-    sep();
-    const diff=Math.round((cx.appBruto-cx.plataformaBruto)*100)/100;
-    const estado=Math.abs(diff)<=1?'✓':'✗';
-    const totalBg=Math.abs(diff)<=1?GRN:RED;
-    data.push(mkRow(['CloudBeds','TOTAL bruto',cx.appBruto,cx.plataformaBruto,cx.bankTotal||'',diff,estado,''],stTotalRow(totalBg)));
+    const diffBruto=Math.round((cx.appBruto-cx.plataformaBruto)*100)/100;
+    const estBruto=Math.abs(diffBruto)<=1?'✓':'✗';
+    data.push(mkRow(['CloudBeds','TOTAL bruto',cx.appBruto,cx.plataformaBruto,'',diffBruto,estBruto,''],stTotalBase,true));
     if(cx.bankTotal!==null){
       const diffNeto=Math.round((cx.plataformaNeto-cx.bankTotal)*100)/100;
-      data.push(mkRow(['CloudBeds','TOTAL neto (banco)','',cx.plataformaNeto,cx.bankTotal,diffNeto,Math.abs(diffNeto)<=1?'✓':'✗',''],stTotalRow(GRY)));
+      const estNeto=Math.abs(diffNeto)<=1?'✓':'✗';
+      data.push(mkRow(['CloudBeds','TOTAL neto (banco)','',cx.plataformaNeto,cx.bankTotal,diffNeto,estNeto,''],stTotalBase,true));
     }
+    const probs=[];
     cx.matches.forEach(m=>{
       const ref='cb-'+(m.cb.txId||(m.cbId+'-'+m.cbDate));
       const note=getNote('cloudbeds',ref);
-      if(m.ok&&!note)return;
-      const bg=m.ok?GRN:RED;
-      const concept=(m.cbName||'(sin nombre)')+' · '+m.cbDate+(m.ok?' ↔ '+m.matchName:'');
-      const diff=m.ok?0:m.bruto;
-      data.push(mkRow(['CloudBeds',concept,'',m.bruto,'',diff,m.ok?'✓':'✗',note],stDetailRow(bg)));
+      if(!m.ok||note){
+        const concept=(m.cbName||'(sin nombre)')+' · '+m.cbDate+(m.ok?' ↔ '+m.matchName:'');
+        probs.push({bloque:'CloudBeds',concept,app:'',plat:m.bruto,bank:'',diff:m.ok?0:m.bruto,est:m.ok?'✓':'✗',note});
+      }
     });
     cx.huerfanosApp.forEach(h=>{
       const ref='cb-app-'+(h.nombre||'')+'-'+h.tipo+'-'+Math.round((h.monto||0)*100);
       const note=getNote('cloudbeds',ref);
       const concept=(h.nombre||'')+' · '+h.fecha+' · '+h.tipo+' (sin CloudBeds)';
-      data.push(mkRow(['CloudBeds',concept,h.monto,'','',-h.monto,'⚠',note],stDetailRow(AMB)));
+      probs.push({bloque:'CloudBeds',concept,app:h.monto,plat:'',bank:'',diff:-h.monto,est:'⚠',note});
     });
+    if(probs.length){
+      sectionRow('CloudBeds','DETALLE ERRORES CLOUDBEDS');
+      probs.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+    }
+    sep();
   }
 
-  // === TRANSFERENCIAS ===
+  // ====== TRANSFERENCIAS ======
   const tx=window._recLastTrans;
   if(tx){
-    sep();
     const diff=Math.round((tx.appBruto-tx.bankTotal)*100)/100;
-    const estado=Math.abs(diff)<=1?'✓':'⚠';
-    const totalBg=Math.abs(diff)<=1?GRN:AMB;
-    data.push(mkRow(['Transferencias','TOTAL',tx.appBruto,'',tx.bankTotal,diff,estado,''],stTotalRow(totalBg)));
+    const est=Math.abs(diff)<=1?'✓':'⚠';
+    data.push(mkRow(['Transferencias','TOTAL',tx.appBruto,'',tx.bankTotal,diff,est,''],stTotalBase,true));
+    const probs=[];
     tx.matches.forEach(m=>{
       const ref='t-'+(m.bankAcc||'')+'-'+m.bankFecha+'-'+Math.round((m.bankAbono||0)*100);
       const note=getNote('transferencias',ref);
-      if(m.ok&&!note)return;
-      const bg=m.ok?GRN:RED;
-      const concept=(m.bankAcc||'')+' · '+m.bankFecha+' · SPEI'+(m.ok?' ↔ '+m.matchName:'');
-      const diff=m.ok?0:m.bankAbono;
-      data.push(mkRow(['Transferencias',concept,'','',m.bankAbono,diff,m.ok?'✓':'✗',note],stDetailRow(bg)));
+      if(!m.ok||note){
+        const concept=(m.bankAcc||'')+' · '+m.bankFecha+' · SPEI'+(m.ok?' ↔ '+m.matchName:'');
+        probs.push({bloque:'Transferencias',concept,app:'',plat:'',bank:m.bankAbono,diff:m.ok?0:m.bankAbono,est:m.ok?'✓':'✗',note});
+      }
     });
     tx.huerfanosApp.forEach(h=>{
       const ref='t-app-'+(h.reservaId||'')+'-'+h.fecha+'-'+Math.round(h.monto*100);
       const note=getNote('transferencias',ref);
       const concept=(h.huesped||'')+' · '+h.fecha+' · '+h.itemsCount+' item'+(h.itemsCount!==1?'s':'')+' (sin SPEI banco)';
-      data.push(mkRow(['Transferencias',concept,h.monto,'','',-h.monto,'⚠',note],stDetailRow(AMB)));
+      probs.push({bloque:'Transferencias',concept,app:h.monto,plat:'',bank:'',diff:-h.monto,est:'⚠',note});
     });
+    if(probs.length){
+      sectionRow('Transferencias','DETALLE ERRORES TRANSFERENCIAS');
+      probs.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+    }
+    sep();
   }
 
-  // === DÉBITO ===
+  // ====== DÉBITO ======
   const dx=window._recLastDebito;
   if(dx){
-    sep();
-    const estado=Math.abs(dx.diff)<=1?'✓':'⚠';
-    const totalBg=Math.abs(dx.diff)<=1?GRN:AMB;
-    data.push(mkRow(['Débito','TOTAL (banco neto)',dx.appBruto,'',dx.bankTotal,dx.diff,estado,''],stTotalRow(totalBg)));
+    const est=Math.abs(dx.diff)<=1?'✓':'⚠';
+    data.push(mkRow(['Débito','TOTAL (banco neto)',dx.appBruto,'',dx.bankTotal,dx.diff,est,''],stTotalBase,true));
     if(dx.comisionTotal){
-      data.push(mkRow(['Débito','Comisión TDC (cargo banco)','','',dx.comisionTotal,'','',''],stDetailRow(GRY)));
+      data.push(mkRow(['Débito','Comisión TDC (cargo banco)','','',dx.comisionTotal,'','',''],stDetailBase,false));
     }
+    sep();
   }
 
-  // === EGRESOS ===
+  // ====== EGRESOS ======
   const ex=window._recLastEgresos;
   if(ex){
-    sep();
     const diff=Math.round((ex.appBruto-ex.bankTotal)*100)/100;
-    const estado=Math.abs(diff)<=1?'✓':'⚠';
-    const totalBg=Math.abs(diff)<=1?GRN:AMB;
-    data.push(mkRow(['Egresos','TOTAL facturas',ex.appBruto,'',ex.bankTotal,diff,estado,''],stTotalRow(totalBg)));
-    // Detalle: facturas problemáticas (sin match O lejanas) + cualquier con nota
+    const est=Math.abs(diff)<=1?'✓':'⚠';
+    data.push(mkRow(['Egresos','TOTAL facturas',ex.appBruto,'',ex.bankTotal,diff,est,''],stTotalBase,true));
+    const probsFact=[];
     ex.facturaMatches.forEach(m=>{
       const ref='eg-'+(m.egreso.uuid||(m.rfc+'-'+m.fecha+'-'+Math.round(m.total*100)));
       const note=getNote('egresos',ref);
       const isProblem=!m.ok||m.lejano;
       if(!isProblem&&!note)return;
-      const bg=!m.ok?RED:(m.lejano?AMB:GRN);
       const concept=m.proveedor+' · '+m.fecha+(m.ok?' ↔ '+m.bankAcc+' '+m.bankFecha+(m.lejano?' ⚠ '+m.dateDiffDays+'d':''):' ✗ sin banco');
-      data.push(mkRow(['Egresos',concept,m.total,'','',m.ok?0:m.total,!m.ok?'✗':(m.lejano?'⚠':'✓'),note],stDetailRow(bg)));
+      probsFact.push({bloque:'Egresos',concept,app:m.total,plat:'',bank:'',diff:m.ok?0:m.total,est:!m.ok?'✗':(m.lejano?'⚠':'✓'),note});
     });
     ex.huerfanosBank.forEach(h=>{
       const ref='eg-bank-'+(h.acc||'')+'-'+h.fecha+'-'+Math.round(h.monto*100);
       const note=getNote('egresos',ref);
       const concept=(h.acc||'')+' · '+h.fecha+' · '+(h.rfc?'RFC: '+h.rfc:'sin RFC')+' (sin CFDI app)';
-      data.push(mkRow(['Egresos',concept,'','',h.monto,h.monto,'⚠',note],stDetailRow(AMB)));
+      probsFact.push({bloque:'Egresos',concept,app:'',plat:'',bank:h.monto,diff:h.monto,est:'⚠',note});
     });
+    if(probsFact.length){
+      sectionRow('Egresos','DETALLE ERRORES EGRESOS');
+      probsFact.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+    }
     if(ex.ncMatches.length){
-      data.push(mkRow(['Notas de crédito','— sección',null,null,null,null,'',''],stTotalRow(GRY)));
+      const probsNc=[];
       ex.ncMatches.forEach(m=>{
         const ref='nc-'+(m.egreso.uuid||(m.proveedor+'-'+m.fecha+'-'+Math.round(m.monto*100)));
         const note=getNote('notas_credito',ref);
         if(m.ok&&!note)return;
-        const bg=m.ok?GRN:RED;
         const concept=m.proveedor+' · '+m.fecha+(m.ok?' ↔ '+m.bankAcc+' '+m.bankFecha+' (abono)':' ✗ sin abono');
-        data.push(mkRow(['NC',concept,'','',-m.monto,m.ok?0:-m.monto,m.ok?'✓':'✗',note],stDetailRow(bg)));
+        probsNc.push({bloque:'NC',concept,app:'',plat:'',bank:-m.monto,diff:m.ok?0:-m.monto,est:m.ok?'✓':'✗',note});
       });
+      if(probsNc.length){
+        sectionRow('NC','DETALLE ERRORES NOTAS DE CRÉDITO');
+        probsNc.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
+      }
     }
   }
 
