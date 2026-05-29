@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.1.3-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.2.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.1.3-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.2.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -635,6 +635,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     </div>
     <div id="rec-stripe-block"><div id="rec-summary"></div><div id="rec-detail"></div></div>
     <div id="rec-cb-block"></div>
+    <div id="rec-trans-block"></div>
+    <div id="rec-debito-block"></div>
   </div>
 
   <div class="sec" id="sec-cierre">
@@ -4919,7 +4921,11 @@ function renderReconcil(){
     summary.innerHTML='<p class="empty" style="padding:20px">Sube un archivo de payout (Stripe CSV y/o CloudBeds .xls) para iniciar la reconciliación. Opcionalmente sube el archivo del banco BBVA Principal para verificar el cuadre 3-vías (app · plataforma · banco).</p>';
     detail.innerHTML='';
     const cbBlock=document.getElementById('rec-cb-block');if(cbBlock)cbBlock.innerHTML='';
-    return;
+    const transBlock=document.getElementById('rec-trans-block');if(transBlock)transBlock.innerHTML='';
+    const debBlock=document.getElementById('rec-debito-block');if(debBlock)debBlock.innerHTML='';
+    if(!Array.isArray(window._recBbvaRows))return;
+    // Si solo hay BBVA, igual permitimos transferencias y débito
+    summary.innerHTML='';
   }
   if(!window._recStripeRows){
     summary.innerHTML='';
@@ -4930,6 +4936,8 @@ function renderReconcil(){
 
   if(window._recStripeRows){_renderReconcilStripe(prefix,summary,detail);}
   _renderReconcilCb(prefix);
+  _renderReconcilTrans(prefix);
+  _renderReconcilDebito(prefix);
 }
 
 function _renderReconcilStripe(prefix,summary,detail){
@@ -5363,6 +5371,250 @@ function _renderReconcilCb(prefix){
             </tr>`;
           }).join('')||'<tr><td colspan="4" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin depósitos CloudBeds en el banco este mes</td></tr>'}
         </tbody>
+      </table>
+    </div>`:''}`;
+}
+
+// ----- Transferencias -----
+function _renderReconcilTrans(prefix){
+  const block=document.getElementById('rec-trans-block');if(!block)return;
+  if(!Array.isArray(window._recBbvaRows)){block.innerHTML='';return;}
+
+  // App: pagos con método transferencia en el mes
+  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+  const appPagos=[];
+  reservas.forEach(r=>{
+    if((r.anticipo||0)>0&&r.antiPago==='transferencia'&&String(r.antiFecha||'').startsWith(prefix)){
+      appPagos.push({reserva:r,monto:r.anticipo,fecha:r.antiFecha,tipo:'Anticipo'});
+    }
+    if((r.saldo||0)>0&&r.saldPago==='transferencia'&&String(r.saldFecha||'').startsWith(prefix)){
+      appPagos.push({reserva:r,monto:r.saldo,fecha:r.saldFecha,tipo:'Saldo'});
+    }
+  });
+  gd(KC).forEach(c=>{
+    let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+    items.forEach(it=>{
+      if(it.pago!=='transferencia')return;
+      const fp=String(it.fechaPago||'').slice(0,10);
+      if(!fp.startsWith(prefix))return;
+      const monto=(it.precio||0)*(it.cantidad||0);
+      appPagos.push({reserva:{id:c.id,nombre:c.huesped},monto,fecha:fp,tipo:'Consumo: '+it.nombre});
+    });
+  });
+  const appBruto=Math.round(appPagos.reduce((s,p)=>s+p.monto,0)*100)/100;
+
+  // Banco: SPEI recibidos del mes que NO son Stripe ni CloudBeds
+  const bankSpei=window._recBbvaRows.filter(r=>{
+    const d=String(r.descripcion||'').toUpperCase();
+    return r.abono>0&&d.includes('SPEI RECIBIDO')&&!d.includes('STRIPE')&&!d.includes('CLOUDBEDS')&&String(r.fecha||'').startsWith(prefix);
+  });
+  const bankTotal=Math.round(bankSpei.reduce((s,r)=>s+r.abono,0)*100)/100;
+
+  // Matching: cada SPEI ↔ pago app por monto (tolerancia 1 peso)
+  const usedApp=new Set();
+  const matches=bankSpei.map(bs=>{
+    const amount=Math.round(bs.abono*100)/100;
+    const cand=appPagos.filter((p,i)=>!usedApp.has(i)&&Math.abs(p.monto-amount)<=1);
+    if(cand.length===1){
+      const idx=appPagos.indexOf(cand[0]);
+      usedApp.add(idx);
+      return {bank:bs,match:cand[0],how:'monto'};
+    }
+    return {bank:bs,match:null,how:cand.length>1?'ambiguo':'sin_match'};
+  });
+  const huerfanosApp=appPagos.filter((p,i)=>!usedApp.has(i));
+
+  const okMatches=matches.filter(m=>m.match);
+  const failMatches=matches.filter(m=>!m.match);
+  const cuadre=Math.abs(appBruto-bankTotal)<=1;
+  const huerfTotal=failMatches.length+huerfanosApp.length;
+
+  // Si no hay datos en ninguna parte, mostrar bloque vacío informativo
+  if(appPagos.length===0&&bankSpei.length===0){
+    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Transferencias</h3><p class="empty" style="padding:14px;font-size:12px">Sin pagos por transferencia ni SPEI recibidos en este mes.</p>`;
+    return;
+  }
+
+  const rowsHtml=matches.map(m=>{
+    const ok=!!m.match;
+    const bg=ok?'#E1F5EE':'#FCE8E6';
+    // Extraer una pista del remitente desde la descripción del SPEI (las últimas palabras antes de tabulaciones o el nombre)
+    const desc=String(m.bank.descripcion||'');
+    const matchTxt=ok
+      ? `<div style="font-size:12px"><strong>${m.match.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${m.match.tipo} · ${fmtDate(m.match.fecha)||'—'}</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios pagos con este monto en la app':'✗ Sin pago en la app con este monto'}</div>`;
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${m.bank.fecha}</td>
+      <td style="padding:7px 8px;font-size:11px;color:#666">${desc.substring(0,80)}${desc.length>80?'…':''}</td>
+      <td style="padding:7px 8px">${matchTxt}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(m.bank.abono)}</td>
+      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+    </tr>`;
+  }).join('');
+  const huerfAppHtml=huerfanosApp.map(p=>`
+    <tr style="background:#FFF4E5">
+      <td style="padding:7px 8px;font-size:12px">${fmtDate(p.fecha)||'—'}</td>
+      <td style="padding:7px 8px;font-size:11px;color:#999;font-style:italic">(sin SPEI en el banco)</td>
+      <td style="padding:7px 8px"><div style="font-size:12px"><strong>${p.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${p.tipo}</div></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(p.monto)}</td>
+      <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
+    </tr>`).join('');
+
+  block.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Transferencias</h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco recibido</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankTotal)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankSpei.length} SPEI recibido${bankSpei.length!==1?'s':''}</p>
+      </div>
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FCE8E6'};border:0.5px solid ${cuadre?'#1D9E75':'#E24B4A'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:0">Estado</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#7A1F1D'}">${cuadre?'✓ Cuadra':'✗ Diferencia '+fmt(appBruto-bankTotal)}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 8px">Verificaciones</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:${cuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${cuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${cuadre?'#1D9E75':'#E24B4A'}">${cuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${cuadre?'#085041':'#7A1F1D'}">App vs Banco</p>
+            <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(appBruto)} vs ${fmt(bankTotal)} · ${cuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(appBruto-bankTotal))}</p>
+          </div>
+        </div>
+        <div style="background:${huerfTotal===0?'#E1F5EE':'#FFF4E5'};border-left:3px solid ${huerfTotal===0?'#1D9E75':'#BA7517'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${huerfTotal===0?'#1D9E75':'#BA7517'}">${huerfTotal===0?'✓':'⚠'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${huerfTotal===0?'#085041':'#634009'}">Huérfanos</p>
+            <p style="font-size:11px;color:${huerfTotal===0?'#085041':'#634009'};margin:2px 0 0">${huerfTotal===0?'Todos los movimientos emparejados':failMatches.length+' SPEI sin pago en app · '+huerfanosApp.length+' pago app sin SPEI'}</p>
+          </div>
+        </div>
+        <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:#888">i</span>
+          <div style="flex:1">
+            <p style="font-size:12px;color:#666;margin:0">Total emparejado: ${okMatches.length}/${matches.length} SPEI del banco</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Transferencias — ${bankSpei.length} SPEI${huerfanosApp.length>0?' + '+huerfanosApp.length+' huérfanos en app':''}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción SPEI</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Pago App</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+        </tr></thead>
+        <tbody>${rowsHtml||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin SPEI recibidos en este mes</td></tr>'}${huerfAppHtml}</tbody>
+      </table>
+    </div>`;
+}
+
+// ----- Débito -----
+function _renderReconcilDebito(prefix){
+  const block=document.getElementById('rec-debito-block');if(!block)return;
+  if(!Array.isArray(window._recBbvaRows)){block.innerHTML='';return;}
+
+  // App: pagos con método débito en el mes
+  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+  let appBruto=0;
+  reservas.forEach(r=>{
+    if((r.anticipo||0)>0&&r.antiPago==='debito'&&String(r.antiFecha||'').startsWith(prefix))appBruto+=r.anticipo;
+    if((r.saldo||0)>0&&r.saldPago==='debito'&&String(r.saldFecha||'').startsWith(prefix))appBruto+=r.saldo;
+  });
+  gd(KC).forEach(c=>{
+    let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+    items.forEach(it=>{
+      if(it.pago!=='debito')return;
+      const fp=String(it.fechaPago||'').slice(0,10);
+      if(!fp.startsWith(prefix))return;
+      appBruto+=(it.precio||0)*(it.cantidad||0);
+    });
+  });
+  appBruto=Math.round(appBruto*100)/100;
+
+  // Banco: VENTAS TDC INTER del mes (neto, ya con comisión descontada)
+  const bankTdc=window._recBbvaRows.filter(r=>{
+    const d=String(r.descripcion||'').toUpperCase();
+    return r.abono>0&&d.includes('VENTAS TDC')&&String(r.fecha||'').startsWith(prefix);
+  });
+  const bankTdcTotal=Math.round(bankTdc.reduce((s,r)=>s+r.abono,0)*100)/100;
+
+  // Comisión TDC del mes (cargos COM VTAS TDC + IVA COM VTAS TDC)
+  const comTdc=window._recBbvaRows.filter(r=>{
+    const d=String(r.descripcion||'').toUpperCase();
+    return r.cargo<0&&(d.includes('COM VTAS TDC')||d.includes('COM VTAS TDC INTER'))&&String(r.fecha||'').startsWith(prefix);
+  });
+  const comTdcTotal=Math.round(comTdc.reduce((s,r)=>s+Math.abs(r.cargo),0)*100)/100;
+
+  const diff=appBruto-bankTdcTotal;
+
+  if(appBruto===0&&bankTdc.length===0){
+    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3><p class="empty" style="padding:14px;font-size:12px">Sin pagos por débito ni ventas TDC en este mes.</p>`;
+    return;
+  }
+
+  const tdcRowsHtml=bankTdc.map(b=>`
+    <tr>
+      <td style="padding:7px 8px;font-size:12px">${b.fecha}</td>
+      <td style="padding:7px 8px;font-size:11px;color:#666">${String(b.descripcion||'').substring(0,80)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(b.abono)}</td>
+    </tr>`).join('');
+  const comRowsHtml=comTdc.map(b=>`
+    <tr>
+      <td style="padding:7px 8px;font-size:12px">${b.fecha}</td>
+      <td style="padding:7px 8px;font-size:11px;color:#666">${String(b.descripcion||'').substring(0,80)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;color:#7A1F1D">${fmt(Math.abs(b.cargo))}</td>
+    </tr>`).join('');
+
+  block.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco (neto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankTdcTotal)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankTdc.length} cierre${bankTdc.length!==1?'s':''} TDC</p>
+      </div>
+      <div style="flex:1;min-width:160px;background:#F5F4F0;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Diferencia</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:#1A1916">${fmt(diff)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">comisión TDC mes: ${fmt(comTdcTotal)}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:12px;color:#666;margin:0;background:#F5F4F0;padding:8px 12px;border-radius:6px"><strong>Nota:</strong> el banco recibe el monto neto de comisión TDC (~3-3.5%). La app registra el bruto. La diferencia esperada es del orden de la comisión TDC del mes. Si la diferencia es muy superior, puede haber cierres de terminal pendientes o cobros mal etiquetados.</p>
+    </div>
+    ${tdcRowsHtml?`<div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Cierres TDC en banco — ${bankTdc.length}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto neto</th>
+        </tr></thead>
+        <tbody>${tdcRowsHtml}</tbody>
+      </table>
+    </div>`:''}
+    ${comRowsHtml?`<div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Comisiones TDC en banco — ${comTdc.length}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
+        </tr></thead>
+        <tbody>${comRowsHtml}</tbody>
       </table>
     </div>`:''}`;
 }
