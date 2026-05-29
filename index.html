@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.4</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.6</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.4</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.6</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1625,17 +1625,38 @@ function guardarRes(){
       total=(storedR.hospTotal||0)+(storedR.consumoCena||0)||storedR.total||total;
     }
   } else {
-    const habs=gd(KH);
-    let totalConImp=0;
-    habRows.forEach(row=>{
-      const hab=habs.find(h=>h.nombre===row.nombre);
-      totalConImp+=(hab?hab.precio:0)*noches;
-    });
-    totalConImp=Math.round(totalConImp*(1-desc/100)*100)/100;
-    base=Math.round(totalConImp/1.205*100)/100;
-    ish=Math.round(base*0.045*100)/100;
-    iva=Math.round(base*0.16*100)/100;
-    total=totalConImp; // exact total (base/ish/iva derived for display)
+    // Reserva no-CB y candado cerrado.
+    // Si estamos editando una existente, verificar si los inputs fiscales cambiaron.
+    // Si nada cambió → preservar valores almacenados. Si algo cambió → recalcular.
+    const storedR=editId?gd(KR).find(x=>String(x.id)===String(editId)):null;
+    let needsRecompute=true;
+    if(storedR){
+      const storedNoches=parseInt(storedR.noches)||0;
+      const storedDesc=parseFloat(storedR.descuento)||0;
+      const storedHab=String(storedR.habitacion||'').trim();
+      const newHab=habRows.map(r=>r.nombre).join(' + ').trim();
+      // Si nada de lo fiscal cambió → preservar
+      if(storedNoches===noches&&storedDesc===desc&&storedHab===newHab){
+        needsRecompute=false;
+        base=parseFloat(storedR.base)||0;
+        ish=parseFloat(storedR.ish)||0;
+        iva=parseFloat(storedR.iva)||0;
+        total=parseFloat(storedR.total)||0;
+      }
+    }
+    if(needsRecompute){
+      const habs=gd(KH);
+      let totalConImp=0;
+      habRows.forEach(row=>{
+        const hab=habs.find(h=>h.nombre===row.nombre);
+        totalConImp+=(hab?hab.precio:0)*noches;
+      });
+      totalConImp=Math.round(totalConImp*(1-desc/100)*100)/100;
+      base=Math.round(totalConImp/1.205*100)/100;
+      ish=Math.round(base*0.045*100)/100;
+      iva=Math.round(base*0.16*100)/100;
+      total=totalConImp; // exact total (base/ish/iva derived for display)
+    }
   }
 
   const hasAnticipo=document.getElementById('chk-anticipo').checked;
@@ -1731,17 +1752,17 @@ function guardarRes(){
 }
 
 function renderRes(){
-  // Populate month selector if empty
+  // Populate month selector (always refresh to pick up new imports)
   const mesEl=document.getElementById('res-mes');
-  if(mesEl&&mesEl.options.length<=1){
+  if(mesEl){
+    const currentValue=mesEl.value;
     const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const meses=new Set(gd(KR).map(r=>(fmtDate(r.checkout)||'').substring(0,7)).filter(Boolean));
-    [...meses].sort().reverse().forEach(m=>{
+    mesEl.innerHTML='<option value="">Todos los meses</option>'+[...meses].sort().reverse().map(m=>{
       const [y,mo]=m.split('-');
-      const opt=document.createElement('option');
-      opt.value=m; opt.textContent=MN[parseInt(mo)-1]+' '+y;
-      mesEl.appendChild(opt);
-    });
+      return `<option value="${m}">${MN[parseInt(mo)-1]} ${y}</option>`;
+    }).join('');
+    if(currentValue&&[...mesEl.options].some(o=>o.value===currentValue))mesEl.value=currentValue;
   }
 
   const search=(document.getElementById('res-search')?.value||'').toLowerCase();
@@ -2094,15 +2115,15 @@ function initConsList(){
 
 function renderConsList(){
   const mesEl=document.getElementById('cons-mes');
-  if(mesEl&&mesEl.options.length<=1){
+  if(mesEl){
+    const currentValue=mesEl.value;
     const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const meses=new Set(gd(KC).map(c=>(c.fecha||'').substring(0,7)).filter(Boolean));
-    [...meses].sort().reverse().forEach(m=>{
+    mesEl.innerHTML='<option value="">Todos los meses</option>'+[...meses].sort().reverse().map(m=>{
       const [y,mo]=m.split('-');
-      const opt=document.createElement('option');
-      opt.value=m; opt.textContent=MN[parseInt(mo)-1]+' '+y;
-      mesEl.appendChild(opt);
-    });
+      return `<option value="${m}">${MN[parseInt(mo)-1]} ${y}</option>`;
+    }).join('');
+    if(currentValue&&[...mesEl.options].some(o=>o.value===currentValue))mesEl.value=currentValue;
   }
   const search=(document.getElementById('cons-search')?.value||'').toLowerCase();
   const mes=document.getElementById('cons-mes')?.value||'';
