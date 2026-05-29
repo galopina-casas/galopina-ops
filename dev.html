@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.2-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.6.2-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -4665,7 +4665,20 @@ function exportarCierreExcel(modo){
     const recRows=_buildReconcilExcelData(prefix);
     if(recRows.length){
       const wsRec=XLSX.utils.aoa_to_sheet(recRows);
-      wsRec['!cols']=[{wch:14},{wch:38},{wch:12},{wch:12},{wch:12},{wch:12},{wch:9},{wch:50}];
+      wsRec['!cols']=[{wch:16},{wch:42},{wch:13},{wch:13},{wch:13},{wch:13},{wch:9},{wch:55}];
+      // Alturas dinámicas: si NOTA tiene texto largo, fila más alta
+      wsRec['!rows']=recRows.map((row,idx)=>{
+        if(idx===0)return {hpt:22}; // header alto
+        const noteCell=row[7];
+        const note=noteCell?(typeof noteCell==='object'?noteCell.v:noteCell):'';
+        const len=String(note||'').length;
+        if(len>120)return {hpt:60};
+        if(len>60)return {hpt:42};
+        if(len>0)return {hpt:28};
+        return {hpt:18};
+      });
+      // Freeze first row (panel congelado)
+      wsRec['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
       XLSX.utils.book_append_sheet(wb,wsRec,'Reconciliación');
     }
   }
@@ -5213,6 +5226,14 @@ function renderReconcil(){
   if(!mes||!anio){summary.innerHTML='';detail.innerHTML='';return;}
   const prefix=anio+'-'+mes;
 
+  // Reset captura de resultados para Excel
+  window._recLastStripe=null;
+  window._recLastCb=null;
+  window._recLastTrans=null;
+  window._recLastDebito=null;
+  window._recLastEgresos=null;
+  window._recLastPrefix=prefix;
+
   if(window._recStripeRows){_renderReconcilStripe(prefix,summary,detail);}
   _renderReconcilCb(prefix);
   _renderReconcilTrans(prefix);
@@ -5395,6 +5416,32 @@ function _renderReconcilStripe(prefix,summary,detail){
       <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'stripe',ref)}</td>
     </tr>`;
   }).join('');
+  // Captura resultados para Excel
+  window._recLastStripe={
+    appBruto:appBruto,
+    plataformaBruto:stripeBruto,
+    plataformaNeto:stripeNeto,
+    bankTotal:hasBank?bankStripeTotal:null,
+    matches:matches.map(m=>({
+      stripe:m.stripe,
+      stripeDt:String(m.stripe.createdAt||'').slice(0,10),
+      stripeName:_recStripeRowName(m.stripe),
+      gross:m.stripe.gross,
+      fee:m.stripe.fee,
+      net:m.stripe.net,
+      ok:!!m.match,
+      how:m.how,
+      matchName:m.match?m.match.reserva.nombre:'',
+      matchTipo:m.match?m.match.tipo:'',
+      matchFecha:m.match?m.match.fecha:''
+    })),
+    huerfanosApp:huerfanosApp.map(p=>({
+      fecha:p.fecha,
+      nombre:p.reserva.nombre,
+      tipo:p.tipo,
+      monto:p.monto
+    }))
+  };
   detail.innerHTML=`
     <div class="card" style="padding:14px 16px;margin-top:10px">
       <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Stripe — ${stripeAll.length} transacciones${huerfanosApp.length>0?' + '+huerfanosApp.length+' huérfanos en app':''}</p>
@@ -5578,6 +5625,34 @@ function _renderReconcilCb(prefix){
       <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'cloudbeds',ref)}</td>
     </tr>`;
   }).join('');
+
+  // Captura resultados para Excel
+  window._recLastCb={
+    appBruto:appBruto,
+    plataformaBruto:cbBruto,
+    plataformaNeto:cbNeto,
+    bankTotal:hasBank?bankCbTotal:null,
+    matches:matches.map(m=>({
+      cb:m.cb,
+      cbDate:m.cb.txDate,
+      cbName:m.cb.guestName||'(sin nombre)',
+      cbId:m.cb.cbId||'',
+      bruto:m.cb.montoCobrado,
+      fee:m.cb.tasa,
+      neto:m.cb.montoDesembolso,
+      ok:!!m.match,
+      how:m.how,
+      matchName:m.match?m.match.reserva.nombre:'',
+      matchTipo:m.match?m.match.tipo:'',
+      matchFecha:m.match?m.match.fecha:''
+    })),
+    huerfanosApp:huerfanosApp.map(p=>({
+      fecha:p.fecha,
+      nombre:p.reserva.nombre,
+      tipo:p.tipo,
+      monto:p.monto
+    }))
+  };
 
   block.innerHTML=`
     <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">CloudBeds</h3>
@@ -5787,6 +5862,31 @@ function _renderReconcilTrans(prefix){
     </tr>`;
   }).join('');
 
+  // Captura resultados para Excel
+  window._recLastTrans={
+    appBruto:appBruto,
+    bankTotal:bankTotal,
+    matches:matches.map(m=>({
+      bankAcc:m.bank._acc||'',
+      bankFecha:m.bank.fecha,
+      bankDesc:String(m.bank.descripcion||''),
+      bankAbono:m.bank.abono,
+      ok:!!m.match,
+      how:m.how,
+      matchName:m.match?m.match.huesped:'',
+      matchFecha:m.match?m.match.fecha:'',
+      matchItems:m.match?m.match.items.length:0
+    })),
+    huerfanosApp:huerfanosApp.map(g=>({
+      huesped:g.huesped,
+      fecha:g.fecha,
+      monto:g.monto,
+      reservaId:g.reservaId,
+      itemsDesc:g.items.slice(0,3).map(i=>i.tipo).join(', ')+(g.items.length>3?'…':''),
+      itemsCount:g.items.length
+    }))
+  };
+
   block.innerHTML=`
     <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Transferencias</h3>
     <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
@@ -5901,6 +6001,14 @@ function _renderReconcilDebito(prefix){
       <td style="padding:7px 8px;font-size:11px;color:#666">${String(b.descripcion||'').substring(0,80)}</td>
       <td style="padding:7px 8px;text-align:right;font-size:12px;color:#7A1F1D">${fmt(Math.abs(b.cargo))}</td>
     </tr>`).join('');
+
+  // Captura resultados para Excel
+  window._recLastDebito={
+    appBruto:appBruto,
+    bankTotal:bankTdcTotal,
+    comisionTotal:comTdcTotal,
+    diff:diff
+  };
 
   block.innerHTML=`
     <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3>
@@ -6172,6 +6280,43 @@ function _renderReconcilEgresos(prefix){
     return;
   }
 
+  // Captura resultados para Excel
+  window._recLastEgresos={
+    appBruto:appBruto,
+    bankTotal:bankBruto,
+    facturaMatches:facturaMatches.map(m=>({
+      egreso:m.egreso,
+      proveedor:m.egreso.proveedor||'',
+      rfc:m.egreso.rfc||'',
+      fecha:String(m.egreso.fecha||'').slice(0,10),
+      total:Math.abs(parseFloat(m.egreso.montoMXN||m.egreso.total)||0),
+      ok:!!m.bank,
+      lejano:m.bank&&typeof m.dateDiffDays==='number'&&m.dateDiffDays>30,
+      dateDiffDays:m.dateDiffDays||null,
+      how:m.how,
+      bankAcc:m.bank?m.bank._acc:'',
+      bankFecha:m.bank?m.bank.fecha:'',
+      bankDesc:m.bank?String(m.bank.descripcion||''):''
+    })),
+    huerfanosBank:cargosHuerfanos.map(c=>({
+      fecha:c.fecha,
+      acc:c._acc,
+      desc:String(c.descripcion||''),
+      monto:Math.abs(c.cargo),
+      rfc:_recExtractRfc(c.descripcion)
+    })),
+    ncMatches:ncMatches.map(m=>({
+      egreso:m.egreso,
+      proveedor:m.egreso.proveedor||'',
+      fecha:String(m.egreso.fecha||'').slice(0,10),
+      monto:Math.abs(parseFloat(m.egreso.montoMXN||m.egreso.total)||0),
+      ok:!!m.bank,
+      bankAcc:m.bank?m.bank._acc:'',
+      bankFecha:m.bank?m.bank.fecha:'',
+      bankAbono:m.bank?m.bank.abono:0
+    }))
+  };
+
   const factRowsHtml=facturaMatches.map(m=>{
     const e=m.egreso;
     const ok=!!m.bank;
@@ -6304,207 +6449,191 @@ function _renderReconcilEgresos(prefix){
 
 // --- Excel sheet "Reconciliación" para Cierre Mensual ---
 function _buildReconcilExcelData(prefix){
-  // Opción B: una fila TOTAL por bloque + solo filas problemáticas (rojas/ámbar) o con nota.
-  // Filas verdes (sin problema, sin nota) NO aparecen.
-  const headers=['BLOQUE','CONCEPTO','APP','PLATAFORMA','BANCO','DIFERENCIA','ESTADO','NOTA'];
-  const rows=[headers];
-  const sep=()=>rows.push(['','','','','','','','']);
+  // Estructura: una fila TOTAL por bloque + solo filas problemáticas o con nota.
+  // Estilos: B=bold; t=type, z=format; s=style (fill, font, alignment, border).
+  // Lee resultados capturados por los renderers (window._recLast*).
   const getNote=(bloque,ref)=>{const n=_recGetNote(prefix,bloque,ref);return n?n.nota:'';};
-  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+  const data=[];
 
-  // App por método de pago
-  const appByMetodo=metodo=>{
-    let tot=0;
-    reservas.forEach(r=>{
-      if((r.anticipo||0)>0&&r.antiPago===metodo&&String(r.antiFecha||'').startsWith(prefix))tot+=r.anticipo;
-      if((r.saldo||0)>0&&r.saldPago===metodo&&String(r.saldFecha||'').startsWith(prefix))tot+=r.saldo;
+  // ---- Estilos reutilizables ----
+  const RED='FCE8E6',AMB='FFF4E5',GRN='E1F5EE',GRY='F0F0EE',DARK='1A1916';
+  const moneyFmt='"$"#,##0.00';
+  const stHeader={
+    font:{bold:true,color:{rgb:'FFFFFF'},sz:11},
+    fill:{fgColor:{rgb:DARK}},
+    alignment:{horizontal:'center',vertical:'center'},
+    border:{top:{style:'thin',color:{rgb:'888888'}},bottom:{style:'thin',color:{rgb:'888888'}}}
+  };
+  const stTotalRow=bg=>({
+    font:{bold:true,sz:11},
+    fill:{fgColor:{rgb:bg||GRY}},
+    border:{top:{style:'thin',color:{rgb:'CCCCCC'}},bottom:{style:'thin',color:{rgb:'CCCCCC'}}}
+  });
+  const stDetailRow=bg=>({
+    fill:{fgColor:{rgb:bg}},
+    font:{sz:10}
+  });
+  const stNoteCell=bg=>({
+    fill:{fgColor:{rgb:bg}},
+    font:{sz:10,italic:true,color:{rgb:'444444'}},
+    alignment:{wrapText:true,vertical:'top'}
+  });
+  const stMoney=base=>({...base,alignment:{...(base.alignment||{}),horizontal:'right'}});
+  const stCenter=base=>({...base,alignment:{...(base.alignment||{}),horizontal:'center'}});
+
+  const mkRow=(cells,rowStyle)=>{
+    return cells.map((c,i)=>{
+      if(c===null||c===undefined||c==='')return {v:'',s:rowStyle||{}};
+      const isMoney=[2,3,4,5].includes(i);
+      const isCenter=i===6;
+      const isNote=i===7;
+      let style=rowStyle||{};
+      if(isNote)style=stNoteCell(rowStyle&&rowStyle.fill?rowStyle.fill.fgColor.rgb:'FFFFFF');
+      else if(isMoney&&typeof c==='number')style=stMoney(style);
+      else if(isCenter)style=stCenter(style);
+      if(isMoney&&typeof c==='number')return {v:c,t:'n',z:moneyFmt,s:style};
+      return {v:c,s:style};
     });
-    gd(KC).forEach(c=>{
-      let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
-      items.forEach(it=>{if(it.pago===metodo&&String(it.fechaPago||'').startsWith(prefix))tot+=(it.precio||0)*(it.cantidad||0);});
-    });
-    return Math.round(tot*100)/100;
   };
 
+  // ---- HEADER ----
+  data.push(['BLOQUE','CONCEPTO','APP','PLATAFORMA','BANCO','DIFERENCIA','ESTADO','NOTA'].map(h=>({v:h,s:stHeader})));
+
+  const sep=()=>data.push(['','','','','','','',''].map(()=>({v:'',s:{}})));
+
   // === STRIPE ===
-  if(window._recStripeRows){
-    const stripeAll=window._recStripeRows.filter(r=>(r.category==='charge'||r.category==='refund')&&String(r.createdAt||'').startsWith(prefix));
-    const appStripe=appByMetodo('stripe');
-    const bruto=Math.round(stripeAll.reduce((s,r)=>s+r.gross,0)*100)/100;
-    const neto=Math.round(stripeAll.reduce((s,r)=>s+r.net,0)*100)/100;
-    // Banco: depósitos Stripe en BBVA Principal
-    let bankStripeTot=0;
-    if(window._recBbvaRows){
-      const dep=window._recBbvaRows.filter(r=>r.abono>0&&String(r.descripcion||'').toUpperCase().includes('STRIPE')&&String(r.fecha||'').startsWith(prefix));
-      bankStripeTot=Math.round(dep.reduce((s,r)=>s+r.abono,0)*100)/100;
-    }
-    const diff=Math.round((appStripe-bruto)*100)/100;
+  const sx=window._recLastStripe;
+  if(sx){
+    const diff=Math.round((sx.appBruto-sx.plataformaBruto)*100)/100;
     const estado=Math.abs(diff)<=1?'✓':'✗';
-    if(stripeAll.length||appStripe>0){
-      rows.push(['Stripe','TOTAL',appStripe,bruto,bankStripeTot||'',diff,estado,'']);
-      // Detalle problemático: recompilar matching para detectar huérfanos
-      const _matchedIdx=new Set();
-      stripeAll.forEach((sr,i)=>{
-        const stripeDt=String(sr.createdAt||'').slice(0,10);
-        const ref='s-'+(sr.payoutId||'')+'-'+stripeDt+'-'+Math.round((sr.gross||0)*100);
-        const note=getNote('stripe',ref);
-        // Buscar match en reservas por monto
-        const cand=reservas.find(r=>{
-          const m=Math.round((sr.gross||0)*100)/100;
-          if(Math.abs((r.anticipo||0)-m)<=1&&r.antiPago==='stripe')return true;
-          if(Math.abs((r.saldo||0)-m)<=1&&r.saldPago==='stripe')return true;
-          return false;
-        });
-        if(!cand||note){
-          const nm=_recStripeRowName(sr)||'(sin nombre)';
-          rows.push(['Stripe',nm+' · '+stripeDt,'',sr.gross,'',!cand?sr.gross:0,!cand?'✗':'✓',note]);
-        }
-      });
+    const totalBg=Math.abs(diff)<=1?GRN:RED;
+    data.push(mkRow(['Stripe','TOTAL bruto',sx.appBruto,sx.plataformaBruto,sx.bankTotal||'',diff,estado,''],stTotalRow(totalBg)));
+    if(sx.bankTotal!==null){
+      const diffNeto=Math.round((sx.plataformaNeto-sx.bankTotal)*100)/100;
+      data.push(mkRow(['Stripe','TOTAL neto (banco)','',sx.plataformaNeto,sx.bankTotal,diffNeto,Math.abs(diffNeto)<=1?'✓':'✗',''],stTotalRow(GRY)));
     }
+    // Filas problemáticas o con nota
+    sx.matches.forEach(m=>{
+      const ref='s-'+(m.stripe.payoutId||'')+'-'+m.stripeDt+'-'+Math.round((m.gross||0)*100);
+      const note=getNote('stripe',ref);
+      if(m.ok&&!note)return;
+      const bg=m.ok?GRN:RED;
+      const concept=(m.stripeName||'(sin nombre)')+' · '+m.stripeDt+(m.ok?' ↔ '+m.matchName:'');
+      const diff=m.ok?0:m.gross;
+      data.push(mkRow(['Stripe',concept,'',m.gross,'',diff,m.ok?'✓':'✗',note],stDetailRow(bg)));
+    });
+    sx.huerfanosApp.forEach(h=>{
+      const ref='s-app-'+(h.nombre||'')+'-'+h.tipo+'-'+Math.round((h.monto||0)*100);
+      const note=getNote('stripe',ref);
+      const concept=(h.nombre||'')+' · '+h.fecha+' · '+h.tipo+' (sin Stripe)';
+      data.push(mkRow(['Stripe',concept,h.monto,'','',-h.monto,'⚠',note],stDetailRow(AMB)));
+    });
   }
 
   // === CLOUDBEDS ===
-  if(window._recCbRows){
-    const cbAll=window._recCbRows.filter(r=>String(r.txDate||'').startsWith(prefix));
-    const appCb=appByMetodo('cloudbeds');
-    const bruto=Math.round(cbAll.reduce((s,r)=>s+r.montoCobrado,0)*100)/100;
-    const neto=Math.round(cbAll.reduce((s,r)=>s+r.montoDesembolso,0)*100)/100;
-    let bankCbTot=0;
-    if(window._recBbvaRows){
-      const dep=window._recBbvaRows.filter(r=>r.abono>0&&String(r.descripcion||'').toUpperCase().includes('CLOUDBEDS')&&String(r.fecha||'').startsWith(prefix));
-      bankCbTot=Math.round(dep.reduce((s,r)=>s+r.abono,0)*100)/100;
-    }
-    const diff=Math.round((appCb-bruto)*100)/100;
+  const cx=window._recLastCb;
+  if(cx){
+    sep();
+    const diff=Math.round((cx.appBruto-cx.plataformaBruto)*100)/100;
     const estado=Math.abs(diff)<=1?'✓':'✗';
-    if(cbAll.length||appCb>0){
-      sep();
-      rows.push(['CloudBeds','TOTAL',appCb,bruto,bankCbTot||'',diff,estado,'']);
-      // Detalle problemático
-      cbAll.forEach(cb=>{
-        const ref='cb-'+(cb.txId||(cb.cbId+'-'+cb.txDate));
-        const note=getNote('cloudbeds',ref);
-        // Buscar match
-        const cand=reservas.find(r=>{
-          const m=Math.round((cb.montoCobrado||0)*100)/100;
-          if(Math.abs((r.anticipo||0)-m)<=1&&r.antiPago==='cloudbeds')return true;
-          if(Math.abs((r.saldo||0)-m)<=1&&r.saldPago==='cloudbeds')return true;
-          return false;
-        });
-        if(!cand||note){
-          rows.push(['CloudBeds',(cb.guestName||'(sin nombre)')+' · '+cb.txDate,'',cb.montoCobrado,'',!cand?cb.montoCobrado:0,!cand?'✗':'✓',note]);
-        }
-      });
+    const totalBg=Math.abs(diff)<=1?GRN:RED;
+    data.push(mkRow(['CloudBeds','TOTAL bruto',cx.appBruto,cx.plataformaBruto,cx.bankTotal||'',diff,estado,''],stTotalRow(totalBg)));
+    if(cx.bankTotal!==null){
+      const diffNeto=Math.round((cx.plataformaNeto-cx.bankTotal)*100)/100;
+      data.push(mkRow(['CloudBeds','TOTAL neto (banco)','',cx.plataformaNeto,cx.bankTotal,diffNeto,Math.abs(diffNeto)<=1?'✓':'✗',''],stTotalRow(GRY)));
     }
+    cx.matches.forEach(m=>{
+      const ref='cb-'+(m.cb.txId||(m.cbId+'-'+m.cbDate));
+      const note=getNote('cloudbeds',ref);
+      if(m.ok&&!note)return;
+      const bg=m.ok?GRN:RED;
+      const concept=(m.cbName||'(sin nombre)')+' · '+m.cbDate+(m.ok?' ↔ '+m.matchName:'');
+      const diff=m.ok?0:m.bruto;
+      data.push(mkRow(['CloudBeds',concept,'',m.bruto,'',diff,m.ok?'✓':'✗',note],stDetailRow(bg)));
+    });
+    cx.huerfanosApp.forEach(h=>{
+      const ref='cb-app-'+(h.nombre||'')+'-'+h.tipo+'-'+Math.round((h.monto||0)*100);
+      const note=getNote('cloudbeds',ref);
+      const concept=(h.nombre||'')+' · '+h.fecha+' · '+h.tipo+' (sin CloudBeds)';
+      data.push(mkRow(['CloudBeds',concept,h.monto,'','',-h.monto,'⚠',note],stDetailRow(AMB)));
+    });
   }
 
   // === TRANSFERENCIAS ===
-  const hasAnyBank=Array.isArray(window._recBbvaRows)||Array.isArray(window._recSantanderRows);
-  if(hasAnyBank){
-    const appT=appByMetodo('transferencia');
-    const bankRows=_recAllBankRows(['bbva','santander']);
-    const bankSpei=bankRows.filter(r=>{
-      const d=String(r.descripcion||'').toUpperCase();
-      if(r.abono<=0||!String(r.fecha||'').startsWith(prefix))return false;
-      if(d.includes('STRIPE')||d.includes('CLOUDBEDS'))return false;
-      if(r._acc==='BBVA Principal')return d.includes('SPEI RECIBIDO');
-      return true;
-    });
-    const bankT=Math.round(bankSpei.reduce((s,r)=>s+r.abono,0)*100)/100;
-    const diff=Math.round((appT-bankT)*100)/100;
+  const tx=window._recLastTrans;
+  if(tx){
+    sep();
+    const diff=Math.round((tx.appBruto-tx.bankTotal)*100)/100;
     const estado=Math.abs(diff)<=1?'✓':'⚠';
-    if(appT>0||bankSpei.length>0){
-      sep();
-      rows.push(['Transferencias','TOTAL',appT,'',bankT,diff,estado,'']);
-      // Agrupar app por huésped+fecha
-      const appGrupos={};
-      reservas.forEach(r=>{
-        if((r.anticipo||0)>0&&r.antiPago==='transferencia'&&String(r.antiFecha||'').startsWith(prefix)){
-          const k=(r.nombre||'')+'|'+r.antiFecha;
-          appGrupos[k]=(appGrupos[k]||{huesped:r.nombre,fecha:r.antiFecha,monto:0});appGrupos[k].monto+=r.anticipo;
-        }
-        if((r.saldo||0)>0&&r.saldPago==='transferencia'&&String(r.saldFecha||'').startsWith(prefix)){
-          const k=(r.nombre||'')+'|'+r.saldFecha;
-          appGrupos[k]=(appGrupos[k]||{huesped:r.nombre,fecha:r.saldFecha,monto:0});appGrupos[k].monto+=r.saldo;
-        }
-      });
-      gd(KC).forEach(c=>{
-        let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
-        items.forEach(it=>{
-          if(it.pago!=='transferencia')return;
-          const fp=String(it.fechaPago||'').slice(0,10);
-          if(!fp.startsWith(prefix))return;
-          const k=(c.huesped||'')+'|'+fp;
-          appGrupos[k]=(appGrupos[k]||{huesped:c.huesped,fecha:fp,monto:0});appGrupos[k].monto+=(it.precio||0)*(it.cantidad||0);
-        });
-      });
-      const grupos=Object.values(appGrupos).map(g=>({...g,monto:Math.round(g.monto*100)/100}));
-      const usedG=new Set();
-      bankSpei.forEach(bs=>{
-        const ref='t-'+(bs._acc||'')+'-'+bs.fecha+'-'+Math.round((bs.abono||0)*100);
-        const note=getNote('transferencias',ref);
-        const matchIdx=grupos.findIndex((g,i)=>!usedG.has(i)&&Math.abs(g.monto-bs.abono)<=1);
-        if(matchIdx<0||note){
-          rows.push(['Transferencias',(bs._acc||'')+' · '+bs.fecha+' · SPEI','','',bs.abono,matchIdx<0?bs.abono:0,matchIdx<0?'✗':'✓',note]);
-        }
-        if(matchIdx>=0)usedG.add(matchIdx);
-      });
-      // Grupos app sin match
-      grupos.forEach((g,i)=>{
-        if(usedG.has(i))return;
-        const ref='t-app-'+(g.huesped||'')+'-'+g.fecha+'-'+Math.round(g.monto*100);
-        const note=getNote('transferencias',ref);
-        rows.push(['Transferencias',(g.huesped||'')+' · '+g.fecha,g.monto,'','',-g.monto,'⚠',note]);
-      });
-    }
+    const totalBg=Math.abs(diff)<=1?GRN:AMB;
+    data.push(mkRow(['Transferencias','TOTAL',tx.appBruto,'',tx.bankTotal,diff,estado,''],stTotalRow(totalBg)));
+    tx.matches.forEach(m=>{
+      const ref='t-'+(m.bankAcc||'')+'-'+m.bankFecha+'-'+Math.round((m.bankAbono||0)*100);
+      const note=getNote('transferencias',ref);
+      if(m.ok&&!note)return;
+      const bg=m.ok?GRN:RED;
+      const concept=(m.bankAcc||'')+' · '+m.bankFecha+' · SPEI'+(m.ok?' ↔ '+m.matchName:'');
+      const diff=m.ok?0:m.bankAbono;
+      data.push(mkRow(['Transferencias',concept,'','',m.bankAbono,diff,m.ok?'✓':'✗',note],stDetailRow(bg)));
+    });
+    tx.huerfanosApp.forEach(h=>{
+      const ref='t-app-'+(h.reservaId||'')+'-'+h.fecha+'-'+Math.round(h.monto*100);
+      const note=getNote('transferencias',ref);
+      const concept=(h.huesped||'')+' · '+h.fecha+' · '+h.itemsCount+' item'+(h.itemsCount!==1?'s':'')+' (sin SPEI banco)';
+      data.push(mkRow(['Transferencias',concept,h.monto,'','',-h.monto,'⚠',note],stDetailRow(AMB)));
+    });
   }
 
   // === DÉBITO ===
-  if(Array.isArray(window._recBbvaRows)){
-    const appD=appByMetodo('debito');
-    const bankTdc=window._recBbvaRows.filter(r=>{
-      const d=String(r.descripcion||'').toUpperCase();
-      return r.abono>0&&d.includes('VENTAS TDC')&&String(r.fecha||'').startsWith(prefix);
-    });
-    const bankD=Math.round(bankTdc.reduce((s,r)=>s+r.abono,0)*100)/100;
-    const diff=Math.round((appD-bankD)*100)/100;
-    if(appD>0||bankTdc.length>0){
-      sep();
-      rows.push(['Débito','TOTAL (banco neto)',appD,'',bankD,diff,'⚠','']);
+  const dx=window._recLastDebito;
+  if(dx){
+    sep();
+    const estado=Math.abs(dx.diff)<=1?'✓':'⚠';
+    const totalBg=Math.abs(dx.diff)<=1?GRN:AMB;
+    data.push(mkRow(['Débito','TOTAL (banco neto)',dx.appBruto,'',dx.bankTotal,dx.diff,estado,''],stTotalRow(totalBg)));
+    if(dx.comisionTotal){
+      data.push(mkRow(['Débito','Comisión TDC (cargo banco)','','',dx.comisionTotal,'','',''],stDetailRow(GRY)));
     }
   }
 
   // === EGRESOS ===
-  if(hasAnyBank||Array.isArray(window._recBbvaSndaRows)){
-    const egresos=gd(KE);
-    const facturas=egresos.filter(e=>{
-      const f=String(e.fecha||'').slice(0,10);
-      if(!f.startsWith(prefix))return false;
-      if(e.tipoDoc==='Nota de crédito')return false;
-      const m=Math.abs(parseFloat(e.montoMXN||e.total)||0);
-      return m>=0.01;
+  const ex=window._recLastEgresos;
+  if(ex){
+    sep();
+    const diff=Math.round((ex.appBruto-ex.bankTotal)*100)/100;
+    const estado=Math.abs(diff)<=1?'✓':'⚠';
+    const totalBg=Math.abs(diff)<=1?GRN:AMB;
+    data.push(mkRow(['Egresos','TOTAL facturas',ex.appBruto,'',ex.bankTotal,diff,estado,''],stTotalRow(totalBg)));
+    // Detalle: facturas problemáticas (sin match O lejanas) + cualquier con nota
+    ex.facturaMatches.forEach(m=>{
+      const ref='eg-'+(m.egreso.uuid||(m.rfc+'-'+m.fecha+'-'+Math.round(m.total*100)));
+      const note=getNote('egresos',ref);
+      const isProblem=!m.ok||m.lejano;
+      if(!isProblem&&!note)return;
+      const bg=!m.ok?RED:(m.lejano?AMB:GRN);
+      const concept=m.proveedor+' · '+m.fecha+(m.ok?' ↔ '+m.bankAcc+' '+m.bankFecha+(m.lejano?' ⚠ '+m.dateDiffDays+'d':''):' ✗ sin banco');
+      data.push(mkRow(['Egresos',concept,m.total,'','',m.ok?0:m.total,!m.ok?'✗':(m.lejano?'⚠':'✓'),note],stDetailRow(bg)));
     });
-    if(facturas.length){
-      const totalApp=Math.round(facturas.reduce((s,e)=>s+Math.abs(parseFloat(e.montoMXN||e.total)||0),0)*100)/100;
-      const allBank=_recAllBankRows();
-      const cargosBank=allBank.filter(r=>r.cargo<0&&!_recIsInternalMovement(r.descripcion));
-      const bankTotal=Math.round(cargosBank.reduce((s,c)=>s+Math.abs(c.cargo),0)*100)/100;
-      const diff=Math.round((totalApp-bankTotal)*100)/100;
-      const estadoEg=Math.abs(diff)<=1?'✓':'⚠';
-      sep();
-      rows.push(['Egresos','TOTAL facturas',totalApp,'',bankTotal,diff,estadoEg,'']);
-      // Detalle: solo facturas con nota o sin match obvio (heurística simple: matching aquí sería costoso, así que confiamos en notas)
-      facturas.forEach(e=>{
-        const m=Math.abs(parseFloat(e.montoMXN||e.total)||0);
-        const ref='eg-'+(e.uuid||(e.rfc+'-'+e.fecha+'-'+Math.round(m*100)));
-        const note=getNote('egresos',ref);
-        if(note){
-          rows.push(['Egresos',(e.proveedor||'')+' · '+String(e.fecha||'').slice(0,10),m,'','','','',note]);
-        }
+    ex.huerfanosBank.forEach(h=>{
+      const ref='eg-bank-'+(h.acc||'')+'-'+h.fecha+'-'+Math.round(h.monto*100);
+      const note=getNote('egresos',ref);
+      const concept=(h.acc||'')+' · '+h.fecha+' · '+(h.rfc?'RFC: '+h.rfc:'sin RFC')+' (sin CFDI app)';
+      data.push(mkRow(['Egresos',concept,'','',h.monto,h.monto,'⚠',note],stDetailRow(AMB)));
+    });
+    if(ex.ncMatches.length){
+      data.push(mkRow(['Notas de crédito','— sección',null,null,null,null,'',''],stTotalRow(GRY)));
+      ex.ncMatches.forEach(m=>{
+        const ref='nc-'+(m.egreso.uuid||(m.proveedor+'-'+m.fecha+'-'+Math.round(m.monto*100)));
+        const note=getNote('notas_credito',ref);
+        if(m.ok&&!note)return;
+        const bg=m.ok?GRN:RED;
+        const concept=m.proveedor+' · '+m.fecha+(m.ok?' ↔ '+m.bankAcc+' '+m.bankFecha+' (abono)':' ✗ sin abono');
+        data.push(mkRow(['NC',concept,'','',-m.monto,m.ok?0:-m.monto,m.ok?'✓':'✗',note],stDetailRow(bg)));
       });
     }
   }
 
-  return rows.length>1?rows:[];
+  return data.length>1?data:[];
 }
 
 </script>
