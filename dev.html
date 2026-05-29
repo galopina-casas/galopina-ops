@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.2.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.2.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.2.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.2.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5403,6 +5403,16 @@ function _renderReconcilTrans(prefix){
   });
   const appBruto=Math.round(appPagos.reduce((s,p)=>s+p.monto,0)*100)/100;
 
+  // Agrupar pagos app por huésped + fecha exacta
+  const grupos={};
+  appPagos.forEach(p=>{
+    const key=(p.reserva.nombre||'')+'|'+(String(p.fecha||'').slice(0,10));
+    if(!grupos[key])grupos[key]={huesped:p.reserva.nombre,fecha:String(p.fecha||'').slice(0,10),monto:0,items:[],reservaId:p.reserva.id};
+    grupos[key].monto+=p.monto;
+    grupos[key].items.push(p);
+  });
+  const appGrupos=Object.values(grupos).map(g=>({...g,monto:Math.round(g.monto*100)/100}));
+
   // Banco: SPEI recibidos del mes que NO son Stripe ni CloudBeds
   const bankSpei=window._recBbvaRows.filter(r=>{
     const d=String(r.descripcion||'').toUpperCase();
@@ -5410,19 +5420,19 @@ function _renderReconcilTrans(prefix){
   });
   const bankTotal=Math.round(bankSpei.reduce((s,r)=>s+r.abono,0)*100)/100;
 
-  // Matching: cada SPEI ↔ pago app por monto (tolerancia 1 peso)
-  const usedApp=new Set();
+  // Matching: cada SPEI ↔ grupo app por monto (tolerancia 1 peso)
+  const usedGrupo=new Set();
   const matches=bankSpei.map(bs=>{
     const amount=Math.round(bs.abono*100)/100;
-    const cand=appPagos.filter((p,i)=>!usedApp.has(i)&&Math.abs(p.monto-amount)<=1);
+    const cand=appGrupos.filter((g,i)=>!usedGrupo.has(i)&&Math.abs(g.monto-amount)<=1);
     if(cand.length===1){
-      const idx=appPagos.indexOf(cand[0]);
-      usedApp.add(idx);
+      const idx=appGrupos.indexOf(cand[0]);
+      usedGrupo.add(idx);
       return {bank:bs,match:cand[0],how:'monto'};
     }
     return {bank:bs,match:null,how:cand.length>1?'ambiguo':'sin_match'};
   });
-  const huerfanosApp=appPagos.filter((p,i)=>!usedApp.has(i));
+  const huerfanosApp=appGrupos.filter((g,i)=>!usedGrupo.has(i));
 
   const okMatches=matches.filter(m=>m.match);
   const failMatches=matches.filter(m=>!m.match);
@@ -5438,11 +5448,10 @@ function _renderReconcilTrans(prefix){
   const rowsHtml=matches.map(m=>{
     const ok=!!m.match;
     const bg=ok?'#E1F5EE':'#FCE8E6';
-    // Extraer una pista del remitente desde la descripción del SPEI (las últimas palabras antes de tabulaciones o el nombre)
     const desc=String(m.bank.descripcion||'');
     const matchTxt=ok
-      ? `<div style="font-size:12px"><strong>${m.match.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${m.match.tipo} · ${fmtDate(m.match.fecha)||'—'}</div>`
-      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios pagos con este monto en la app':'✗ Sin pago en la app con este monto'}</div>`;
+      ? `<div style="font-size:12px"><strong>${m.match.huesped}</strong></div><div style="font-size:11px;color:#666">${fmtDate(m.match.fecha)||'—'} · ${m.match.items.length} item${m.match.items.length!==1?'s':''}</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios grupos con este monto en la app':'✗ Sin grupo en la app con este monto'}</div>`;
     return `<tr style="background:${bg}">
       <td style="padding:7px 8px;font-size:12px">${m.bank.fecha}</td>
       <td style="padding:7px 8px;font-size:11px;color:#666">${desc.substring(0,80)}${desc.length>80?'…':''}</td>
@@ -5451,12 +5460,12 @@ function _renderReconcilTrans(prefix){
       <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
     </tr>`;
   }).join('');
-  const huerfAppHtml=huerfanosApp.map(p=>`
+  const huerfAppHtml=huerfanosApp.map(g=>`
     <tr style="background:#FFF4E5">
-      <td style="padding:7px 8px;font-size:12px">${fmtDate(p.fecha)||'—'}</td>
+      <td style="padding:7px 8px;font-size:12px">${g.fecha||'—'}</td>
       <td style="padding:7px 8px;font-size:11px;color:#999;font-style:italic">(sin SPEI en el banco)</td>
-      <td style="padding:7px 8px"><div style="font-size:12px"><strong>${p.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${p.tipo}</div></td>
-      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(p.monto)}</td>
+      <td style="padding:7px 8px"><div style="font-size:12px"><strong>${g.huesped}</strong></div><div style="font-size:11px;color:#666">${g.items.length} item${g.items.length!==1?'s':''}: ${g.items.slice(0,3).map(i=>i.tipo).join(', ')}${g.items.length>3?'…':''}</div></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(g.monto)}</td>
       <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
     </tr>`).join('');
 
@@ -5491,7 +5500,7 @@ function _renderReconcilTrans(prefix){
           <span style="font-size:16px;color:${huerfTotal===0?'#1D9E75':'#BA7517'}">${huerfTotal===0?'✓':'⚠'}</span>
           <div style="flex:1">
             <p style="font-size:13px;font-weight:600;margin:0;color:${huerfTotal===0?'#085041':'#634009'}">Huérfanos</p>
-            <p style="font-size:11px;color:${huerfTotal===0?'#085041':'#634009'};margin:2px 0 0">${huerfTotal===0?'Todos los movimientos emparejados':failMatches.length+' SPEI sin pago en app · '+huerfanosApp.length+' pago app sin SPEI'}</p>
+            <p style="font-size:11px;color:${huerfTotal===0?'#085041':'#634009'};margin:2px 0 0">${huerfTotal===0?'Todos los movimientos emparejados':failMatches.length+' SPEI sin grupo en app · '+huerfanosApp.length+' grupo app sin SPEI'}</p>
           </div>
         </div>
         <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
@@ -5503,7 +5512,7 @@ function _renderReconcilTrans(prefix){
       </div>
     </div>
     <div class="card" style="padding:14px 16px;margin-top:10px">
-      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Transferencias — ${bankSpei.length} SPEI${huerfanosApp.length>0?' + '+huerfanosApp.length+' huérfanos en app':''}</p>
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Transferencias — ${bankSpei.length} SPEI${huerfanosApp.length>0?' + '+huerfanosApp.length+' grupos huérfanos en app':''}</p>
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="border-bottom:2px solid #EEE">
           <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
