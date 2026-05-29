@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.2-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.4-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.2-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.4-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -6127,6 +6127,16 @@ function _renderReconcilDebito(prefix){
 
   // ---- Capturar para Excel ----
   const diff=appBruto-bankBruto;
+  // Agrupar pendientes por huésped + fecha para el Excel
+  const pendGrouped={};
+  pendientesIdx.forEach(i=>{
+    const c=appPagos[i];
+    const k=c.fecha+'|'+c.huesped;
+    if(!pendGrouped[k])pendGrouped[k]={fecha:c.fecha,huesped:c.huesped,total:0,nItems:0};
+    pendGrouped[k].total+=c.monto;pendGrouped[k].nItems++;
+  });
+  const pendientesList=Object.values(pendGrouped).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+
   window._recLastDebito={
     appBruto:appBruto,
     bankTotal:bankBruto,
@@ -6134,7 +6144,8 @@ function _renderReconcilDebito(prefix){
     diff:diff,
     cierres:cierresInfo,
     pendientesCount:pendientesIdx.length,
-    pendientesTotal:pendientesTotal
+    pendientesTotal:pendientesTotal,
+    pendientesList:pendientesList
   };
 
   if(appBruto===0&&cierres.length===0){
@@ -6839,9 +6850,14 @@ function _buildReconcilExcelData(prefix){
   const dx=window._recLastDebito;
   if(dx){
     const est=Math.abs(dx.diff)<=1?'✓':'⚠';
-    data.push(mkRow(['Débito','TOTAL (banco neto)',dx.appBruto,'',dx.bankTotal,dx.diff,est,''],stTotalBase,true));
-    if(dx.comisionTotal){
-      data.push(mkRow(['Débito','Comisión TDC (cargo banco)','','',dx.comisionTotal,'','',''],stDetailBase,false));
+    data.push(mkRow(['Débito','TOTAL (banco bruto)',dx.appBruto,'',dx.bankTotal,dx.diff,est,''],stTotalBase,true));
+    // Si hay diferencia, listar pendientes de cierre (huésped + fecha + total)
+    if(Math.abs(dx.diff)>1&&dx.pendientesList&&dx.pendientesList.length){
+      sectionRow('Débito','PENDIENTES DE CIERRE');
+      dx.pendientesList.forEach(p=>{
+        const concept=p.huesped+' · '+p.fecha+' · '+p.nItems+' item'+(p.nItems!==1?'s':'');
+        data.push(mkRow(['Débito',concept,p.total,'','',p.total,'⚠',''],stDetailBase,false));
+      });
     }
     sep();
   }
