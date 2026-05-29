@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.2.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.3.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.2.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.3.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -576,14 +576,17 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
   <div class="sec" id="sec-reconcil">
     <div class="sh"><h2>Reconciliación</h2></div>
-    <div class="card" style="padding:12px 16px;margin-bottom:10px">
+    <div class="card" style="padding:12px 16px;margin-bottom:14px">
       <div style="display:flex;gap:14px;align-items:flex-end;flex-wrap:wrap">
         <div><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Mes</label><select id="rec-mes" onchange="renderReconcil()" style="height:32px;font-size:13px;padding:0 8px;border:0.5px solid #e0e0da;border-radius:6px;width:140px"></select></div>
         <div><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Año</label><select id="rec-anio" onchange="renderReconcil()" style="height:32px;font-size:13px;padding:0 8px;border:0.5px solid #e0e0da;border-radius:6px;width:90px"></select></div>
         <button class="btn btn-sm" onclick="clearReconcil()" style="margin-left:auto">Limpiar todo</button>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:10px">
+
+    <!-- Grupo: Plataformas de pago -->
+    <p style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;font-weight:600">Plataformas de pago</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px">
       <!-- Stripe card -->
       <div id="rec-card-stripe" style="background:#fff;border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
@@ -616,7 +619,12 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         </div>
         <input type="file" id="rec-cb-file" accept=".xls,.xlsx" onchange="loadCbFile(this)" style="display:none">
       </div>
-      <!-- BBVA card -->
+    </div>
+
+    <!-- Grupo: Bancos -->
+    <p style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:.08em;margin:0 0 6px;font-weight:600">Bancos</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:10px">
+      <!-- BBVA Principal -->
       <div id="rec-card-bbva" style="background:#fff;border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <div style="display:flex;align-items:center;gap:8px">
@@ -625,18 +633,52 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           </div>
           <span id="rec-status-bbva" style="font-size:11px;color:#aaa">&nbsp;</span>
         </div>
-        <p style="font-size:11px;color:#888;margin:0 0 8px">Estado de cuenta mensual (Excel)</p>
+        <p style="font-size:11px;color:#888;margin:0 0 8px">Estado de cuenta (Excel)</p>
         <div id="rec-info-bbva" style="margin-bottom:10px"><p style="font-size:11px;color:#999;margin:0;font-style:italic">Sin archivo cargado</p></div>
         <div id="rec-actions-bbva">
           <label for="rec-bbva-file" style="display:block;background:#1D9E75;color:#fff;padding:7px 10px;font-size:12px;border-radius:5px;cursor:pointer;text-align:center;font-weight:500">+ Subir archivo</label>
         </div>
         <input type="file" id="rec-bbva-file" accept=".xlsx,.xls" onchange="loadBbvaFile(this)" style="display:none">
       </div>
+      <!-- BBVA Snda -->
+      <div id="rec-card-bbvasnda" style="background:#fff;border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="40" height="14" viewBox="0 0 100 36" xmlns="http://www.w3.org/2000/svg"><path fill="#004481" d="M0 0h100v36H0z"/><text x="50" y="25" font-family="Arial,sans-serif" font-size="18" font-weight="700" fill="#fff" text-anchor="middle">BBVA</text></svg>
+            <span style="font-size:13px;font-weight:600">BBVA Snda</span>
+          </div>
+          <span id="rec-status-bbvasnda" style="font-size:11px;color:#aaa">Opcional</span>
+        </div>
+        <p style="font-size:11px;color:#888;margin:0 0 8px">Estado de cuenta (Excel)</p>
+        <div id="rec-info-bbvasnda" style="margin-bottom:10px"><p style="font-size:11px;color:#999;margin:0;font-style:italic">Sin archivo cargado</p></div>
+        <div id="rec-actions-bbvasnda">
+          <label for="rec-bbvasnda-file" style="display:block;background:#1D9E75;color:#fff;padding:7px 10px;font-size:12px;border-radius:5px;cursor:pointer;text-align:center;font-weight:500">+ Subir archivo</label>
+        </div>
+        <input type="file" id="rec-bbvasnda-file" accept=".xlsx,.xls" onchange="loadBbvaSndaFile(this)" style="display:none">
+      </div>
+      <!-- Santander -->
+      <div id="rec-card-santander" style="background:#fff;border:1.5px dashed #ccc;border-radius:10px;padding:14px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:8px">
+            <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="11" fill="#EC0000"/><path fill="#fff" d="M7.2 10.4c0-1.05.6-1.8 1.95-1.8h6.05c.97 0 1.7.45 1.7 1.35 0 .6-.45.97-1.05.97l-3.97.07c-.45 0-.82.3-.82.75 0 .53.37.83.9.9l4.05.6c.97.15 1.42.83 1.42 1.65 0 1.05-.83 1.72-2.1 1.72H9.07c-1.05 0-1.95-.6-1.95-1.72"/></svg>
+            <span style="font-size:13px;font-weight:600">Santander</span>
+          </div>
+          <span id="rec-status-santander" style="font-size:11px;color:#aaa">Opcional</span>
+        </div>
+        <p style="font-size:11px;color:#888;margin:0 0 8px">Estado de cuenta (Excel)</p>
+        <div id="rec-info-santander" style="margin-bottom:10px"><p style="font-size:11px;color:#999;margin:0;font-style:italic">Sin archivo cargado</p></div>
+        <div id="rec-actions-santander">
+          <label for="rec-santander-file" style="display:block;background:#1D9E75;color:#fff;padding:7px 10px;font-size:12px;border-radius:5px;cursor:pointer;text-align:center;font-weight:500">+ Subir archivo</label>
+        </div>
+        <input type="file" id="rec-santander-file" accept=".xlsx,.xls" onchange="loadSantanderFile(this)" style="display:none">
+      </div>
     </div>
+
     <div id="rec-stripe-block"><div id="rec-summary"></div><div id="rec-detail"></div></div>
     <div id="rec-cb-block"></div>
     <div id="rec-trans-block"></div>
     <div id="rec-debito-block"></div>
+    <div id="rec-egresos-block"></div>
   </div>
 
   <div class="sec" id="sec-cierre">
@@ -4624,17 +4666,23 @@ function exportarCierreExcel(modo){
 // RECONCILIACIÓN MODULE
 // ============================================================
 window._recStripeRows=null;
-window._recBbvaRows=null;
+window._recBbvaRows=null;     // BBVA Principal (cuenta ingresos+egresos)
+window._recBbvaSndaRows=null; // BBVA Snda (solo egresos)
+window._recSantanderRows=null;// Santander (ingresos+egresos)
 window._recCbRows=null;
 window._recStripeFilename='';
 window._recBbvaFilename='';
+window._recBbvaSndaFilename='';
+window._recSantanderFilename='';
 window._recCbFilename='';
 
 function _recUpdateCardState(type){
   const map={
     stripe:{rows:window._recStripeRows,filename:window._recStripeFilename,countLabel:'transacciones',inputId:'rec-stripe-file',removeFn:'removeStripeFile'},
     cb:{rows:window._recCbRows,filename:window._recCbFilename,countLabel:'transacciones',inputId:'rec-cb-file',removeFn:'removeCbFile'},
-    bbva:{rows:window._recBbvaRows,filename:window._recBbvaFilename,countLabel:'movimientos',inputId:'rec-bbva-file',removeFn:'removeBbvaFile'}
+    bbva:{rows:window._recBbvaRows,filename:window._recBbvaFilename,countLabel:'movimientos',inputId:'rec-bbva-file',removeFn:'removeBbvaFile'},
+    bbvasnda:{rows:window._recBbvaSndaRows,filename:window._recBbvaSndaFilename,countLabel:'movimientos',inputId:'rec-bbvasnda-file',removeFn:'removeBbvaSndaFile'},
+    santander:{rows:window._recSantanderRows,filename:window._recSantanderFilename,countLabel:'movimientos',inputId:'rec-santander-file',removeFn:'removeSantanderFile'}
   };
   const cfg=map[type];if(!cfg)return;
   const card=document.getElementById('rec-card-'+type);
@@ -4666,11 +4714,15 @@ function _recUpdateAllCards(){
   _recUpdateCardState('stripe');
   _recUpdateCardState('cb');
   _recUpdateCardState('bbva');
+  _recUpdateCardState('bbvasnda');
+  _recUpdateCardState('santander');
 }
 
 function removeStripeFile(){window._recStripeRows=null;window._recStripeFilename='';_recUpdateCardState('stripe');renderReconcil();}
 function removeCbFile(){window._recCbRows=null;window._recCbFilename='';_recUpdateCardState('cb');renderReconcil();}
 function removeBbvaFile(){window._recBbvaRows=null;window._recBbvaFilename='';_recUpdateCardState('bbva');renderReconcil();}
+function removeBbvaSndaFile(){window._recBbvaSndaRows=null;window._recBbvaSndaFilename='';_recUpdateCardState('bbvasnda');renderReconcil();}
+function removeSantanderFile(){window._recSantanderRows=null;window._recSantanderFilename='';_recUpdateCardState('santander');renderReconcil();}
 
 function initReconcil(){
   const mesEl=document.getElementById('rec-mes');
@@ -4693,15 +4745,42 @@ function initReconcil(){
 function clearReconcil(){
   window._recStripeRows=null;
   window._recBbvaRows=null;
+  window._recBbvaSndaRows=null;
+  window._recSantanderRows=null;
   window._recCbRows=null;
   window._recStripeFilename='';
   window._recBbvaFilename='';
+  window._recBbvaSndaFilename='';
+  window._recSantanderFilename='';
   window._recCbFilename='';
-  const fi=document.getElementById('rec-stripe-file');if(fi)fi.value='';
-  const fb=document.getElementById('rec-bbva-file');if(fb)fb.value='';
-  const fc=document.getElementById('rec-cb-file');if(fc)fc.value='';
+  ['rec-stripe-file','rec-bbva-file','rec-bbvasnda-file','rec-santander-file','rec-cb-file'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
   _recUpdateAllCards();
   renderReconcil();
+}
+
+function _parseBbvaSheet(arrBuf){
+  const data=new Uint8Array(arrBuf);
+  const wb=XLSX.read(data,{type:'array'});
+  const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('movimiento'))||wb.SheetNames[0];
+  const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:''});
+  let hdrIdx=-1;
+  for(let i=0;i<Math.min(aoa.length,15);i++){
+    const r=aoa[i];
+    if(r&&String(r[0]||'').toUpperCase()==='FECHA'&&String(r[1]||'').toUpperCase().includes('DESCRIP')){hdrIdx=i;break;}
+  }
+  if(hdrIdx<0)throw new Error('No se encontró encabezado FECHA/DESCRIPCIÓN');
+  const rows=[];
+  for(let i=hdrIdx+1;i<aoa.length;i++){
+    const r=aoa[i];if(!r||!r[0])continue;
+    rows.push({
+      fecha:String(r[0]||'').slice(0,10),
+      descripcion:String(r[1]||''),
+      abono:parseFloat(r[2])||0,
+      cargo:parseFloat(r[3])||0,
+      saldo:parseFloat(r[4])||0
+    });
+  }
+  return rows;
 }
 
 function loadBbvaFile(input){
@@ -4710,35 +4789,89 @@ function loadBbvaFile(input){
   const reader=new FileReader();
   reader.onload=e=>{
     try{
-      const data=new Uint8Array(e.target.result);
-      const wb=XLSX.read(data,{type:'array'});
-      const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('movimiento'))||wb.SheetNames[0];
-      const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:''});
-      // Find header row (FECHA · DESCRIPCIÓN · ABONO · CARGO · SALDO)
-      let hdrIdx=-1;
-      for(let i=0;i<Math.min(aoa.length,15);i++){
-        const r=aoa[i];
-        if(r&&String(r[0]||'').toUpperCase()==='FECHA'&&String(r[1]||'').toUpperCase().includes('DESCRIP')){hdrIdx=i;break;}
-      }
-      if(hdrIdx<0)throw new Error('No se encontró encabezado FECHA/DESCRIPCIÓN');
-      const rows=[];
-      for(let i=hdrIdx+1;i<aoa.length;i++){
-        const r=aoa[i];if(!r||!r[0])continue;
-        rows.push({
-          fecha:String(r[0]||'').slice(0,10),
-          descripcion:String(r[1]||''),
-          abono:parseFloat(r[2])||0,
-          cargo:parseFloat(r[3])||0,
-          saldo:parseFloat(r[4])||0
-        });
-      }
+      const rows=_parseBbvaSheet(e.target.result);
       window._recBbvaRows=rows;
       window._recBbvaFilename=fname;
       _recUpdateCardState('bbva');
       renderReconcil();
-      showAlert('Archivo BBVA cargado: '+rows.length+' movimientos','success');
+      showAlert('Archivo BBVA Principal cargado: '+rows.length+' movimientos','success');
     }catch(err){
-      showAlert('Error al leer archivo BBVA: '+err.message,'error');
+      showAlert('Error al leer archivo BBVA Principal: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function loadBbvaSndaFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const fname=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const rows=_parseBbvaSheet(e.target.result);
+      window._recBbvaSndaRows=rows;
+      window._recBbvaSndaFilename=fname;
+      _recUpdateCardState('bbvasnda');
+      renderReconcil();
+      showAlert('Archivo BBVA Snda cargado: '+rows.length+' movimientos','success');
+    }catch(err){
+      showAlert('Error al leer archivo BBVA Snda: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function _parseSantanderSheet(arrBuf){
+  const data=new Uint8Array(arrBuf);
+  const wb=XLSX.read(data,{type:'array'});
+  const sheetName=wb.SheetNames[0];
+  const aoa=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{header:1,defval:''});
+  // Header: FECHA · HORA · CONCEPTO · RETIRO · DEPOSITO · MONEDA
+  let hdrIdx=-1;
+  for(let i=0;i<Math.min(aoa.length,15);i++){
+    const r=aoa[i];
+    if(r&&String(r[0]||'').toUpperCase()==='FECHA'&&String(r[2]||'').toUpperCase().includes('CONCEPTO')){hdrIdx=i;break;}
+  }
+  if(hdrIdx<0)throw new Error('No se encontró encabezado FECHA/CONCEPTO');
+  const rows=[];
+  // Santander format: FECHA "DD/mmm/YY" (e.g. "29/abr/26") → convert to YYYY-MM-DD
+  const meses={'ene':'01','feb':'02','mar':'03','abr':'04','may':'05','jun':'06','jul':'07','ago':'08','sep':'09','oct':'10','nov':'11','dic':'12'};
+  const parseSantDate=s=>{
+    const m=String(s||'').match(/(\d{1,2})\/([a-z]+)\/(\d{2,4})/i);
+    if(!m)return '';
+    const mm=meses[m[2].toLowerCase().substring(0,3)];if(!mm)return '';
+    let yy=m[3];if(yy.length===2)yy='20'+yy;
+    return yy+'-'+mm+'-'+String(m[1]).padStart(2,'0');
+  };
+  for(let i=hdrIdx+1;i<aoa.length;i++){
+    const r=aoa[i];if(!r||!r[0])continue;
+    const retiro=parseFloat(r[3])||0; // negative
+    const deposito=parseFloat(r[4])||0; // positive
+    rows.push({
+      fecha:parseSantDate(r[0]),
+      descripcion:String(r[2]||''),
+      abono:deposito,
+      cargo:retiro, // already negative
+      saldo:0
+    });
+  }
+  return rows;
+}
+
+function loadSantanderFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const fname=f.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const rows=_parseSantanderSheet(e.target.result);
+      window._recSantanderRows=rows;
+      window._recSantanderFilename=fname;
+      _recUpdateCardState('santander');
+      renderReconcil();
+      showAlert('Archivo Santander cargado: '+rows.length+' movimientos','success');
+    }catch(err){
+      showAlert('Error al leer archivo Santander: '+err.message,'error');
     }
   };
   reader.readAsArrayBuffer(f);
@@ -4923,8 +5056,9 @@ function renderReconcil(){
     const cbBlock=document.getElementById('rec-cb-block');if(cbBlock)cbBlock.innerHTML='';
     const transBlock=document.getElementById('rec-trans-block');if(transBlock)transBlock.innerHTML='';
     const debBlock=document.getElementById('rec-debito-block');if(debBlock)debBlock.innerHTML='';
-    if(!Array.isArray(window._recBbvaRows))return;
-    // Si solo hay BBVA, igual permitimos transferencias y débito
+    const egBlock=document.getElementById('rec-egresos-block');if(egBlock)egBlock.innerHTML='';
+    if(!Array.isArray(window._recBbvaRows)&&!Array.isArray(window._recBbvaSndaRows)&&!Array.isArray(window._recSantanderRows))return;
+    // Si solo hay banco, igual permitimos transferencias, débito y egresos
     summary.innerHTML='';
   }
   if(!window._recStripeRows){
@@ -4938,6 +5072,7 @@ function renderReconcil(){
   _renderReconcilCb(prefix);
   _renderReconcilTrans(prefix);
   _renderReconcilDebito(prefix);
+  _renderReconcilEgresos(prefix);
 }
 
 function _renderReconcilStripe(prefix,summary,detail){
@@ -5375,10 +5510,21 @@ function _renderReconcilCb(prefix){
     </div>`:''}`;
 }
 
+function _recAllBankRows(includeAccounts){
+  // includeAccounts: array de keys: 'bbva','bbvasnda','santander'
+  const out=[];
+  const addAll=(rows,acc)=>{(rows||[]).forEach(r=>out.push({...r,_acc:acc}));};
+  if(!includeAccounts||includeAccounts.includes('bbva'))addAll(window._recBbvaRows,'BBVA Principal');
+  if(!includeAccounts||includeAccounts.includes('bbvasnda'))addAll(window._recBbvaSndaRows,'BBVA Snda');
+  if(!includeAccounts||includeAccounts.includes('santander'))addAll(window._recSantanderRows,'Santander');
+  return out;
+}
+
 // ----- Transferencias -----
 function _renderReconcilTrans(prefix){
   const block=document.getElementById('rec-trans-block');if(!block)return;
-  if(!Array.isArray(window._recBbvaRows)){block.innerHTML='';return;}
+  const hasAnyBank=Array.isArray(window._recBbvaRows)||Array.isArray(window._recSantanderRows);
+  if(!hasAnyBank){block.innerHTML='';return;}
 
   // App: pagos con método transferencia en el mes
   const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
@@ -5413,10 +5559,17 @@ function _renderReconcilTrans(prefix){
   });
   const appGrupos=Object.values(grupos).map(g=>({...g,monto:Math.round(g.monto*100)/100}));
 
-  // Banco: SPEI recibidos del mes que NO son Stripe ni CloudBeds
-  const bankSpei=window._recBbvaRows.filter(r=>{
+  // Banco: SPEI recibidos del mes (BBVA Principal + Santander) que NO son Stripe ni CloudBeds
+  const bankRows=_recAllBankRows(['bbva','santander']);
+  const bankSpei=bankRows.filter(r=>{
     const d=String(r.descripcion||'').toUpperCase();
-    return r.abono>0&&d.includes('SPEI RECIBIDO')&&!d.includes('STRIPE')&&!d.includes('CLOUDBEDS')&&String(r.fecha||'').startsWith(prefix);
+    if(r.abono<=0||!String(r.fecha||'').startsWith(prefix))return false;
+    // BBVA: descripción típica "SPEI RECIBIDO ..."
+    // Santander: descripción puede no traer "SPEI" pero es un depósito sin Stripe/CloudBeds
+    if(d.includes('STRIPE')||d.includes('CLOUDBEDS'))return false;
+    // En BBVA, queremos SPEI RECIBIDO. En Santander, cualquier depósito que no sea claramente otra cosa.
+    if(r._acc==='BBVA Principal')return d.includes('SPEI RECIBIDO');
+    return true; // Santander: aceptamos todos los abonos
   });
   const bankTotal=Math.round(bankSpei.reduce((s,r)=>s+r.abono,0)*100)/100;
 
@@ -5454,7 +5607,7 @@ function _renderReconcilTrans(prefix){
       : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios grupos con este monto en la app':'✗ Sin grupo en la app con este monto'}</div>`;
     return `<tr style="background:${bg}">
       <td style="padding:7px 8px;font-size:12px">${m.bank.fecha}</td>
-      <td style="padding:7px 8px;font-size:11px;color:#666">${desc.substring(0,80)}${desc.length>80?'…':''}</td>
+      <td style="padding:7px 8px;font-size:11px;color:#666"><strong style="color:#1A1916">${m.bank._acc||''}</strong> · ${desc.substring(0,70)}${desc.length>70?'…':''}</td>
       <td style="padding:7px 8px">${matchTxt}</td>
       <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(m.bank.abono)}</td>
       <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
@@ -5624,6 +5777,248 @@ function _renderReconcilDebito(prefix){
           <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
         </tr></thead>
         <tbody>${comRowsHtml}</tbody>
+      </table>
+    </div>`:''}`;
+}
+
+// ----- Egresos (Facturas + Notas de crédito) -----
+function _recExtractRfc(desc){
+  // Banco: extrae RFC tipo "TCH 850701RM1" o "ANE 140618P37"
+  const m=String(desc||'').match(/RFC:\s*([A-Z&Ñ]{3,4})\s*(\d{6})([A-Z0-9]{3})/i);
+  return m?(m[1]+m[2]+m[3]).toUpperCase():'';
+}
+
+function _recIsInternalMovement(desc){
+  // Movimientos internos del banco a excluir del matching de egresos
+  const d=String(desc||'').toUpperCase();
+  return d.includes('TRASPASO CUENTAS PROPIAS')
+      || d.includes('SERV BCA INTERNET')
+      || d.includes('IVA COM SERV BCA')
+      || d.includes('COM SERV BCA')
+      || d.includes('SPEI ENVIADO')&&d.includes('CUENTAS PROPIAS')
+      || d.includes('VENTAS TDC INTER')      // ingresos
+      || d.includes('COM VTAS TDC')          // ya tratado en débito
+      || d.includes('IVA COM VTAS TDC')
+      || d.includes('SPEI RECIBIDO');        // ingresos
+}
+
+function _renderReconcilEgresos(prefix){
+  const block=document.getElementById('rec-egresos-block');if(!block)return;
+  const hasAnyBank=Array.isArray(window._recBbvaRows)||Array.isArray(window._recBbvaSndaRows)||Array.isArray(window._recSantanderRows);
+  if(!hasAnyBank){block.innerHTML='';return;}
+
+  // App: egresos (facturas + notas de crédito + noCFDI) del mes
+  const egresos=gd(KE);
+  const facturas=egresos.filter(e=>{
+    const fecha=String(e.fecha||'').slice(0,10);
+    if(!fecha.startsWith(prefix))return false;
+    if(e.tipoDoc==='Nota de crédito')return false;
+    return true;
+  });
+  const notasCredito=egresos.filter(e=>{
+    const fecha=String(e.fecha||'').slice(0,10);
+    if(!fecha.startsWith(prefix))return false;
+    return e.tipoDoc==='Nota de crédito';
+  });
+
+  // Banco: todos los cargos (excluyendo movimientos internos) en los 3 archivos
+  const allBank=_recAllBankRows();
+  // Para egresos: incluir cargos del mes Y los 60 días siguientes (puede pagar después)
+  // Pero el banco actual es solo el mes; aceptamos esto y rastreamos por monto.
+  // Filtro cargos elegibles: cualquier cargo del mes O posterior pero antes de prefix+60d
+  const cargosBank=allBank.filter(r=>r.cargo<0&&!_recIsInternalMovement(r.descripcion));
+  // abonos para notas de crédito
+  const abonosBank=allBank.filter(r=>r.abono>0&&!_recIsInternalMovement(r.descripcion));
+
+  // Matching facturas → cargo banco (RFC+monto, sino monto, ventana ±60 días desde fecha CFDI)
+  const usedCargo=new Set();
+  const facturaMatches=facturas.map(e=>{
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    const isUSD=String(e.monedaOriginal||e.moneda||'MXN').toUpperCase()!=='MXN'&&String(e.monedaOriginal||e.moneda||'MXN').toUpperCase()!=='';
+    const tolerancia=isUSD?Math.max(monto*0.03,5):1; // 3% para moneda extranjera, 1 peso para MXN
+    const rfc=String(e.rfc||'').toUpperCase().replace(/[^A-Z0-9Ñ&]/g,'');
+    const cfdiDate=new Date(String(e.fecha||'').slice(0,10));
+    const ventana=60*24*60*60*1000;
+
+    const elegibles=cargosBank.filter((c,i)=>{
+      if(usedCargo.has(i))return false;
+      if(Math.abs(Math.abs(c.cargo)-monto)>tolerancia)return false;
+      const bd=new Date(c.fecha);
+      const diff=bd-cfdiDate;
+      return diff>=-ventana&&diff<=ventana; // ±60 días
+    });
+    // Match por RFC + monto si posible
+    if(rfc){
+      const byRfc=elegibles.filter(c=>_recExtractRfc(c.descripcion)===rfc);
+      if(byRfc.length>=1){
+        const idx=cargosBank.indexOf(byRfc[0]);
+        usedCargo.add(idx);
+        return {egreso:e,bank:byRfc[0],how:'RFC+monto'};
+      }
+    }
+    if(elegibles.length===1){
+      const idx=cargosBank.indexOf(elegibles[0]);
+      usedCargo.add(idx);
+      return {egreso:e,bank:elegibles[0],how:'monto'};
+    }
+    return {egreso:e,bank:null,how:elegibles.length>1?'ambiguo':'sin_match'};
+  });
+  const cargosHuerfanos=cargosBank.filter((c,i)=>!usedCargo.has(i)&&String(c.fecha||'').startsWith(prefix));
+
+  // Matching notas de crédito → abono banco
+  const usedAbono=new Set();
+  const ncMatches=notasCredito.map(e=>{
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    const cfdiDate=new Date(String(e.fecha||'').slice(0,10));
+    const ventana=60*24*60*60*1000;
+    const elegibles=abonosBank.filter((a,i)=>{
+      if(usedAbono.has(i))return false;
+      if(Math.abs(a.abono-monto)>1)return false;
+      const bd=new Date(a.fecha);
+      const diff=bd-cfdiDate;
+      return diff>=-ventana&&diff<=ventana;
+    });
+    if(elegibles.length>=1){
+      const idx=abonosBank.indexOf(elegibles[0]);
+      usedAbono.add(idx);
+      return {egreso:e,bank:elegibles[0],how:'monto'};
+    }
+    return {egreso:e,bank:null,how:'sin_match'};
+  });
+
+  // Totales
+  const appBruto=Math.round(facturas.reduce((s,e)=>s+Math.abs(parseFloat(e.montoMXN||e.total)||0),0)*100)/100;
+  const bankBruto=Math.round(cargosBank.reduce((s,c)=>s+Math.abs(c.cargo),0)*100)/100;
+  const diff=appBruto-bankBruto;
+  const fokFact=facturaMatches.filter(m=>m.bank).length;
+  const failFact=facturaMatches.length-fokFact;
+  const huerfBankCount=cargosHuerfanos.length;
+  const cuadre=Math.abs(diff)<=1;
+  const accountsLoaded=[
+    Array.isArray(window._recBbvaRows)?'BBVA Principal':null,
+    Array.isArray(window._recBbvaSndaRows)?'BBVA Snda':null,
+    Array.isArray(window._recSantanderRows)?'Santander':null
+  ].filter(Boolean);
+
+  if(facturas.length===0&&notasCredito.length===0&&cargosBank.length===0){
+    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Egresos</h3><p class="empty" style="padding:14px;font-size:12px">Sin egresos ni cargos bancarios en este mes.</p>`;
+    return;
+  }
+
+  const factRowsHtml=facturaMatches.map(m=>{
+    const e=m.egreso;
+    const ok=!!m.bank;
+    const bg=ok?'#E1F5EE':'#FCE8E6';
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    const matchTxt=ok
+      ? `<div style="font-size:11px"><strong style="color:#1A1916">${m.bank._acc}</strong> · ${m.bank.fecha}</div><div style="font-size:11px;color:#666">${String(m.bank.descripcion||'').substring(0,60)}${String(m.bank.descripcion||'').length>60?'…':''}</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios cargos con este monto':'✗ Sin cargo coincidente en banco'}</div>`;
+    const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${String(e.fecha||'').slice(0,10)}</td>
+      <td style="padding:7px 8px;font-size:12px"><strong>${e.proveedor||''}</strong><br><span style="font-size:10px;color:#888">${e.rfc||''}</span></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(monto)}</td>
+      <td style="padding:7px 8px">${matchTxt} ${howTag}</td>
+      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+    </tr>`;
+  }).join('');
+  const huerfBankHtml=cargosHuerfanos.map(c=>{
+    const rfc=_recExtractRfc(c.descripcion);
+    return `<tr style="background:#FFF4E5">
+      <td style="padding:7px 8px;font-size:12px">${c.fecha}</td>
+      <td style="padding:7px 8px;font-size:12px;color:#999;font-style:italic">(sin CFDI en app)${rfc?'<br><span style="font-size:10px;color:#888">'+rfc+'</span>':''}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(Math.abs(c.cargo))}</td>
+      <td style="padding:7px 8px"><div style="font-size:11px"><strong>${c._acc}</strong></div><div style="font-size:11px;color:#666">${String(c.descripcion||'').substring(0,60)}</div></td>
+      <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
+    </tr>`;
+  }).join('');
+
+  const ncRowsHtml=ncMatches.map(m=>{
+    const e=m.egreso;
+    const ok=!!m.bank;
+    const bg=ok?'#E1F5EE':'#FCE8E6';
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    const matchTxt=ok
+      ? `<div style="font-size:11px"><strong>${m.bank._acc}</strong> · ${m.bank.fecha} · ${fmt(m.bank.abono)} abono</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">✗ Sin abono coincidente</div>`;
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${String(e.fecha||'').slice(0,10)}</td>
+      <td style="padding:7px 8px;font-size:12px"><strong>${e.proveedor||''}</strong></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">-${fmt(monto)}</td>
+      <td style="padding:7px 8px">${matchTxt}</td>
+      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+    </tr>`;
+  }).join('');
+
+  block.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Egresos</h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App (facturas)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${facturas.length} factura${facturas.length!==1?'s':''}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco (cargos elegibles)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankBruto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${accountsLoaded.length} cuenta${accountsLoaded.length!==1?'s':''} · ${cargosBank.length} cargos</p>
+      </div>
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FFF4E5'};border:0.5px solid ${cuadre?'#1D9E75':'#BA7517'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#634009'};margin:0">Estado</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#634009'}">${cuadre?'✓ Cuadra':'⚠ Diferencia '+fmt(Math.abs(diff))}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 8px">Verificaciones</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:${failFact===0?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${failFact===0?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${failFact===0?'#1D9E75':'#E24B4A'}">${failFact===0?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${failFact===0?'#085041':'#7A1F1D'}">Facturas emparejadas</p>
+            <p style="font-size:11px;color:${failFact===0?'#085041':'#7A1F1D'};margin:2px 0 0">${fokFact} de ${facturas.length} facturas encontradas en banco (±60 días)</p>
+          </div>
+        </div>
+        <div style="background:${huerfBankCount===0?'#E1F5EE':'#FFF4E5'};border-left:3px solid ${huerfBankCount===0?'#1D9E75':'#BA7517'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${huerfBankCount===0?'#1D9E75':'#BA7517'}">${huerfBankCount===0?'✓':'⚠'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${huerfBankCount===0?'#085041':'#634009'}">Cargos en banco sin CFDI</p>
+            <p style="font-size:11px;color:${huerfBankCount===0?'#085041':'#634009'};margin:2px 0 0">${huerfBankCount===0?'Todos los cargos tienen factura':huerfBankCount+' cargos del mes sin factura en la app'}</p>
+          </div>
+        </div>
+        <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:#888">i</span>
+          <div style="flex:1">
+            <p style="font-size:12px;color:#666;margin:0">Cuentas analizadas: ${accountsLoaded.join(' · ')||'ninguna'}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle Facturas — ${facturas.length} CFDI${huerfBankCount>0?' + '+huerfBankCount+' huérfanos del banco':''}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha CFDI</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Proveedor</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Banco</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+        </tr></thead>
+        <tbody>${factRowsHtml||'<tr><td colspan="5" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin facturas en este mes</td></tr>'}${huerfBankHtml}</tbody>
+      </table>
+    </div>
+    ${notasCredito.length>0?`
+    <div style="background:#F5F4F0;border:0.5px solid #e0e0da;border-radius:10px;padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 4px">Notas de crédito</p>
+      <p style="font-size:11px;color:#666;margin:0 0 10px">Reembolsos del proveedor — buscan abonos en el banco (no cargos)</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px;overflow:hidden">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha NC</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Proveedor</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Banco (abono)</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+        </tr></thead>
+        <tbody>${ncRowsHtml}</tbody>
       </table>
     </div>`:''}`;
 }
