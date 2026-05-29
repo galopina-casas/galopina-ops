@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.7.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.7.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -6031,12 +6031,16 @@ function _renderReconcilDebito(prefix){
   const block=document.getElementById('rec-debito-block');if(!block)return;
   if(!Array.isArray(window._recBbvaRows)){block.innerHTML='';return;}
 
-  // App: pagos con método débito en el mes
+  // App: pagos por débito del mes
   const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
-  let appBruto=0;
+  const appPagos=[]; // [{fecha,huesped,tipo,monto,reservaId}]
   reservas.forEach(r=>{
-    if((r.anticipo||0)>0&&r.antiPago==='debito'&&String(r.antiFecha||'').startsWith(prefix))appBruto+=r.anticipo;
-    if((r.saldo||0)>0&&r.saldPago==='debito'&&String(r.saldFecha||'').startsWith(prefix))appBruto+=r.saldo;
+    if((r.anticipo||0)>0&&r.antiPago==='debito'&&String(r.antiFecha||'').startsWith(prefix)){
+      appPagos.push({fecha:String(r.antiFecha).slice(0,10),huesped:r.nombre,tipo:'Anticipo',monto:r.anticipo,reservaId:r.id});
+    }
+    if((r.saldo||0)>0&&r.saldPago==='debito'&&String(r.saldFecha||'').startsWith(prefix)){
+      appPagos.push({fecha:String(r.saldFecha).slice(0,10),huesped:r.nombre,tipo:'Saldo',monto:r.saldo,reservaId:r.id});
+    }
   });
   gd(KC).forEach(c=>{
     let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
@@ -6044,52 +6048,168 @@ function _renderReconcilDebito(prefix){
       if(it.pago!=='debito')return;
       const fp=String(it.fechaPago||'').slice(0,10);
       if(!fp.startsWith(prefix))return;
-      appBruto+=(it.precio||0)*(it.cantidad||0);
+      const monto=(it.precio||0)*(it.cantidad||0);
+      appPagos.push({fecha:fp,huesped:c.huesped,tipo:'Consumo: '+it.nombre,monto,reservaId:c.id});
     });
   });
-  appBruto=Math.round(appBruto*100)/100;
+  const appBruto=Math.round(appPagos.reduce((s,p)=>s+p.monto,0)*100)/100;
 
-  // Banco: VENTAS TDC INTER del mes (neto, ya con comisión descontada)
-  const bankTdc=window._recBbvaRows.filter(r=>{
+  // Banco: cierres TDC (VENTAS TDC INTER) y sus comisiones (COM VTAS TDC INTER, IVA COM VTAS TDC INTER)
+  const cierres=window._recBbvaRows.filter(r=>{
     const d=String(r.descripcion||'').toUpperCase();
-    return r.abono>0&&d.includes('VENTAS TDC')&&String(r.fecha||'').startsWith(prefix);
+    return r.abono>0&&d.includes('VENTAS TDC')&&!d.includes('COM')&&String(r.fecha||'').startsWith(prefix);
   });
-  const bankTdcTotal=Math.round(bankTdc.reduce((s,r)=>s+r.abono,0)*100)/100;
-
-  // Comisión TDC del mes (cargos COM VTAS TDC + IVA COM VTAS TDC)
-  const comTdc=window._recBbvaRows.filter(r=>{
+  const comisionesAll=window._recBbvaRows.filter(r=>{
     const d=String(r.descripcion||'').toUpperCase();
-    return r.cargo<0&&(d.includes('COM VTAS TDC')||d.includes('COM VTAS TDC INTER'))&&String(r.fecha||'').startsWith(prefix);
+    return r.cargo<0&&d.includes('COM VTAS TDC')&&String(r.fecha||'').startsWith(prefix);
   });
-  const comTdcTotal=Math.round(comTdc.reduce((s,r)=>s+Math.abs(r.cargo),0)*100)/100;
+  const bankNetoTotal=Math.round(cierres.reduce((s,r)=>s+r.abono,0)*100)/100;
+  const bankComTotal=Math.round(comisionesAll.reduce((s,r)=>s+Math.abs(r.cargo),0)*100)/100;
+  const bankBruto=Math.round((bankNetoTotal+bankComTotal)*100)/100;
 
-  const diff=appBruto-bankTdcTotal;
+  // Asociar comisiones a cada cierre por mismo día
+  const usedCom=new Set();
+  const cierresInfo=cierres.map(c=>{
+    const sameDayCom=comisionesAll.filter((cm,i)=>!usedCom.has(i)&&cm.fecha===c.fecha);
+    sameDayCom.forEach(cm=>usedCom.add(comisionesAll.indexOf(cm)));
+    const comTotal=sameDayCom.reduce((s,cm)=>s+Math.abs(cm.cargo),0);
+    return {
+      cierre:c,
+      fecha:c.fecha,
+      neto:c.abono,
+      comisiones:sameDayCom,
+      comisionTotal:Math.round(comTotal*100)/100,
+      bruto:Math.round((c.abono+comTotal)*100)/100
+    };
+  });
+  // Comisiones huérfanas (sin cierre del mismo día) van apilladas como "no asociadas"
+  const comHuerfanas=comisionesAll.filter((cm,i)=>!usedCom.has(i));
 
-  if(appBruto===0&&bankTdc.length===0){
-    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3><p class="empty" style="padding:14px;font-size:12px">Sin pagos por débito ni ventas TDC en este mes.</p>`;
+  // Subset-sum: para cada cierre, buscar combinación de cobros app que sume bruto (tolerancia $1)
+  // Cobros candidatos: del mismo mes, fecha ≤ fecha del cierre
+  // Algoritmo: backtracking con poda (limit 25 cobros; greedy si más)
+  const usedPago=new Set();
+  function findSubset(items,target,tol){
+    // items: [{idx, monto}] orden descendente; devuelve subset de índices o null
+    // Para evitar explosión, usamos backtracking ordenado
+    let best=null;
+    const seen=new Set();
+    function bt(i,remaining,chosen){
+      if(best)return; // cortar al primer match
+      if(Math.abs(remaining)<=tol){best=[...chosen];return;}
+      if(i>=items.length||remaining<-tol)return;
+      // Sin item i
+      bt(i+1,remaining,chosen);
+      if(best)return;
+      // Con item i
+      chosen.push(items[i].idx);
+      bt(i+1,remaining-items[i].monto,chosen);
+      chosen.pop();
+    }
+    bt(0,target,[]);
+    return best;
+  }
+
+  cierresInfo.forEach(ci=>{
+    // Cobros app candidatos: fecha ≤ fecha cierre, no usados
+    const cands=appPagos.map((p,idx)=>({idx,monto:p.monto,fecha:p.fecha}))
+      .filter(c=>!usedPago.has(c.idx)&&c.fecha<=ci.fecha)
+      .sort((a,b)=>b.monto-a.monto);
+    let subset=null;
+    if(cands.length<=25){
+      subset=findSubset(cands,ci.bruto,1);
+    } else {
+      // Demasiados cobros: heurístico greedy por monto descendente
+      let acc=0;const sel=[];
+      for(const c of cands){
+        if(Math.abs(acc-ci.bruto)<=1)break;
+        if(acc+c.monto<=ci.bruto+1){acc+=c.monto;sel.push(c.idx);}
+      }
+      if(Math.abs(acc-ci.bruto)<=1)subset=sel;
+    }
+    ci.cobrosIdx=subset||[];
+    ci.matchOk=!!subset;
+    if(subset)subset.forEach(idx=>usedPago.add(idx));
+  });
+
+  // Cobros app no emparejados a ningún cierre
+  const pendientesIdx=appPagos.map((_,i)=>i).filter(i=>!usedPago.has(i));
+  const pendientesTotal=Math.round(pendientesIdx.reduce((s,i)=>s+appPagos[i].monto,0)*100)/100;
+
+  // ---- Capturar para Excel ----
+  const diff=appBruto-bankBruto;
+  window._recLastDebito={
+    appBruto:appBruto,
+    bankTotal:bankNetoTotal,
+    bankBruto:bankBruto,
+    comisionTotal:bankComTotal,
+    diff:diff,
+    cierres:cierresInfo,
+    pendientesCount:pendientesIdx.length,
+    pendientesTotal:pendientesTotal
+  };
+
+  if(appBruto===0&&cierres.length===0){
+    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3><p class="empty" style="padding:14px;font-size:12px">Sin pagos por débito ni cierres TDC en este mes.</p>`;
     return;
   }
 
-  const tdcRowsHtml=bankTdc.map(b=>`
-    <tr>
-      <td style="padding:7px 8px;font-size:12px">${b.fecha}</td>
-      <td style="padding:7px 8px;font-size:11px;color:#666">${String(b.descripcion||'').substring(0,80)}</td>
-      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(b.abono)}</td>
-    </tr>`).join('');
-  const comRowsHtml=comTdc.map(b=>`
-    <tr>
-      <td style="padding:7px 8px;font-size:12px">${b.fecha}</td>
-      <td style="padding:7px 8px;font-size:11px;color:#666">${String(b.descripcion||'').substring(0,80)}</td>
-      <td style="padding:7px 8px;text-align:right;font-size:12px;color:#7A1F1D">${fmt(Math.abs(b.cargo))}</td>
-    </tr>`).join('');
+  // ---- UI ----
+  const cuadre=Math.abs(appBruto-bankBruto)<=1;
+  const cierresHtml=cierresInfo.map((ci,cIdx)=>{
+    const cobros=ci.cobrosIdx.map(i=>appPagos[i]);
+    const sumCobros=Math.round(cobros.reduce((s,c)=>s+c.monto,0)*100)/100;
+    const bg=ci.matchOk?'#E1F5EE':'#FCE8E6';
+    const headerColor=ci.matchOk?'#085041':'#7A1F1D';
+    const headerIcon=ci.matchOk?'✓':'✗';
+    const cobrosHtml=cobros.length?cobros.map(c=>`
+      <tr>
+        <td style="padding:5px 8px;font-size:11px">${c.fecha}</td>
+        <td style="padding:5px 8px;font-size:11px"><strong>${c.huesped}</strong></td>
+        <td style="padding:5px 8px;font-size:11px;color:#666">${c.tipo}</td>
+        <td style="padding:5px 8px;text-align:right;font-size:11px;font-weight:600">${fmt(c.monto)}</td>
+      </tr>`).join(''):`<tr><td colspan="4" style="padding:8px;font-size:11px;color:#7A1F1D;text-align:center">No se encontró combinación de cobros que sume el bruto del cierre ${fmt(ci.bruto)}</td></tr>`;
+    return `<div style="background:${bg};border-radius:8px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+        <div>
+          <p style="font-size:12px;font-weight:600;margin:0;color:${headerColor}">${headerIcon} Cierre ${ci.fecha} · ${ci.cobros?ci.cobros.length:cobros.length} cobro${cobros.length!==1?'s':''} emparejado${cobros.length!==1?'s':''}</p>
+          <p style="font-size:11px;color:${headerColor};margin:2px 0 0">Neto banco ${fmt(ci.neto)} + comisión ${fmt(ci.comisionTotal)} = bruto ${fmt(ci.bruto)}${cobros.length?' · cobros app suman '+fmt(sumCobros):''}</p>
+        </div>
+      </div>
+      <table style="width:100%;background:#fff;border-radius:6px">
+        <thead><tr style="border-bottom:1px solid #EEE">
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Huésped</th>
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Tipo</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Monto</th>
+        </tr></thead>
+        <tbody>${cobrosHtml}</tbody>
+      </table>
+    </div>`;
+  }).join('');
 
-  // Captura resultados para Excel
-  window._recLastDebito={
-    appBruto:appBruto,
-    bankTotal:bankTdcTotal,
-    comisionTotal:comTdcTotal,
-    diff:diff
-  };
+  const pendientesHtml=pendientesIdx.length?`
+    <div style="background:#FFF4E5;border-radius:8px;padding:12px 14px;margin-top:8px">
+      <p style="font-size:12px;font-weight:600;margin:0 0 8px;color:#634009">⚠ Pendientes de cierre — ${pendientesIdx.length} cobro${pendientesIdx.length!==1?'s':''} · ${fmt(pendientesTotal)}</p>
+      <table style="width:100%;background:#fff;border-radius:6px">
+        <thead><tr style="border-bottom:1px solid #EEE">
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Huésped</th>
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Tipo</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Monto</th>
+        </tr></thead>
+        <tbody>${pendientesIdx.map(i=>{
+          const c=appPagos[i];
+          return `<tr><td style="padding:5px 8px;font-size:11px">${c.fecha}</td><td style="padding:5px 8px;font-size:11px"><strong>${c.huesped}</strong></td><td style="padding:5px 8px;font-size:11px;color:#666">${c.tipo}</td><td style="padding:5px 8px;text-align:right;font-size:11px;font-weight:600">${fmt(c.monto)}</td></tr>`;
+        }).join('')}</tbody>
+      </table>
+    </div>`:'';
+
+  const comHuerfHtml=comHuerfanas.length?`
+    <div style="background:#F5F4F0;border-radius:8px;padding:10px 14px;margin-top:8px">
+      <p style="font-size:11px;color:#666;margin:0 0 4px"><strong>Comisiones TDC sin cierre del mismo día</strong> (${comHuerfanas.length})</p>
+      ${comHuerfanas.map(cm=>`<p style="font-size:11px;color:#666;margin:2px 0">${cm.fecha} · ${String(cm.descripcion).substring(0,60)} · ${fmt(Math.abs(cm.cargo))}</p>`).join('')}
+    </div>`:'';
 
   block.innerHTML=`
     <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3>
@@ -6097,42 +6217,26 @@ function _renderReconcilDebito(prefix){
       <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
         <p style="font-size:11px;color:#888;margin:0">App (bruto)</p>
         <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${appPagos.length} cobro${appPagos.length!==1?'s':''}</p>
       </div>
       <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
-        <p style="font-size:11px;color:#888;margin:0">Banco (neto)</p>
-        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankTdcTotal)}</p>
-        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankTdc.length} cierre${bankTdc.length!==1?'s':''} TDC</p>
+        <p style="font-size:11px;color:#888;margin:0">Banco (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankBruto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${cierres.length} cierre${cierres.length!==1?'s':''} TDC · neto ${fmt(bankNetoTotal)} + com ${fmt(bankComTotal)}</p>
       </div>
-      <div style="flex:1;min-width:160px;background:#F5F4F0;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
-        <p style="font-size:11px;color:#888;margin:0">Diferencia</p>
-        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:#1A1916">${fmt(diff)}</p>
-        <p style="font-size:10px;color:#888;margin:2px 0 0">comisión TDC mes: ${fmt(comTdcTotal)}</p>
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FFF4E5'};border:0.5px solid ${cuadre?'#1D9E75':'#BA7517'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#634009'};margin:0">Diferencia</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#634009'}">${cuadre?'✓ Cuadra':fmt(Math.abs(diff))}</p>
+        <p style="font-size:10px;color:${cuadre?'#085041':'#634009'};margin:2px 0 0">${pendientesIdx.length>0?pendientesIdx.length+' cobro'+(pendientesIdx.length!==1?'s':'')+' pendiente'+(pendientesIdx.length!==1?'s':'')+' de cierre':'todos los cobros emparejados'}</p>
       </div>
     </div>
-    <div class="card" style="padding:14px 16px">
-      <p style="font-size:12px;color:#666;margin:0;background:#F5F4F0;padding:8px 12px;border-radius:6px"><strong>Nota:</strong> el banco recibe el monto neto de comisión TDC (~3-3.5%). La app registra el bruto. La diferencia esperada es del orden de la comisión TDC del mes. Si la diferencia es muy superior, puede haber cierres de terminal pendientes o cobros mal etiquetados.</p>
-    </div>
-    ${tdcRowsHtml?`<div class="card" style="padding:14px 16px;margin-top:10px">
-      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Cierres TDC en banco — ${bankTdc.length}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="border-bottom:2px solid #EEE">
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto neto</th>
-        </tr></thead>
-        <tbody>${tdcRowsHtml}</tbody>
-      </table>
+    ${cierresInfo.length>0?`<div class="card" style="padding:14px 16px;margin-top:8px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Cierres TDC analizados — ${cierresInfo.length}</p>
+      ${cierresHtml}
     </div>`:''}
-    ${comRowsHtml?`<div class="card" style="padding:14px 16px;margin-top:10px">
-      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Comisiones TDC en banco — ${comTdc.length}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="border-bottom:2px solid #EEE">
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
-        </tr></thead>
-        <tbody>${comRowsHtml}</tbody>
-      </table>
+    ${pendientesHtml||comHuerfHtml?`<div class="card" style="padding:14px 16px;margin-top:8px">
+      ${pendientesHtml}
+      ${comHuerfHtml}
     </div>`:''}`;
 }
 
