@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.3.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.3.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.3.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.3.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5830,39 +5830,134 @@ function _renderReconcilEgresos(prefix){
   // abonos para notas de crédito
   const abonosBank=allBank.filter(r=>r.abono>0&&!_recIsInternalMovement(r.descripcion));
 
-  // Matching facturas → cargo banco (RFC+monto, sino monto, ventana ±60 días desde fecha CFDI)
+  // Matching facturas → cargo banco — lógica en 4 pasadas + greedy por proximidad
+  //   Pasada 1: match único RFC+monto+ventana
+  //   Pasada 2: match greedy N:N entre facturas con mismo RFC+monto y sus cargos elegibles
+  //   Pasada 3: match único por monto solo (sin RFC)
+  //   Pasada 4: match greedy N:N por monto solo (distintos proveedores con mismo monto)
+  // Después de match: si la diferencia de fecha es >30 días, se etiqueta el match como "lejano"
+
   const usedCargo=new Set();
-  const facturaMatches=facturas.map(e=>{
+  const facturaMatches=new Array(facturas.length).fill(null);
+  const ventana=60*24*60*60*1000;
+
+  // Pre-cálculo por cada factura
+  const facData=facturas.map(e=>{
     const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
-    const isUSD=String(e.monedaOriginal||e.moneda||'MXN').toUpperCase()!=='MXN'&&String(e.monedaOriginal||e.moneda||'MXN').toUpperCase()!=='';
-    const tolerancia=isUSD?Math.max(monto*0.03,5):1; // 3% para moneda extranjera, 1 peso para MXN
+    const monedaOrig=String(e.monedaOriginal||e.moneda||'MXN').toUpperCase();
+    const isUSD=monedaOrig!=='MXN'&&monedaOrig!=='';
+    const tolerancia=isUSD?Math.max(monto*0.03,5):1;
     const rfc=String(e.rfc||'').toUpperCase().replace(/[^A-Z0-9Ñ&]/g,'');
     const cfdiDate=new Date(String(e.fecha||'').slice(0,10));
-    const ventana=60*24*60*60*1000;
-
-    const elegibles=cargosBank.filter((c,i)=>{
-      if(usedCargo.has(i))return false;
-      if(Math.abs(Math.abs(c.cargo)-monto)>tolerancia)return false;
-      const bd=new Date(c.fecha);
-      const diff=bd-cfdiDate;
-      return diff>=-ventana&&diff<=ventana; // ±60 días
-    });
-    // Match por RFC + monto si posible
-    if(rfc){
-      const byRfc=elegibles.filter(c=>_recExtractRfc(c.descripcion)===rfc);
-      if(byRfc.length>=1){
-        const idx=cargosBank.indexOf(byRfc[0]);
-        usedCargo.add(idx);
-        return {egreso:e,bank:byRfc[0],how:'RFC+monto'};
-      }
-    }
-    if(elegibles.length===1){
-      const idx=cargosBank.indexOf(elegibles[0]);
-      usedCargo.add(idx);
-      return {egreso:e,bank:elegibles[0],how:'monto'};
-    }
-    return {egreso:e,bank:null,how:elegibles.length>1?'ambiguo':'sin_match'};
+    return {e,monto,tolerancia,rfc,cfdiDate};
   });
+
+  const elegiblesFor=(d,useRfc)=>{
+    return cargosBank.map((c,i)=>({c,i})).filter(({c,i})=>{
+      if(usedCargo.has(i))return false;
+      if(Math.abs(Math.abs(c.cargo)-d.monto)>d.tolerancia)return false;
+      const bd=new Date(c.fecha);
+      const diff=bd-d.cfdiDate;
+      if(diff<-ventana||diff>ventana)return false;
+      if(useRfc&&d.rfc&&_recExtractRfc(c.descripcion)!==d.rfc)return false;
+      return true;
+    });
+  };
+
+  const dayDiff=(a,b)=>Math.abs((new Date(a)-new Date(b))/(1000*60*60*24));
+
+  // --- Pasada 1: único RFC+monto ---
+  facData.forEach((d,fi)=>{
+    if(facturaMatches[fi])return;
+    if(!d.rfc)return;
+    const el=elegiblesFor(d,true);
+    if(el.length===1){
+      usedCargo.add(el[0].i);
+      const dd=Math.round(dayDiff(el[0].c.fecha,d.cfdiDate));
+      facturaMatches[fi]={egreso:d.e,bank:el[0].c,how:'RFC+monto',dateDiffDays:dd};
+    }
+  });
+
+  // --- Pasada 2: greedy N:N por RFC+monto ---
+  // Agrupar facturas pendientes por RFC + monto redondeado
+  const pendientesPasada2=facData.map((d,fi)=>({d,fi})).filter(({fi,d})=>!facturaMatches[fi]&&d.rfc);
+  const gruposRfcMonto={};
+  pendientesPasada2.forEach(({d,fi})=>{
+    const key=d.rfc+'|'+Math.round(d.monto*100);
+    if(!gruposRfcMonto[key])gruposRfcMonto[key]=[];
+    gruposRfcMonto[key].push({d,fi});
+  });
+  Object.values(gruposRfcMonto).forEach(grupo=>{
+    if(grupo.length<2)return; // solo 1, no aplica greedy
+    // Cargos candidatos comunes (mismo RFC+monto, no usados)
+    const sample=grupo[0].d;
+    const candidatos=elegiblesFor(sample,true);
+    if(candidatos.length===0)return;
+    // Asignación greedy: ordenar pares (factura, cargo) por proximidad de fecha
+    const pares=[];
+    grupo.forEach(({d,fi})=>{
+      candidatos.forEach(({c,i})=>{
+        pares.push({fi,ci:i,c,d,dd:dayDiff(c.fecha,d.cfdiDate)});
+      });
+    });
+    pares.sort((a,b)=>a.dd-b.dd);
+    const usadosFi=new Set(),usadosCi=new Set();
+    pares.forEach(p=>{
+      if(usadosFi.has(p.fi)||usadosCi.has(p.ci)||usedCargo.has(p.ci))return;
+      usadosFi.add(p.fi);usadosCi.add(p.ci);
+      usedCargo.add(p.ci);
+      facturaMatches[p.fi]={egreso:p.d.e,bank:p.c,how:'RFC+monto · greedy',dateDiffDays:Math.round(p.dd)};
+    });
+  });
+
+  // --- Pasada 3: único por monto solo ---
+  facData.forEach((d,fi)=>{
+    if(facturaMatches[fi])return;
+    const el=elegiblesFor(d,false);
+    if(el.length===1){
+      usedCargo.add(el[0].i);
+      const dd=Math.round(dayDiff(el[0].c.fecha,d.cfdiDate));
+      facturaMatches[fi]={egreso:d.e,bank:el[0].c,how:'monto',dateDiffDays:dd};
+    }
+  });
+
+  // --- Pasada 4: greedy N:N por monto solo (sin RFC) ---
+  const pendientesPasada4=facData.map((d,fi)=>({d,fi})).filter(({fi})=>!facturaMatches[fi]);
+  const gruposMonto={};
+  pendientesPasada4.forEach(({d,fi})=>{
+    const key=Math.round(d.monto*100);
+    if(!gruposMonto[key])gruposMonto[key]=[];
+    gruposMonto[key].push({d,fi});
+  });
+  Object.values(gruposMonto).forEach(grupo=>{
+    if(grupo.length===0)return;
+    const sample=grupo[0].d;
+    const candidatos=elegiblesFor(sample,false);
+    if(candidatos.length===0)return;
+    const pares=[];
+    grupo.forEach(({d,fi})=>{
+      candidatos.forEach(({c,i})=>{
+        pares.push({fi,ci:i,c,d,dd:dayDiff(c.fecha,d.cfdiDate)});
+      });
+    });
+    pares.sort((a,b)=>a.dd-b.dd);
+    const usadosFi=new Set(),usadosCi=new Set();
+    pares.forEach(p=>{
+      if(usadosFi.has(p.fi)||usadosCi.has(p.ci)||usedCargo.has(p.ci))return;
+      usadosFi.add(p.fi);usadosCi.add(p.ci);
+      usedCargo.add(p.ci);
+      facturaMatches[p.fi]={egreso:p.d.e,bank:p.c,how:'monto · greedy',dateDiffDays:Math.round(p.dd)};
+    });
+  });
+
+  // Rellenar los que quedaron sin match
+  facturaMatches.forEach((m,fi)=>{
+    if(m)return;
+    const d=facData[fi];
+    const el=elegiblesFor(d,false);
+    facturaMatches[fi]={egreso:d.e,bank:null,how:el.length>1?'ambiguo':'sin_match'};
+  });
+
   const cargosHuerfanos=cargosBank.filter((c,i)=>!usedCargo.has(i)&&String(c.fecha||'').startsWith(prefix));
 
   // Matching notas de crédito → abono banco
@@ -5908,18 +6003,20 @@ function _renderReconcilEgresos(prefix){
   const factRowsHtml=facturaMatches.map(m=>{
     const e=m.egreso;
     const ok=!!m.bank;
-    const bg=ok?'#E1F5EE':'#FCE8E6';
+    const lejano=ok&&typeof m.dateDiffDays==='number'&&m.dateDiffDays>30;
+    const bg=ok?(lejano?'#FFF4E5':'#E1F5EE'):'#FCE8E6';
     const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
     const matchTxt=ok
-      ? `<div style="font-size:11px"><strong style="color:#1A1916">${m.bank._acc}</strong> · ${m.bank.fecha}</div><div style="font-size:11px;color:#666">${String(m.bank.descripcion||'').substring(0,60)}${String(m.bank.descripcion||'').length>60?'…':''}</div>`
+      ? `<div style="font-size:11px"><strong style="color:#1A1916">${m.bank._acc}</strong> · ${m.bank.fecha}${lejano?' <span style="color:#BA7517;font-weight:600">⚠ '+m.dateDiffDays+' días</span>':''}</div><div style="font-size:11px;color:#666">${String(m.bank.descripcion||'').substring(0,60)}${String(m.bank.descripcion||'').length>60?'…':''}</div>`
       : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios cargos con este monto':'✗ Sin cargo coincidente en banco'}</div>`;
     const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
+    const estadoIcon=ok?(lejano?'<span style="color:#BA7517;font-size:14px">⚠</span>':'<span style="color:#1D9E75;font-size:14px">✓</span>'):'<span style="color:#E24B4A;font-size:14px">✗</span>';
     return `<tr style="background:${bg}">
       <td style="padding:7px 8px;font-size:12px">${String(e.fecha||'').slice(0,10)}</td>
       <td style="padding:7px 8px;font-size:12px"><strong>${e.proveedor||''}</strong><br><span style="font-size:10px;color:#888">${e.rfc||''}</span></td>
       <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(monto)}</td>
       <td style="padding:7px 8px">${matchTxt} ${howTag}</td>
-      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+      <td style="padding:7px 8px;text-align:center">${estadoIcon}</td>
     </tr>`;
   }).join('');
   const huerfBankHtml=cargosHuerfanos.map(c=>{
