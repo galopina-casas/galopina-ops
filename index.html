@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.7.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.4</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.7.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.4</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -4354,7 +4354,7 @@ function _renderCmReconcil(prefix){
     rowsData.push({metodo:'Transferencia',app:tx.appBruto,plat:null,bank:tx.bankTotal,diff,bankInfo:false});
   }
   if(dx&&(dx.appBruto>0||dx.bankTotal>0)){
-    rowsData.push({metodo:'D&#233;bito',app:dx.appBruto,plat:null,bank:dx.bankTotal,diff:dx.diff,bankInfo:true,bankInfoTxt:'Monto del banco = ventas brutas TDC - comisi&#243;n TDC. La diferencia con la app puede deberse a cierres pendientes.'});
+    rowsData.push({metodo:'D&#233;bito',app:dx.appBruto,plat:null,bank:dx.bankTotal,diff:dx.diff,bankInfo:true,bankInfoTxt:'Monto del banco = bruto cobrado en la terminal TDC. La comisi&#243;n TDC se carga aparte (no afecta el bruto). La diferencia con la app puede deberse a cierres pendientes.'});
   }
 
   if(rowsData.length===0){
@@ -6031,12 +6031,16 @@ function _renderReconcilDebito(prefix){
   const block=document.getElementById('rec-debito-block');if(!block)return;
   if(!Array.isArray(window._recBbvaRows)){block.innerHTML='';return;}
 
-  // App: pagos con método débito en el mes
+  // App: pagos por débito del mes
   const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
-  let appBruto=0;
+  const appPagos=[]; // [{fecha,huesped,tipo,monto,reservaId}]
   reservas.forEach(r=>{
-    if((r.anticipo||0)>0&&r.antiPago==='debito'&&String(r.antiFecha||'').startsWith(prefix))appBruto+=r.anticipo;
-    if((r.saldo||0)>0&&r.saldPago==='debito'&&String(r.saldFecha||'').startsWith(prefix))appBruto+=r.saldo;
+    if((r.anticipo||0)>0&&r.antiPago==='debito'&&String(r.antiFecha||'').startsWith(prefix)){
+      appPagos.push({fecha:String(r.antiFecha).slice(0,10),huesped:r.nombre,tipo:'Anticipo',monto:r.anticipo,reservaId:r.id});
+    }
+    if((r.saldo||0)>0&&r.saldPago==='debito'&&String(r.saldFecha||'').startsWith(prefix)){
+      appPagos.push({fecha:String(r.saldFecha).slice(0,10),huesped:r.nombre,tipo:'Saldo',monto:r.saldo,reservaId:r.id});
+    }
   });
   gd(KC).forEach(c=>{
     let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
@@ -6044,52 +6048,201 @@ function _renderReconcilDebito(prefix){
       if(it.pago!=='debito')return;
       const fp=String(it.fechaPago||'').slice(0,10);
       if(!fp.startsWith(prefix))return;
-      appBruto+=(it.precio||0)*(it.cantidad||0);
+      const monto=(it.precio||0)*(it.cantidad||0);
+      appPagos.push({fecha:fp,huesped:c.huesped,tipo:'Consumo: '+it.nombre,monto,reservaId:c.id});
     });
   });
-  appBruto=Math.round(appBruto*100)/100;
+  const appBruto=Math.round(appPagos.reduce((s,p)=>s+p.monto,0)*100)/100;
 
-  // Banco: VENTAS TDC INTER del mes (neto, ya con comisión descontada)
-  const bankTdc=window._recBbvaRows.filter(r=>{
+  // Banco: cierres TDC (VENTAS TDC INTER) y sus comisiones (COM VTAS TDC INTER, IVA COM VTAS TDC INTER)
+  const cierres=window._recBbvaRows.filter(r=>{
     const d=String(r.descripcion||'').toUpperCase();
-    return r.abono>0&&d.includes('VENTAS TDC')&&String(r.fecha||'').startsWith(prefix);
+    return r.abono>0&&d.includes('VENTAS TDC')&&!d.includes('COM')&&String(r.fecha||'').startsWith(prefix);
   });
-  const bankTdcTotal=Math.round(bankTdc.reduce((s,r)=>s+r.abono,0)*100)/100;
-
-  // Comisión TDC del mes (cargos COM VTAS TDC + IVA COM VTAS TDC)
-  const comTdc=window._recBbvaRows.filter(r=>{
+  const comisionesAll=window._recBbvaRows.filter(r=>{
     const d=String(r.descripcion||'').toUpperCase();
-    return r.cargo<0&&(d.includes('COM VTAS TDC')||d.includes('COM VTAS TDC INTER'))&&String(r.fecha||'').startsWith(prefix);
+    return r.cargo<0&&d.includes('COM VTAS TDC')&&String(r.fecha||'').startsWith(prefix);
   });
-  const comTdcTotal=Math.round(comTdc.reduce((s,r)=>s+Math.abs(r.cargo),0)*100)/100;
+  // El abono de VENTAS TDC INTER ES el bruto cobrado en la terminal (lo que pagaron los huéspedes).
+  // Las comisiones (COM VTAS TDC + IVA COM VTAS TDC) son cargos aparte: costo de Galopina, NO se restan ni suman al bruto.
+  const bankBruto=Math.round(cierres.reduce((s,r)=>s+r.abono,0)*100)/100;
+  const bankComTotal=Math.round(comisionesAll.reduce((s,r)=>s+Math.abs(r.cargo),0)*100)/100;
 
-  const diff=appBruto-bankTdcTotal;
+  // Asociar comisiones a cada cierre por mismo día (solo informativo)
+  const usedCom=new Set();
+  const cierresInfo=cierres.map(c=>{
+    const sameDayCom=comisionesAll.filter((cm,i)=>!usedCom.has(i)&&cm.fecha===c.fecha);
+    sameDayCom.forEach(cm=>usedCom.add(comisionesAll.indexOf(cm)));
+    const comTotal=sameDayCom.reduce((s,cm)=>s+Math.abs(cm.cargo),0);
+    return {
+      cierre:c,
+      fecha:c.fecha,
+      bruto:c.abono,                              // lo que pagaron los huéspedes
+      comisiones:sameDayCom,
+      comisionTotal:Math.round(comTotal*100)/100  // costo de Galopina, informativo
+    };
+  });
+  // Comisiones huérfanas (sin cierre del mismo día) van apilladas como "no asociadas"
+  const comHuerfanas=comisionesAll.filter((cm,i)=>!usedCom.has(i));
 
-  if(appBruto===0&&bankTdc.length===0){
-    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3><p class="empty" style="padding:14px;font-size:12px">Sin pagos por débito ni ventas TDC en este mes.</p>`;
+  // Acumulación greedy por fecha: para cada cierre TDC (ordenado por fecha asc),
+  // acumular cobros app por fechas ascendentes hasta llegar al bruto del cierre.
+  // Si la suma cuadra → match (con tolerancia $1). Si se pasa o no llega → no match.
+  const usedPago=new Set();
+  // Ordenar cierres por fecha ascendente para procesar en orden cronológico
+  cierresInfo.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+
+  cierresInfo.forEach(ci=>{
+    // Cobros candidatos: no usados, fecha ≤ fecha del cierre. Agrupar por fecha asc.
+    const cands=appPagos.map((p,idx)=>({idx,monto:p.monto,fecha:p.fecha}))
+      .filter(c=>!usedPago.has(c.idx)&&c.fecha<=ci.fecha)
+      .sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+    // Acumular por fecha completa (atómicamente día por día)
+    const byDate={};
+    cands.forEach(c=>{(byDate[c.fecha]=byDate[c.fecha]||[]).push(c);});
+    const dates=Object.keys(byDate).sort();
+    let acc=0;
+    const selectedIdx=[];
+    let matched=false;
+    for(const d of dates){
+      const dayItems=byDate[d];
+      const daySum=dayItems.reduce((s,c)=>s+c.monto,0);
+      acc+=daySum;
+      dayItems.forEach(c=>selectedIdx.push(c.idx));
+      if(Math.abs(acc-ci.bruto)<=1){matched=true;break;}
+      if(acc>ci.bruto+1){matched=false;break;} // se pasó: no cuadra
+    }
+    ci.cobrosIdx=matched?selectedIdx:[];
+    ci.matchOk=matched;
+    ci.brutoCalculado=Math.round(acc*100)/100;
+    // Guardamos también los huéspedes "tentativamente" involucrados aunque no cuadre,
+    // para mostrar la lista resumida en caso de no-match
+    ci.huespedesTentativos=matched?[]:[...new Set(selectedIdx.map(i=>appPagos[i].huesped))];
+    if(matched)selectedIdx.forEach(idx=>usedPago.add(idx));
+  });
+
+  // Cobros app no emparejados a ningún cierre
+  const pendientesIdx=appPagos.map((_,i)=>i).filter(i=>!usedPago.has(i));
+  const pendientesTotal=Math.round(pendientesIdx.reduce((s,i)=>s+appPagos[i].monto,0)*100)/100;
+
+  // ---- Capturar para Excel ----
+  const diff=appBruto-bankBruto;
+  // Agrupar pendientes por huésped + fecha para el Excel
+  const pendGrouped={};
+  pendientesIdx.forEach(i=>{
+    const c=appPagos[i];
+    const k=c.fecha+'|'+c.huesped;
+    if(!pendGrouped[k])pendGrouped[k]={fecha:c.fecha,huesped:c.huesped,total:0,nItems:0};
+    pendGrouped[k].total+=c.monto;pendGrouped[k].nItems++;
+  });
+  const pendientesList=Object.values(pendGrouped).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+
+  window._recLastDebito={
+    appBruto:appBruto,
+    bankTotal:bankBruto,
+    comisionTotal:bankComTotal,
+    diff:diff,
+    cierres:cierresInfo,
+    pendientesCount:pendientesIdx.length,
+    pendientesTotal:pendientesTotal,
+    pendientesList:pendientesList
+  };
+
+  if(appBruto===0&&cierres.length===0){
+    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3><p class="empty" style="padding:14px;font-size:12px">Sin pagos por débito ni cierres TDC en este mes.</p>`;
     return;
   }
 
-  const tdcRowsHtml=bankTdc.map(b=>`
-    <tr>
-      <td style="padding:7px 8px;font-size:12px">${b.fecha}</td>
-      <td style="padding:7px 8px;font-size:11px;color:#666">${String(b.descripcion||'').substring(0,80)}</td>
-      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(b.abono)}</td>
-    </tr>`).join('');
-  const comRowsHtml=comTdc.map(b=>`
-    <tr>
-      <td style="padding:7px 8px;font-size:12px">${b.fecha}</td>
-      <td style="padding:7px 8px;font-size:11px;color:#666">${String(b.descripcion||'').substring(0,80)}</td>
-      <td style="padding:7px 8px;text-align:right;font-size:12px;color:#7A1F1D">${fmt(Math.abs(b.cargo))}</td>
-    </tr>`).join('');
+  // ---- UI ----
+  const cuadre=Math.abs(appBruto-bankBruto)<=1;
+  const cierresHtml=cierresInfo.map((ci,cIdx)=>{
+    const cobros=ci.cobrosIdx.map(i=>appPagos[i]);
+    const sumCobros=Math.round(cobros.reduce((s,c)=>s+c.monto,0)*100)/100;
+    const bg=ci.matchOk?'#E1F5EE':'#FCE8E6';
+    const headerColor=ci.matchOk?'#085041':'#7A1F1D';
+    const headerIcon=ci.matchOk?'✓':'✗';
 
-  // Captura resultados para Excel
-  window._recLastDebito={
-    appBruto:appBruto,
-    bankTotal:bankTdcTotal,
-    comisionTotal:comTdcTotal,
-    diff:diff
-  };
+    // Si cuadra: tabla detallada. Si no cuadra: solo lista de huéspedes involucrados.
+    let bodyHtml='';
+    if(ci.matchOk){
+      // Agrupar por huésped + fecha + tipo para reducir filas
+      const grouped={};
+      cobros.forEach(c=>{
+        const key=c.fecha+'|'+c.huesped;
+        if(!grouped[key])grouped[key]={fecha:c.fecha,huesped:c.huesped,total:0,nItems:0};
+        grouped[key].total+=c.monto;
+        grouped[key].nItems++;
+      });
+      const groupedList=Object.values(grouped).sort((a,b)=>a.fecha.localeCompare(b.fecha));
+      bodyHtml=`<table style="width:100%;background:#fff;border-radius:6px">
+        <thead><tr style="border-bottom:1px solid #EEE">
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Huésped</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Items</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Total</th>
+        </tr></thead>
+        <tbody>${groupedList.map(g=>`<tr>
+          <td style="padding:5px 8px;font-size:11px">${g.fecha}</td>
+          <td style="padding:5px 8px;font-size:11px"><strong>${g.huesped}</strong></td>
+          <td style="padding:5px 8px;text-align:right;font-size:11px;color:#666">${g.nItems}</td>
+          <td style="padding:5px 8px;text-align:right;font-size:11px;font-weight:600">${fmt(g.total)}</td>
+        </tr>`).join('')}</tbody>
+      </table>`;
+    } else {
+      // No match: solo huéspedes involucrados, sin detalle
+      const huespedes=ci.huespedesTentativos||[];
+      if(huespedes.length){
+        bodyHtml=`<div style="background:#fff;border-radius:6px;padding:10px 12px">
+          <p style="font-size:11px;color:#7A1F1D;margin:0 0 6px">No se encontró combinación de cobros que sume el bruto ${fmt(ci.bruto)}. Suma acumulada de cobros previos al cierre: ${fmt(ci.brutoCalculado||0)}.</p>
+          <p style="font-size:11px;color:#666;margin:6px 0 4px"><strong>Huéspedes con cobros débito en el rango:</strong></p>
+          <ul style="margin:0;padding-left:18px">${huespedes.map(h=>`<li style="font-size:11px;margin:2px 0">${h}</li>`).join('')}</ul>
+        </div>`;
+      } else {
+        bodyHtml=`<p style="font-size:11px;color:#7A1F1D;text-align:center;padding:10px">Sin cobros débito en la app antes de este cierre.</p>`;
+      }
+    }
+
+    const cobrosLabel=ci.matchOk?`${cobros.length} cobro${cobros.length!==1?'s':''} emparejado${cobros.length!==1?'s':''}`:'sin emparejar';
+    return `<div style="background:${bg};border-radius:8px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+        <div>
+          <p style="font-size:12px;font-weight:600;margin:0;color:${headerColor}">${headerIcon} Cierre ${ci.fecha} · ${cobrosLabel}</p>
+          <p style="font-size:11px;color:${headerColor};margin:2px 0 0">Bruto banco ${fmt(ci.bruto)}${ci.comisionTotal?' · comisión TDC (aparte) '+fmt(ci.comisionTotal):''}${ci.matchOk?' · cobros app suman '+fmt(sumCobros):''}</p>
+        </div>
+      </div>
+      ${bodyHtml}
+    </div>`;
+  }).join('');
+
+  const pendientesHtml=pendientesIdx.length?`
+    <div style="background:#FFF4E5;border-radius:8px;padding:12px 14px;margin-top:8px">
+      <p style="font-size:12px;font-weight:600;margin:0 0 8px;color:#634009">⚠ Pendientes de cierre — ${pendientesIdx.length} cobro${pendientesIdx.length!==1?'s':''} · ${fmt(pendientesTotal)}</p>
+      <table style="width:100%;background:#fff;border-radius:6px">
+        <thead><tr style="border-bottom:1px solid #EEE">
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Huésped</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Items</th>
+          <th style="text-align:right;padding:5px 8px;font-size:9px;color:#AAA;text-transform:uppercase">Total</th>
+        </tr></thead>
+        <tbody>${(()=>{
+          const grouped={};
+          pendientesIdx.forEach(i=>{
+            const c=appPagos[i];
+            const k=c.fecha+'|'+c.huesped;
+            if(!grouped[k])grouped[k]={fecha:c.fecha,huesped:c.huesped,total:0,nItems:0};
+            grouped[k].total+=c.monto;grouped[k].nItems++;
+          });
+          return Object.values(grouped).sort((a,b)=>a.fecha.localeCompare(b.fecha)).map(g=>
+            `<tr><td style="padding:5px 8px;font-size:11px">${g.fecha}</td><td style="padding:5px 8px;font-size:11px"><strong>${g.huesped}</strong></td><td style="padding:5px 8px;text-align:right;font-size:11px;color:#666">${g.nItems}</td><td style="padding:5px 8px;text-align:right;font-size:11px;font-weight:600">${fmt(g.total)}</td></tr>`).join('');
+        })()}</tbody>
+      </table>
+    </div>`:'';
+
+  const comHuerfHtml=comHuerfanas.length?`
+    <div style="background:#F5F4F0;border-radius:8px;padding:10px 14px;margin-top:8px">
+      <p style="font-size:11px;color:#666;margin:0 0 4px"><strong>Comisiones TDC sin cierre del mismo día</strong> (${comHuerfanas.length})</p>
+      ${comHuerfanas.map(cm=>`<p style="font-size:11px;color:#666;margin:2px 0">${cm.fecha} · ${String(cm.descripcion).substring(0,60)} · ${fmt(Math.abs(cm.cargo))}</p>`).join('')}
+    </div>`:'';
 
   block.innerHTML=`
     <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">Débito</h3>
@@ -6097,42 +6250,26 @@ function _renderReconcilDebito(prefix){
       <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
         <p style="font-size:11px;color:#888;margin:0">App (bruto)</p>
         <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${appPagos.length} cobro${appPagos.length!==1?'s':''}</p>
       </div>
       <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
-        <p style="font-size:11px;color:#888;margin:0">Banco (neto)</p>
-        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankTdcTotal)}</p>
-        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankTdc.length} cierre${bankTdc.length!==1?'s':''} TDC</p>
+        <p style="font-size:11px;color:#888;margin:0">Banco (bruto cobrado)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankBruto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${cierres.length} cierre${cierres.length!==1?'s':''} TDC${bankComTotal?' · comisión TDC aparte: '+fmt(bankComTotal):''}</p>
       </div>
-      <div style="flex:1;min-width:160px;background:#F5F4F0;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
-        <p style="font-size:11px;color:#888;margin:0">Diferencia</p>
-        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:#1A1916">${fmt(diff)}</p>
-        <p style="font-size:10px;color:#888;margin:2px 0 0">comisión TDC mes: ${fmt(comTdcTotal)}</p>
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FFF4E5'};border:0.5px solid ${cuadre?'#1D9E75':'#BA7517'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#634009'};margin:0">Diferencia</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#634009'}">${cuadre?'✓ Cuadra':fmt(Math.abs(diff))}</p>
+        <p style="font-size:10px;color:${cuadre?'#085041':'#634009'};margin:2px 0 0">${pendientesIdx.length>0?pendientesIdx.length+' cobro'+(pendientesIdx.length!==1?'s':'')+' pendiente'+(pendientesIdx.length!==1?'s':'')+' de cierre':'todos los cobros emparejados'}</p>
       </div>
     </div>
-    <div class="card" style="padding:14px 16px">
-      <p style="font-size:12px;color:#666;margin:0;background:#F5F4F0;padding:8px 12px;border-radius:6px"><strong>Nota:</strong> el banco recibe el monto neto de comisión TDC (~3-3.5%). La app registra el bruto. La diferencia esperada es del orden de la comisión TDC del mes. Si la diferencia es muy superior, puede haber cierres de terminal pendientes o cobros mal etiquetados.</p>
-    </div>
-    ${tdcRowsHtml?`<div class="card" style="padding:14px 16px;margin-top:10px">
-      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Cierres TDC en banco — ${bankTdc.length}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="border-bottom:2px solid #EEE">
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto neto</th>
-        </tr></thead>
-        <tbody>${tdcRowsHtml}</tbody>
-      </table>
+    ${cierresInfo.length>0?`<div class="card" style="padding:14px 16px;margin-top:8px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Cierres TDC analizados — ${cierresInfo.length}</p>
+      ${cierresHtml}
     </div>`:''}
-    ${comRowsHtml?`<div class="card" style="padding:14px 16px;margin-top:10px">
-      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Comisiones TDC en banco — ${comTdc.length}</p>
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
-        <thead><tr style="border-bottom:2px solid #EEE">
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
-          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
-          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
-        </tr></thead>
-        <tbody>${comRowsHtml}</tbody>
-      </table>
+    ${pendientesHtml||comHuerfHtml?`<div class="card" style="padding:14px 16px;margin-top:8px">
+      ${pendientesHtml}
+      ${comHuerfHtml}
     </div>`:''}`;
 }
 
@@ -6713,9 +6850,14 @@ function _buildReconcilExcelData(prefix){
   const dx=window._recLastDebito;
   if(dx){
     const est=Math.abs(dx.diff)<=1?'✓':'⚠';
-    data.push(mkRow(['Débito','TOTAL (banco neto)',dx.appBruto,'',dx.bankTotal,dx.diff,est,''],stTotalBase,true));
-    if(dx.comisionTotal){
-      data.push(mkRow(['Débito','Comisión TDC (cargo banco)','','',dx.comisionTotal,'','',''],stDetailBase,false));
+    data.push(mkRow(['Débito','TOTAL (banco bruto)',dx.appBruto,'',dx.bankTotal,dx.diff,est,''],stTotalBase,true));
+    // Si hay diferencia, listar pendientes de cierre (huésped + fecha + total)
+    if(Math.abs(dx.diff)>1&&dx.pendientesList&&dx.pendientesList.length){
+      sectionRow('Débito','PENDIENTES DE CIERRE');
+      dx.pendientesList.forEach(p=>{
+        const concept=p.huesped+' · '+p.fecha+' · '+p.nItems+' item'+(p.nItems!==1?'s':'');
+        data.push(mkRow(['Débito',concept,p.total,'','',p.total,'⚠',''],stDetailBase,false));
+      });
     }
     sep();
   }
