@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.3.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.4.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.3.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.4.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -952,8 +952,8 @@ function getMonthlyData(months){
     const consumos=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+(c.total||0),0);
     // Consumos base (sin IVA)
     const consumosBase=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+Math.round((c.subtotal||c.total/1.16||0)*100)/100,0);
-    // Egresos (con IVA) — exclude gastos personales unless toggle on
-    const egrFilt=egr.filter(e=>(e.fecha||'').startsWith(prefix)&&(_dashEgrIncludeGP||!e.gastoPersonal));
+    // Egresos (con IVA) — exclude gastos personales unless toggle on; always exclude deducibles anuales
+    const egrFilt=egr.filter(e=>(e.fecha||'').startsWith(prefix)&&!e.deducibleAnual&&(_dashEgrIncludeGP||!e.gastoPersonal));
     const egresos=egrFilt.reduce((s,e)=>s+(e.total||0),0);
     // Egresos base (sin IVA)
     const egresosBase=egrFilt.reduce((s,e)=>s+(e.subtotal||0),0);
@@ -1040,7 +1040,7 @@ function dashRenderChart(gId,months){
 
   if(gId==='g9'){
     const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
-    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria&&(_dashEgrIncludeGP||!e.gastoPersonal)).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);});
+    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria&&!e.deducibleAnual&&(_dashEgrIncludeGP||!e.gastoPersonal)).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);});
     const top=Object.entries(catTot).sort((a,b)=>b[1]-a[1]).slice(0,8);
     const tot=top.reduce((s,e)=>s+e[1],0);
     mkChart('cv-g9',{type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{label:'Monto',data:top.map(e=>Math.round(e[1])),backgroundColor:top.map((_,i)=>i===0?'#185FA5':i<3?'#378ADD':i<6?'#85B7EB':'#B5D4F4'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.x.toLocaleString()+' · '+Math.round(ctx.parsed.x/tot*100)+'%'}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
@@ -5813,12 +5813,18 @@ function _renderReconcilEgresos(prefix){
     const fecha=String(e.fecha||'').slice(0,10);
     if(!fecha.startsWith(prefix))return false;
     if(e.tipoDoc==='Nota de crédito')return false;
+    // Excluir facturas con monto 0 (no representan un pago real)
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    if(monto<0.01)return false;
     return true;
   });
   const notasCredito=egresos.filter(e=>{
     const fecha=String(e.fecha||'').slice(0,10);
     if(!fecha.startsWith(prefix))return false;
-    return e.tipoDoc==='Nota de crédito';
+    if(e.tipoDoc!=='Nota de crédito')return false;
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    if(monto<0.01)return false;
+    return true;
   });
 
   // Banco: todos los cargos (excluyendo movimientos internos) en los 3 archivos
