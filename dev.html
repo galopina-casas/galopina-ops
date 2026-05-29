@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.7.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.8.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.7.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v31.8.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -155,9 +155,9 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <button class="tab" onclick="showTab('reservas')">Reservas</button>
     <button class="tab" onclick="showTab('consumos')">Consumos</button>
     <button class="tab" onclick="showTab('ingresos')">Resumen Ingresos</button>
+  <button class="tab" id="tab-egresos" onclick="showTab('egresos')">Resumen Egresos</button>
     <button class="tab" id="tcierre" onclick="showTab('cierre')">📊 Cierre Mensual</button>
   <button class="tab" id="tchk" style="display:none" onclick="showTab('checkout')">&#x1F3C1; Checkout</button>
-  <button class="tab" id="tab-egresos" onclick="showTab('egresos')">Egresos</button>
   <button class="tab" id="tab-admin" onclick="showTab('admin')">Catálogos</button>
   </div>
 
@@ -422,7 +422,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   </div>
 
   <div class="sec" id="sec-egresos">
-  <div class="sh"><h2>Egresos</h2>
+  <div class="sh"><h2>Resumen Egresos</h2>
     <div style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn btn-primary btn-sm" onclick="importarZipSAT()">⬆ ZIP SAT (CFDI)</button>
       <button class="btn btn-sm" onclick="importarPDFsNoCFDI()">⬆ Importar noCFDI</button>
@@ -579,7 +579,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
         <div><label>Mes</label><select id="cm-mes" onchange="renderCierre()" style="height:32px;font-size:13px"></select></div>
         <div><label>A&ntilde;o</label><select id="cm-anio" onchange="renderCierre()" style="height:32px;font-size:13px"></select></div>
-        <button class="btn btn-primary" onclick="exportarCierreExcel()" style="height:32px">&#x2193; Exportar Excel</button>
+        <button class="btn btn-primary" onclick="exportarCierreExcel('ops')" style="height:32px">&#x2193; Excel Ops</button>
+        <button class="btn btn-primary" onclick="exportarCierreExcel('conta')" style="height:32px">&#x2193; Excel Conta</button>
       </div>
     </div>
     <div id="cm-metrics"></div>
@@ -2270,16 +2271,24 @@ function toggleIngRow(gKey){
     }
   }
 }
+function _ingPagoBuildDD(){
+  const dd=document.getElementById('ing-pago-dd');
+  if(!dd)return;
+  const all=Object.keys(PAGO_MAP);
+  // null/undefined means "all selected" (default); [] means "none"
+  const sel=Array.isArray(window._ingPagoSel)?window._ingPagoSel:all.slice();
+  dd.innerHTML=`<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer;font-weight:600;border-bottom:0.5px solid #eee;margin-bottom:4px" onclick="ingPagoToggleAll();event.preventDefault()"><input type="checkbox" id="ing-pago-all" ${sel.length===all.length?'checked':''} onclick="event.preventDefault()" style="width:14px;height:14px;accent-color:#1D9E75;pointer-events:none">Todos</label>`+
+    all.map(p=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" ${sel.includes(p)?'checked':''} onchange="ingPagoToggle('${p}',this.checked)" style="width:14px;height:14px;accent-color:#1D9E75;cursor:pointer">${PAGO_MAP[p]||p}</label>`).join('');
+}
 function toggleIngPagoDD(){
   const dd=document.getElementById('ing-pago-dd');
   if(!dd)return;
   if(dd.style.display==='none'){
-    // Build options on open
-    const all=Object.keys(PAGO_MAP);
-    const sel=Array.isArray(window._ingPagoSel)&&window._ingPagoSel.length?window._ingPagoSel:all.slice();
-    window._ingPagoSel=sel;
-    dd.innerHTML=`<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer;font-weight:600;border-bottom:0.5px solid #eee;margin-bottom:4px" onclick="ingPagoToggleAll();event.preventDefault()"><input type="checkbox" id="ing-pago-all" ${sel.length===all.length?'checked':''} onclick="event.preventDefault()" style="width:14px;height:14px;accent-color:#1D9E75;pointer-events:none">Todos</label>`+
-      all.map(p=>`<label style="display:flex;align-items:center;gap:6px;padding:4px 6px;font-size:12px;cursor:pointer"><input type="checkbox" ${sel.includes(p)?'checked':''} onchange="ingPagoToggle('${p}',this.checked)" style="width:14px;height:14px;accent-color:#1D9E75;cursor:pointer">${PAGO_MAP[p]||p}</label>`).join('');
+    // null => initialize as all selected; preserve [] (none) and explicit lists
+    if(window._ingPagoSel==null){
+      window._ingPagoSel=Object.keys(PAGO_MAP).slice();
+    }
+    _ingPagoBuildDD();
     dd.style.display='block';
     setTimeout(()=>document.addEventListener('click',_closeIngPagoOnOutside),0);
   } else {
@@ -2308,17 +2317,17 @@ function ingPagoToggleAll(){
   // Toggle: if currently all selected, deselect all; otherwise select all
   const allSelected=sel.length===all.length;
   window._ingPagoSel=allSelected?[]:all.slice();
-  // Refresh dropdown content (close and reopen)
-  const dd=document.getElementById('ing-pago-dd');
-  if(dd&&dd.style.display==='block'){dd.style.display='none';toggleIngPagoDD();}
+  _ingPagoBuildDD();
   _ingPagoUpdateButton();
   renderIngresos();
 }
 function _ingPagoUpdateButton(){
   const btn=document.getElementById('ing-pago-btn');if(!btn)return;
   const all=Object.keys(PAGO_MAP);
-  const sel=Array.isArray(window._ingPagoSel)?window._ingPagoSel:all;
-  if(sel.length===all.length||sel.length===0)btn.textContent='Todos';
+  if(!Array.isArray(window._ingPagoSel)){btn.textContent='Todos';return;}
+  const sel=window._ingPagoSel;
+  if(sel.length===0)btn.textContent='Ninguno';
+  else if(sel.length===all.length)btn.textContent='Todos';
   else if(sel.length===1)btn.textContent=PAGO_MAP[sel[0]]||sel[0];
   else btn.textContent=sel.length+' métodos';
 }
@@ -2334,7 +2343,7 @@ function renderIngresos(){
   if(mes)rows=rows.filter(r=>r.fecha&&r.fecha.startsWith(mes));
   if(cli)rows=rows.filter(r=>r.huesped.toLowerCase().includes(cli));
   if(tipo)rows=rows.filter(r=>r.tipo===tipo);
-  if(pagoFilter&&pagoFilter.length){
+  if(pagoFilter){
     rows=rows.flatMap(r=>{
       if(r.tipo==='hospedaje'){
         return pagoFilter.includes(r.pago||'')?[r]:[];
@@ -4208,7 +4217,11 @@ function updRecon(pago,enApp){
   el.style.color=diff===0?'#1D9E75':'#C83232';
 }
 
-function exportarCierreExcel(){
+function exportarCierreExcel(modo){
+  modo=modo||'ops';
+  const isConta=modo==='conta';
+  // For Conta: exclude these payment methods from all sheets
+  const EXCLUDED_CONTA=['efectivo-nd','mercadopago'];
   const mes=document.getElementById('cm-mes').value;
   const anio=document.getElementById('cm-anio').value;
   const prefix=anio+'-'+mes;
@@ -4217,7 +4230,8 @@ function exportarCierreExcel(){
     showAlert(`Hay ${egSinCat.length} egreso${egSinCat.length>1?'s':''} sin categoría en este mes. Categorízalos antes de exportar.`,'error');
     return;
   }
-  const rows=getCierreData(prefix);
+  let rows=getCierreData(prefix);
+  if(isConta){rows=rows.filter(r=>!EXCLUDED_CONTA.includes(r.pago));}
   const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const mesNombre=MN[parseInt(mes)-1]+' '+anio;
   if(!rows.length){showAlert('Sin ingresos en este periodo','error');return;}
@@ -4283,9 +4297,9 @@ function exportarCierreExcel(){
     {v:'Concepto CFDI', g:'conc'},{v:'Concepto',      g:'conc'},{v:'Producto',   g:'conc'},
     {v:'Fecha pago',    g:'pago'},{v:'Método pago',   g:'pago'},{v:'Base pago',  g:'pago'},{v:'ISH pago',  g:'pago'},
     {v:'IVA pago',      g:'pago'},{v:'Exento pago',g:'pago'},{v:'Total pago',g:'pago'},
-    {v:'Base Reserva',  g:'res'},{v:'ISH Reserva', g:'res'},{v:'IVA Reserva',g:'res'},{v:'Total Reserva',g:'res'},
-    {v:'Para contador', g:'cnt'}
+    {v:'Base Reserva',  g:'res'},{v:'ISH Reserva', g:'res'},{v:'IVA Reserva',g:'res'},{v:'Total Reserva',g:'res'}
   ];
+  if(!isConta)detHeaders.push({v:'Para contador', g:'cnt'});
   const GROUP_COLORS={id:'BDD7EE',pago:'F4B942',res:'C6EFCE',cnt:null,conc:'F4B942'};
   const hdrStyle=bg=>({font:{bold:true},fill:bg?{fgColor:{rgb:bg}}:{},border:{bottom:{style:'thin',color:{rgb:'888888'}}}});
 
@@ -4311,13 +4325,14 @@ function exportarCierreExcel(){
     }
     const cCFDI=conceptoCFDIof(r);
     const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
-    detData.push([
+    const rowCells=[
       {v:r.cbId||'',s:cs(rowBg)},{v:r.fechaReserva||'',s:cs(rowBg)},{v:r.checkin||'',s:cs(rowBg)},{v:r.checkout||'',s:cs(rowBg)},
       {v:r.huesped,s:cs(rowBg)},{v:cCFDI,s:cs(rowBg)},{v:concepto,s:cs(rowBg)},{v:producto,s:cs(rowBg)},
       {v:r.fecha||'',s:cs(rowBg)},{v:METODOS_LABELS[r.pago]||r.pago,s:cs(rowBg)},nm(rowBg,r.base),nm(rowBg,r.ish),nm(rowBg,r.iva),nm(rowBg,r.exento),nm(rowBg,r.monto),
-      nm(rowBg,r.baseRes||0),nm(rowBg,r.ishRes||0),nm(rowBg,r.ivaRes||0),nm(rowBg,r.totalRes||0),
-      {v:rep?'Sí':'No',s:cs(rowBg)}
-    ]);
+      nm(rowBg,r.baseRes||0),nm(rowBg,r.ishRes||0),nm(rowBg,r.ivaRes||0),nm(rowBg,r.totalRes||0)
+    ];
+    if(!isConta)rowCells.push({v:rep?'Sí':'No',s:cs(rowBg)});
+    detData.push(rowCells);
   });
   // --- Resumen por Concepto CFDI (formulas SUMIF) at the bottom of Detalle Pagos ---
   // Columns: F=Concepto CFDI, K=Base, L=ISH, M=IVA, N=Exento, O=Total
@@ -4354,7 +4369,9 @@ function exportarCierreExcel(){
 
   const ws1=XLSX.utils.aoa_to_sheet(detData);
   // Column widths
-  ws1['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
+  ws1['!cols']=isConta
+    ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}]
+    : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
   XLSX.utils.book_append_sheet(wb,ws1,'Detalle Pagos');
 
   // === HOJA: PAGO x CONCEPTO (agrupado por reserva + Concepto CFDI + fecha pago + método pago) ===
@@ -4381,25 +4398,32 @@ function exportarCierreExcel(){
     {v:'Huésped',g:'id'},
     {v:'Concepto CFDI',g:'conc'},{v:'Nota',g:'conc'},
     {v:'Fecha pago',g:'pago'},{v:'Método pago',g:'pago'},{v:'Base pago',g:'pago'},{v:'ISH pago',g:'pago'},
-    {v:'IVA pago',g:'pago'},{v:'Exento pago',g:'pago'},{v:'Total pago',g:'pago'},
-    {v:'Para contador',g:'cnt'}
+    {v:'IVA pago',g:'pago'},{v:'Exento pago',g:'pago'},{v:'Total pago',g:'pago'}
   ];
+  if(!isConta)pxcHeaders.push({v:'Para contador',g:'cnt'});
   const r2=v=>Math.round(v*100)/100;
   const pxcData=[pxcHeaders.map(h=>({v:h.v,s:hdrStyle(GROUP_COLORS[h.g])}))];
   let _pxcLast=null,_pxcTog=false;
+  // For Conta: Nota only "Anticipo Hospedaje/Cena" or "Saldo Hospedaje/Cena" for reservation payments; empty otherwise
+  const RESERVATION_NOTAS=['Anticipo Hospedaje','Anticipo Cena','Saldo Hospedaje','Saldo Cena'];
   pxcRows.forEach(g=>{
     const rid=String(g.cbId||'');
     if(rid!==_pxcLast){_pxcTog=!_pxcTog;_pxcLast=rid;}
     const rowBg=_pxcTog?null:'F2F2F2';
     const cs=bg=>bg?{fill:{fgColor:{rgb:bg}}}:{};
     const nm=(bg,v)=>({v:r2(v),t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
-    const nota=[...g.notaSet].join(' + ');
-    pxcData.push([
+    let nota=[...g.notaSet].join(' + ');
+    if(isConta){
+      const notas=[...g.notaSet].filter(n=>RESERVATION_NOTAS.includes(n));
+      nota=notas.join(' + ');
+    }
+    const rowCells=[
       {v:g.cbId||'',s:cs(rowBg)},{v:g.fechaReserva||'',s:cs(rowBg)},{v:g.checkin||'',s:cs(rowBg)},{v:g.checkout||'',s:cs(rowBg)},
       {v:g.huesped,s:cs(rowBg)},{v:g.conceptoCFDI,s:cs(rowBg)},{v:nota,s:cs(rowBg)},
-      {v:g.fecha||'',s:cs(rowBg)},{v:METODOS_LABELS[g.pago]||g.pago,s:cs(rowBg)},nm(rowBg,g.base),nm(rowBg,g.ish),nm(rowBg,g.iva),nm(rowBg,g.exento),nm(rowBg,g.monto),
-      {v:g.rep?'Sí':'No',s:cs(rowBg)}
-    ]);
+      {v:g.fecha||'',s:cs(rowBg)},{v:METODOS_LABELS[g.pago]||g.pago,s:cs(rowBg)},nm(rowBg,g.base),nm(rowBg,g.ish),nm(rowBg,g.iva),nm(rowBg,g.exento),nm(rowBg,g.monto)
+    ];
+    if(!isConta)rowCells.push({v:g.rep?'Sí':'No',s:cs(rowBg)});
+    pxcData.push(rowCells);
   });
 
   // --- Resumen por Concepto CFDI (formulas SUMIF) at the bottom of PagoxConcepto ---
@@ -4442,7 +4466,9 @@ function exportarCierreExcel(){
   ]);
 
   const wsPxc=XLSX.utils.aoa_to_sheet(pxcData);
-  wsPxc['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:13}];
+  wsPxc['!cols']=isConta
+    ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12}]
+    : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:13}];
   XLSX.utils.book_append_sheet(wb,wsPxc,'PagoxConcepto');
   const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
@@ -4479,7 +4505,9 @@ function exportarCierreExcel(){
   const met=[
     [{v:'TOTALES POR MÉTODO — '+mesNombre,s:{font:{bold:true,sz:12}}},'',''],
     ['','',''],
-    [{v:'Método',s:hS(BLU,1)},{v:'Monto',s:hS(BLU,1,'#,##0.00')},{v:'Contador',s:hS(BLU,1)}]
+    isConta
+      ? [{v:'Método',s:hS(BLU,1)},{v:'Monto',s:hS(BLU,1,'#,##0.00')}]
+      : [{v:'Método',s:hS(BLU,1)},{v:'Monto',s:hS(BLU,1,'#,##0.00')},{v:'Contador',s:hS(BLU,1)}]
   ];
   let grandTot=0;
   ORDER.forEach(p=>{
@@ -4487,16 +4515,20 @@ function exportarCierreExcel(){
     if(t<=0)return;
     const rep2=METODOS_REPORTABLES.includes(p);
     grandTot+=t;
-    met.push([
+    const row=[
       {v:METODOS_LABELS[p]||p},
-      {v:Math.round(t*100)/100,t:'n',z:'#,##0.00',s:{fill:rep2?{fgColor:{rgb:GRN}}:{fgColor:{rgb:'FCE4D6'}}}},
-      {v:rep2?'Sí':'No',s:{font:{bold:true,color:{rgb:rep2?'1B5E20':'B71C1C'}}}}
-    ]);
+      {v:Math.round(t*100)/100,t:'n',z:'#,##0.00',s:{fill:rep2?{fgColor:{rgb:GRN}}:{fgColor:{rgb:'FCE4D6'}}}}
+    ];
+    if(!isConta)row.push({v:rep2?'Sí':'No',s:{font:{bold:true,color:{rgb:rep2?'1B5E20':'B71C1C'}}}});
+    met.push(row);
   });
-  met.push(['','','']);
-  met.push([{v:'Total',s:hS(GRN2,1)},{v:Math.round(grandTot*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},{v:'',s:hS(GRN2,0)}]);
+  met.push(isConta?['','']:['','','']);
+  met.push(isConta
+    ? [{v:'Total',s:hS(GRN2,1)},{v:Math.round(grandTot*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)}]
+    : [{v:'Total',s:hS(GRN2,1)},{v:Math.round(grandTot*100)/100,t:'n',z:'#,##0.00',s:hS(GRN2,1)},{v:'',s:hS(GRN2,0)}]
+  );
   const ws3=XLSX.utils.aoa_to_sheet(met);
-  ws3['!cols']=[{wch:20},{wch:14},{wch:12}];
+  ws3['!cols']=isConta?[{wch:20},{wch:14}]:[{wch:20},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
   // === HOJA EGRESOS ===
   const egMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
@@ -4517,7 +4549,7 @@ function exportarCierreExcel(){
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
   wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
-  XLSX.writeFile(wb,'Galopina_Cierre_'+mesNombre.replace(' ','_')+'.xlsx');
+  XLSX.writeFile(wb,'Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx');
   showAlert('Excel exportado','success');
 }
 
