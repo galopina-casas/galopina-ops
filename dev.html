@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.0.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.1.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.0.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.1.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -585,14 +585,18 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <input type="file" id="rec-stripe-file" accept=".csv" onchange="loadStripeFile(this)" style="font-size:13px">
         </div>
         <div style="flex:1;min-width:240px">
+          <label>Archivo payout CloudBeds (.xls)</label>
+          <input type="file" id="rec-cb-file" accept=".xls,.xlsx" onchange="loadCbFile(this)" style="font-size:13px">
+        </div>
+        <div style="flex:1;min-width:240px">
           <label>Archivo banco BBVA Principal (Excel)</label>
           <input type="file" id="rec-bbva-file" accept=".xlsx,.xls" onchange="loadBbvaFile(this)" style="font-size:13px">
         </div>
         <button class="btn btn-sm" onclick="clearReconcil()">Limpiar</button>
       </div>
     </div>
-    <div id="rec-summary"></div>
-    <div id="rec-detail"></div>
+    <div id="rec-stripe-block"><div id="rec-summary"></div><div id="rec-detail"></div></div>
+    <div id="rec-cb-block"></div>
   </div>
 
   <div class="sec" id="sec-cierre">
@@ -4581,6 +4585,7 @@ function exportarCierreExcel(modo){
 // ============================================================
 window._recStripeRows=null;
 window._recBbvaRows=null;
+window._recCbRows=null;
 
 function initReconcil(){
   const mesEl=document.getElementById('rec-mes');
@@ -4602,8 +4607,10 @@ function initReconcil(){
 function clearReconcil(){
   window._recStripeRows=null;
   window._recBbvaRows=null;
+  window._recCbRows=null;
   const fi=document.getElementById('rec-stripe-file');if(fi)fi.value='';
   const fb=document.getElementById('rec-bbva-file');if(fb)fb.value='';
+  const fc=document.getElementById('rec-cb-file');if(fc)fc.value='';
   renderReconcil();
 }
 
@@ -4639,6 +4646,67 @@ function loadBbvaFile(input){
       showAlert('Archivo BBVA cargado: '+rows.length+' movimientos','success');
     }catch(err){
       showAlert('Error al leer archivo BBVA: '+err.message,'error');
+    }
+  };
+  reader.readAsArrayBuffer(f);
+}
+
+function _parseCbDate(s){
+  // CloudBeds format: "Apr 09, 2026" or "Apr 09, 2026, 07:57:34 AM"
+  if(!s)return '';
+  const m=String(s).match(/(\w+)\s+(\d+),\s*(\d+)/);
+  if(!m)return '';
+  const months={Jan:'01',Feb:'02',Mar:'03',Apr:'04',May:'05',Jun:'06',Jul:'07',Aug:'08',Sep:'09',Oct:'10',Nov:'11',Dec:'12'};
+  const mm=months[m[1].substring(0,3)];if(!mm)return '';
+  return m[3]+'-'+mm+'-'+String(m[2]).padStart(2,'0');
+}
+
+function _extractCbId(infoStr){
+  // "Silke Boger - 49EU8KXFHP" → "49EU8KXFHP"
+  const m=String(infoStr||'').match(/-\s*([A-Z0-9]{8,})\s*$/i);
+  return m?m[1].toUpperCase():'';
+}
+
+function _extractCbGuestName(infoStr){
+  // "Silke Boger - 49EU8KXFHP" → "Silke Boger"
+  const s=String(infoStr||'');
+  const idx=s.lastIndexOf(' - ');
+  return idx>0?s.substring(0,idx).trim():s.trim();
+}
+
+function loadCbFile(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const sheetName=wb.SheetNames.find(n=>n.toLowerCase().includes('payout')||n.toLowerCase().includes('detail'))||wb.SheetNames[0];
+      const arr=XLSX.utils.sheet_to_json(wb.Sheets[sheetName],{defval:''});
+      const rows=arr.map(r=>{
+        const info=r['Información de la reserva']||r['Information de la reserva']||'';
+        return {
+          payoutDate:_parseCbDate(r['Fecha del desembolso']),
+          payoutId:String(r['ID del desembolso']||''),
+          status:String(r['Estado del desembolso']||''),
+          txId:String(r['ID de la transacción']||''),
+          txDate:_parseCbDate(r['Fecha']),
+          guestName:String(r['Nombre del huésped']||'').trim()||_extractCbGuestName(info),
+          info:String(info),
+          cbId:_extractCbId(info),
+          metodo:String(r['Metodo']||r['Método']||''),
+          tipo:String(r['Tipo']||''),
+          montoCobrado:parseFloat(r['Monto cobrado'])||0,
+          tasa:parseFloat(r['Tasa'])||0,
+          montoDesembolso:parseFloat(r['Monto del desembolso'])||0,
+          moneda:String(r['Moneda']||'')
+        };
+      }).filter(r=>r.txId);
+      window._recCbRows=rows;
+      renderReconcil();
+      showAlert('Archivo CloudBeds cargado: '+rows.length+' transacciones','success');
+    }catch(err){
+      showAlert('Error al leer archivo CloudBeds: '+err.message,'error');
     }
   };
   reader.readAsArrayBuffer(f);
@@ -4750,13 +4818,24 @@ function renderReconcil(){
   const summary=document.getElementById('rec-summary');
   const detail=document.getElementById('rec-detail');
   if(!summary||!detail)return;
-  if(!window._recStripeRows){
-    summary.innerHTML='<p class="empty" style="padding:20px">Sube un archivo de payout Stripe para iniciar la reconciliación. Opcionalmente sube el archivo del banco BBVA Principal para verificar el cuadre 3-vías (app · Stripe · banco).</p>';
+  if(!window._recStripeRows&&!window._recCbRows){
+    summary.innerHTML='<p class="empty" style="padding:20px">Sube un archivo de payout (Stripe CSV y/o CloudBeds .xls) para iniciar la reconciliación. Opcionalmente sube el archivo del banco BBVA Principal para verificar el cuadre 3-vías (app · plataforma · banco).</p>';
     detail.innerHTML='';
+    const cbBlock=document.getElementById('rec-cb-block');if(cbBlock)cbBlock.innerHTML='';
     return;
+  }
+  if(!window._recStripeRows){
+    summary.innerHTML='';
+    detail.innerHTML='';
   }
   if(!mes||!anio){summary.innerHTML='';detail.innerHTML='';return;}
   const prefix=anio+'-'+mes;
+
+  if(window._recStripeRows){_renderReconcilStripe(prefix,summary,detail);}
+  _renderReconcilCb(prefix);
+}
+
+function _renderReconcilStripe(prefix,summary,detail){
   const stripeAll=window._recStripeRows.filter(r=>(r.category==='charge'||r.category==='refund')&&String(r.createdAt||'').startsWith(prefix));
   const stripeBruto=Math.round(stripeAll.reduce((s,r)=>s+r.gross,0)*100)/100;
   const stripeNeto=Math.round(stripeAll.reduce((s,r)=>s+r.net,0)*100)/100;
@@ -4961,6 +5040,230 @@ function renderReconcil(){
               <td style="padding:7px 8px;text-align:center;color:${b.ok?'#1D9E75':'#E24B4A'};font-size:14px">${b.ok?'✓':'✗'}</td>
             </tr>`;
           }).join('')||'<tr><td colspan="4" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin depósitos Stripe en el banco este mes</td></tr>'}
+        </tbody>
+      </table>
+    </div>`:''}`;
+}
+
+function _renderReconcilCb(prefix){
+  const block=document.getElementById('rec-cb-block');if(!block)return;
+  if(!window._recCbRows){block.innerHTML='';return;}
+
+  const cbAll=window._recCbRows.filter(r=>String(r.txDate||'').startsWith(prefix));
+  const cbBruto=Math.round(cbAll.reduce((s,r)=>s+r.montoCobrado,0)*100)/100;
+  const cbFee=Math.round(cbAll.reduce((s,r)=>s+r.tasa,0)*100)/100;
+  const cbNeto=Math.round(cbAll.reduce((s,r)=>s+r.montoDesembolso,0)*100)/100;
+
+  // App: pagos con método cloudbeds en el mes
+  const reservas=gd(KR).filter(r=>r.estado!=='cancelada');
+  let appBruto=0;
+  const appPagosCb=[];
+  reservas.forEach(r=>{
+    if((r.anticipo||0)>0&&r.antiPago==='cloudbeds'&&String(r.antiFecha||'').startsWith(prefix)){
+      appPagosCb.push({reserva:r,monto:r.anticipo,fecha:r.antiFecha,tipo:'Anticipo'});
+      appBruto+=r.anticipo;
+    }
+    if((r.saldo||0)>0&&r.saldPago==='cloudbeds'&&String(r.saldFecha||'').startsWith(prefix)){
+      appPagosCb.push({reserva:r,monto:r.saldo,fecha:r.saldFecha,tipo:'Saldo'});
+      appBruto+=r.saldo;
+    }
+  });
+  gd(KC).forEach(c=>{
+    let items=[];try{items=Array.isArray(c.items)?c.items:JSON.parse(c.items||'[]');}catch(e){items=[];}
+    items.forEach(it=>{
+      if(it.pago!=='cloudbeds')return;
+      const fp=String(it.fechaPago||'').slice(0,10);
+      if(!fp.startsWith(prefix))return;
+      const monto=(it.precio||0)*(it.cantidad||0);
+      appPagosCb.push({reserva:{id:c.id,nombre:c.huesped,cbId:''},monto,fecha:fp,tipo:'Consumo: '+it.nombre});
+      appBruto+=monto;
+    });
+  });
+  appBruto=Math.round(appBruto*100)/100;
+
+  // Match each CB transaction to a reservation in app
+  // Priority: 1) by cbId, 2) by name+amount, 3) by amount
+  const matches=cbAll.map(cb=>{
+    const amount=Math.round(cb.montoCobrado*100)/100;
+    // candidates with matching amount (tolerance 1 peso)
+    const byAmount=appPagosCb.filter(c=>Math.abs(c.monto-amount)<=1);
+    if(cb.cbId){
+      const byCbId=byAmount.filter(c=>String(c.reserva.cbId||'').toUpperCase()===cb.cbId);
+      if(byCbId.length===1)return {cb,match:byCbId[0],how:'cbId+monto'};
+    }
+    const cbName=_recNormName(cb.guestName);
+    if(cbName){
+      const byName=byAmount.filter(c=>{
+        const rn=_recNormName(c.reserva.nombre);
+        return rn===cbName||rn.includes(cbName)||cbName.includes(rn);
+      });
+      if(byName.length===1)return {cb,match:byName[0],how:'nombre+monto'};
+    }
+    if(byAmount.length===1)return {cb,match:byAmount[0],how:'monto'};
+    return {cb,match:null,how:byAmount.length>1?'ambiguo':'sin_match'};
+  });
+  const matchedKeys=new Set();
+  matches.forEach(m=>{if(m.match)matchedKeys.add(String(m.match.reserva.id)+'-'+m.match.tipo+'-'+m.match.monto);});
+  const huerfanosApp=appPagosCb.filter(p=>!matchedKeys.has(String(p.reserva.id)+'-'+p.tipo+'-'+p.monto));
+
+  const okMatches=matches.filter(m=>m.match);
+  const failMatches=matches.filter(m=>!m.match);
+  const cuadre=Math.abs(appBruto-cbBruto)<=1;
+  const huerfTotal=failMatches.length+huerfanosApp.length;
+
+  // Bank reconciliation
+  const hasBank=Array.isArray(window._recBbvaRows);
+  let bankCbDeposits=[],bankCbTotal=0,bankCuadre=false,bankMatches=[];
+  if(hasBank){
+    bankCbDeposits=window._recBbvaRows.filter(r=>{
+      const d=String(r.descripcion||'').toUpperCase();
+      return r.abono>0&&d.includes('CLOUDBEDS')&&String(r.fecha||'').startsWith(prefix);
+    });
+    bankCbTotal=Math.round(bankCbDeposits.reduce((s,r)=>s+r.abono,0)*100)/100;
+    bankCuadre=Math.abs(bankCbTotal-cbNeto)<=1;
+    // Group cb rows by payoutId with sum of net
+    const payoutsById={};
+    cbAll.forEach(r=>{
+      if(!r.payoutId)return;
+      if(!payoutsById[r.payoutId])payoutsById[r.payoutId]={id:r.payoutId,fecha:r.payoutDate||'',monto:0};
+      payoutsById[r.payoutId].monto+=r.montoDesembolso;
+    });
+    const payoutsList=Object.values(payoutsById).map(p=>({...p,monto:Math.round(p.monto*100)/100}));
+    const usedPayout=new Set();
+    bankCbDeposits.forEach(bd=>{
+      const p=payoutsList.find(po=>!usedPayout.has(po.id)&&Math.abs(po.monto-bd.abono)<=0.01);
+      if(p)usedPayout.add(p.id);
+      bankMatches.push({bank:bd,payout:p||null,ok:!!p});
+    });
+  }
+
+  const bankCardHtml=hasBank?`
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">Banco recibido</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(bankCbTotal)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">${bankCbDeposits.length} depósito${bankCbDeposits.length!==1?'s':''} SPEI CloudBeds</p>
+      </div>`:'';
+  const bankVerifHtml=hasBank?`
+        <div style="background:${bankCuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${bankCuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${bankCuadre?'#1D9E75':'#E24B4A'}">${bankCuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${bankCuadre?'#085041':'#7A1F1D'}">CloudBeds neto vs Banco BBVA</p>
+            <p style="font-size:11px;color:${bankCuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(cbNeto)} vs ${fmt(bankCbTotal)} · ${bankCuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(cbNeto-bankCbTotal))}</p>
+          </div>
+        </div>`:'';
+
+  const rowsHtml=matches.map(m=>{
+    const cb=m.cb;
+    const ok=!!m.match;
+    const bg=ok?'#E1F5EE':'#FCE8E6';
+    const matchTxt=ok
+      ? `<div style="font-size:12px"><strong>${m.match.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${m.match.tipo} · ${fmtDate(m.match.fecha)||'—'}</div>`
+      : `<div style="font-size:11px;color:#7A1F1D">${m.how==='ambiguo'?'⚠ Varios candidatos en la app':'✗ Sin reserva con monto coincidente'}</div>`;
+    const howTag=ok?`<span style="font-size:10px;background:#fff;border:0.5px solid #ddd;padding:1px 6px;border-radius:4px;color:#666">${m.how}</span>`:'';
+    return `<tr style="background:${bg}">
+      <td style="padding:7px 8px;font-size:12px">${cb.txDate||'—'}</td>
+      <td style="padding:7px 8px;font-size:12px">${cb.guestName||'<span style="color:#999;font-style:italic">(sin nombre)</span>'}${cb.cbId?'<br><code style="font-size:10px;color:#666">'+cb.cbId+'</code>':''}</td>
+      <td style="padding:7px 8px">${matchTxt} ${howTag}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(cb.montoCobrado)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:11px;color:#888">${fmt(cb.tasa)}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px;font-weight:600">${fmt(cb.montoDesembolso)}</td>
+      <td style="padding:7px 8px;text-align:center;color:${ok?'#1D9E75':'#E24B4A'};font-size:14px">${ok?'✓':'✗'}</td>
+    </tr>`;
+  }).join('');
+  const huerfAppHtml=huerfanosApp.map(p=>`
+    <tr style="background:#FFF4E5">
+      <td style="padding:7px 8px;font-size:12px">${fmtDate(p.fecha)||'—'}</td>
+      <td style="padding:7px 8px;font-size:12px;color:#999;font-style:italic">(sin transacción CloudBeds)</td>
+      <td style="padding:7px 8px"><div style="font-size:12px"><strong>${p.reserva.nombre}</strong></div><div style="font-size:11px;color:#666">${p.tipo}</div></td>
+      <td style="padding:7px 8px;text-align:right;font-size:12px">${fmt(p.monto)}</td>
+      <td style="padding:7px 8px"></td><td style="padding:7px 8px"></td>
+      <td style="padding:7px 8px;text-align:center;color:#BA7517;font-size:14px">⚠</td>
+    </tr>`).join('');
+
+  block.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:24px 0 6px;color:#1A1916">CloudBeds</h3>
+    <div style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap">
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">App (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(appBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">CloudBeds (bruto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0">${fmt(cbBruto)}</p>
+      </div>
+      <div style="flex:1;min-width:140px;background:#fff;border:0.5px solid #e0e0da;border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:#888;margin:0">CloudBeds (neto)</p>
+        <p style="font-size:19px;font-weight:600;margin:2px 0 0;color:#1860A5">${fmt(cbNeto)}</p>
+        <p style="font-size:10px;color:#888;margin:2px 0 0">−comisión ${fmt(cbFee)}</p>
+      </div>
+      ${bankCardHtml}
+      <div style="flex:1;min-width:160px;background:${cuadre?'#E1F5EE':'#FCE8E6'};border:0.5px solid ${cuadre?'#1D9E75':'#E24B4A'};border-radius:8px;padding:10px 14px">
+        <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:0">Estado</p>
+        <p style="font-size:17px;font-weight:600;margin:2px 0 0;color:${cuadre?'#085041':'#7A1F1D'}">${cuadre?'✓ Cuadra':'✗ Diferencia '+fmt(appBruto-cbBruto)}</p>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 8px">Verificaciones</p>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        <div style="background:${cuadre?'#E1F5EE':'#FCE8E6'};border-left:3px solid ${cuadre?'#1D9E75':'#E24B4A'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${cuadre?'#1D9E75':'#E24B4A'}">${cuadre?'✓':'✗'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${cuadre?'#085041':'#7A1F1D'}">App vs CloudBeds (bruto)</p>
+            <p style="font-size:11px;color:${cuadre?'#085041':'#7A1F1D'};margin:2px 0 0">${fmt(appBruto)} vs ${fmt(cbBruto)} · ${cuadre?'diferencia menor a $1':'diferencia de '+fmt(Math.abs(appBruto-cbBruto))}</p>
+          </div>
+        </div>
+        ${bankVerifHtml}
+        <div style="background:${huerfTotal===0?'#E1F5EE':'#FFF4E5'};border-left:3px solid ${huerfTotal===0?'#1D9E75':'#BA7517'};padding:8px 12px;border-radius:0 6px 6px 0;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:${huerfTotal===0?'#1D9E75':'#BA7517'}">${huerfTotal===0?'✓':'⚠'}</span>
+          <div style="flex:1">
+            <p style="font-size:13px;font-weight:600;margin:0;color:${huerfTotal===0?'#085041':'#634009'}">Huérfanos</p>
+            <p style="font-size:11px;color:${huerfTotal===0?'#085041':'#634009'};margin:2px 0 0">${huerfTotal===0?'Todas las transacciones emparejadas':failMatches.length+' CloudBeds sin reserva · '+huerfanosApp.length+' reserva sin CloudBeds'}</p>
+          </div>
+        </div>
+        <div style="background:#F5F4F0;padding:8px 12px;border-radius:6px;display:flex;align-items:center;gap:10px">
+          <span style="font-size:16px;color:#888">i</span>
+          <div style="flex:1">
+            <p style="font-size:12px;color:#666;margin:0">Total emparejado: ${okMatches.length}/${matches.length} transacciones CloudBeds${hasBank?' · '+bankMatches.filter(b=>b.ok).length+'/'+bankMatches.length+' depósitos banco':''}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Detalle CloudBeds — ${cbAll.length} transacciones${huerfanosApp.length>0?' + '+huerfanosApp.length+' huérfanos en app':''}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha cobro</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Huésped CloudBeds</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Reserva App</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Bruto</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fee</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Neto</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+        </tr></thead>
+        <tbody>${rowsHtml||'<tr><td colspan="7" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin transacciones CloudBeds en este mes</td></tr>'}${huerfAppHtml}</tbody>
+      </table>
+    </div>
+    ${hasBank?`
+    <div class="card" style="padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 10px">Depósitos CloudBeds en banco BBVA — ${bankCbDeposits.length}</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto banco</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">↔ Payout CloudBeds</th>
+          <th style="text-align:center;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Estado</th>
+        </tr></thead>
+        <tbody>
+          ${bankMatches.map(b=>{
+            const bg=b.ok?'#E1F5EE':'#FCE8E6';
+            const po=b.payout;
+            return `<tr style="background:${bg}">
+              <td style="padding:7px 8px">${b.bank.fecha}</td>
+              <td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(b.bank.abono)}</td>
+              <td style="padding:7px 8px">${po?`<div style="font-size:11px"><code style="font-size:10px;color:#666">${po.id.substring(0,20)}...</code></div><div style="font-size:11px;color:#666">Desembolso: ${po.fecha} · ${fmt(po.monto)}</div>`:'<span style="color:#7A1F1D;font-size:11px">✗ Sin payout coincidente</span>'}</td>
+              <td style="padding:7px 8px;text-align:center;color:${b.ok?'#1D9E75':'#E24B4A'};font-size:14px">${b.ok?'✓':'✗'}</td>
+            </tr>`;
+          }).join('')||'<tr><td colspan="4" style="padding:14px;text-align:center;color:#888;font-size:12px">Sin depósitos CloudBeds en el banco este mes</td></tr>'}
         </tbody>
       </table>
     </div>`:''}`;
