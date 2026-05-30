@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.15.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.15.2-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.15.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.15.2-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -4782,7 +4782,7 @@ function _renderCmReconcil(prefix){
   return warning+`<div style="${mismatchMonth?'opacity:.5;pointer-events:none':''}">${tableHtml}</div>`;
 }
 
-function exportarCierreExcel(modo){
+async function exportarCierreExcel(modo){
   modo=modo||'ops';
   const isConta=modo==='conta';
   // For Conta: exclude these payment methods from all sheets
@@ -4830,6 +4830,16 @@ function exportarCierreExcel(modo){
       {v:Math.round(((r.hospTotal||r.total||0)+(r.consumoCena||0))*100)/100,t:'n',z:'#,##0.00',s:{...cs(bg)}},
     ]);
   });
+  // Fila TOTAL con fórmulas (Base/ISH/IVA/Total Reserva = columnas G,H,I,J)
+  {
+    const f=2,l=resRows.length;
+    const tS={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+    const tN=col=>({f:`SUM(${col}${f}:${col}${l})`,v:0,t:'n',z:'#,##0.00',s:tS});
+    if(l>=f)resRows.push([
+      {v:'TOTAL',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},
+      tN('G'),tN('H'),tN('I'),tN('J')
+    ]);
+  }
   const wsRes=XLSX.utils.aoa_to_sheet(resRows);
   wsRes['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}];
   wsRes['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
@@ -4900,9 +4910,19 @@ function exportarCierreExcel(modo){
     if(!isConta)rowCells.push({v:rep?'Sí':'No',s:cs(rowBg)});
     detData.push(rowCells);
   });
+  // Fila TOTAL del detalle con fórmulas (Base/ISH/IVA/Exento/Total pago = K,L,M,N,O)
+  {
+    const f=2,l=detData.length;
+    const tS={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+    const tN=col=>({f:`SUM(${col}${f}:${col}${l})`,v:0,t:'n',z:'#,##0.00',s:tS});
+    if(l>=f)detData.push([
+      {v:'TOTAL',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},
+      tN('K'),tN('L'),tN('M'),tN('N'),tN('O')
+    ]);
+  }
   // --- Resumen por Concepto CFDI (formulas SUMIF) at the bottom of Detalle Pagos ---
   // Columns: F=Concepto CFDI, K=Base, L=ISH, M=IVA, N=Exento, O=Total
-  const detDetailFirst=2, detDetailLast=detData.length;
+  const detDetailFirst=2, detDetailLast=detData.length-1; // -1 para excluir la fila TOTAL recién agregada
   const detConceptosUnicos=[...new Set(rowsSorted.map(r=>conceptoCFDIof(r)||'(sin concepto)'))].sort((a,b)=>a.localeCompare(b));
   detData.push([]);
   detData.push([{v:'Resumen por Concepto CFDI',s:{font:{bold:true,sz:12}}}]);
@@ -4910,7 +4930,7 @@ function exportarCierreExcel(modo){
   detData.push([
     {v:'Concepto CFDI',s:detSumHdrStyle},{v:'Base',s:detSumHdrStyle},{v:'ISH',s:detSumHdrStyle},{v:'IVA',s:detSumHdrStyle},{v:'Exento',s:detSumHdrStyle},{v:'Total',s:detSumHdrStyle}
   ]);
-  const detSumNum={t:'n',z:'#,##0.00'};
+  const detSumNum={v:0,t:'n',z:'#,##0.00'};
   detConceptosUnicos.forEach(c=>{
     const lit='"'+String(c).replace(/"/g,'""')+'"';
     const rng=(col)=>`${col}${detDetailFirst}:${col}${detDetailLast}`;
@@ -4923,7 +4943,8 @@ function exportarCierreExcel(modo){
       {f:`SUMIF(${rng('F')},${lit},${rng('O')})`,...detSumNum},
     ]);
   });
-  const detSumFirst=detDetailLast+4, detSumLast=detSumFirst+detConceptosUnicos.length-1;
+  // detDetailLast = última fila de datos; +1 fila TOTAL detalle, +1 separador, +1 título, +1 header → primer concepto en +5
+  const detSumFirst=detDetailLast+5, detSumLast=detSumFirst+detConceptosUnicos.length-1;
   detData.push([
     {v:'TOTAL',s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
     {f:`SUM(B${detSumFirst}:B${detSumLast})`,...detSumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
@@ -5004,10 +5025,21 @@ function exportarCierreExcel(modo){
     pxcData.push(rowCells);
   });
 
+  // Fila TOTAL del detalle con fórmulas (Base/ISH/IVA/Exento/Total pago = J,K,L,M,N)
+  {
+    const f=2,l=pxcData.length;
+    const tS={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+    const tN=col=>({f:`SUM(${col}${f}:${col}${l})`,v:0,t:'n',z:'#,##0.00',s:tS});
+    if(l>=f)pxcData.push([
+      {v:'TOTAL',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},
+      tN('J'),tN('K'),tN('L'),tN('M'),tN('N')
+    ]);
+  }
+
   // --- Resumen por Concepto CFDI (formulas SUMIF) at the bottom of PagoxConcepto ---
   // Columns in PagoxConcepto (1-based):
   // F=Concepto CFDI, J=Base pago, K=ISH pago, L=IVA pago, M=Exento pago, N=Total pago
-  const pxcDetailFirst=2, pxcDetailLast=pxcData.length; // sheet row numbers
+  const pxcDetailFirst=2, pxcDetailLast=pxcData.length-1; // -1 para excluir la fila TOTAL recién agregada
   const pxcConceptosUnicos=[...new Set(pxcRows.map(g=>g.conceptoCFDI||'(sin concepto)'))].sort((a,b)=>a.localeCompare(b));
   // blank separator
   pxcData.push([]);
@@ -5019,7 +5051,7 @@ function exportarCierreExcel(modo){
   pxcData.push([
     {v:'Concepto CFDI',s:sumHdrStyle},{v:'Base',s:sumHdrStyle},{v:'ISH',s:sumHdrStyle},{v:'IVA',s:sumHdrStyle},{v:'Exento',s:sumHdrStyle},{v:'Total',s:sumHdrStyle}
   ]);
-  const sumNum={t:'n',z:'#,##0.00'};
+  const sumNum={v:0,t:'n',z:'#,##0.00'};
   pxcConceptosUnicos.forEach(c=>{
     const lit='"'+String(c).replace(/"/g,'""')+'"';
     const rng=(col)=>`${col}${pxcDetailFirst}:${col}${pxcDetailLast}`;
@@ -5033,7 +5065,8 @@ function exportarCierreExcel(modo){
     ]);
   });
   // TOTAL row
-  const pxcSumFirst=pxcDetailLast+4, pxcSumLast=pxcSumFirst+pxcConceptosUnicos.length-1;
+  // pxcDetailLast = última fila de datos; +1 fila TOTAL detalle, +1 separador, +1 título, +1 header → primer concepto en +5
+  const pxcSumFirst=pxcDetailLast+5, pxcSumLast=pxcSumFirst+pxcConceptosUnicos.length-1;
   pxcData.push([
     {v:'TOTAL',s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
     {f:`SUM(B${pxcSumFirst}:B${pxcSumLast})`,...sumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
@@ -5135,7 +5168,7 @@ function exportarCierreExcel(modo){
   // Fila TOTAL con fórmulas Excel (suma solo las filas de egresos normales)
   const egFirst=2, egLast=egData.length; // filas de datos (sin encabezado)
   const egTotStyle={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
-  const egTotNum=col=>({f:`SUM(${col}${egFirst}:${col}${egLast})`,t:'n',z:'#,##0.00',s:egTotStyle});
+  const egTotNum=col=>({f:`SUM(${col}${egFirst}:${col}${egLast})`,v:0,t:'n',z:'#,##0.00',s:egTotStyle});
   egData.push([
     {v:'TOTAL',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},
     egTotNum('K'),egTotNum('L'),egTotNum('M'),egTotNum('N'),
@@ -5171,7 +5204,7 @@ function exportarCierreExcel(modo){
     // Totales con fórmulas Excel
     const first=2,last=retData.length;
     const tStyle={font:{bold:true},fill:{fgColor:{rgb:RGRN}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
-    const tNum={t:'n',z:'#,##0.00',s:tStyle};
+    const tNum={v:0,t:'n',z:'#,##0.00',s:tStyle};
     retData.push([
       {v:'TOTAL',s:tStyle},{v:'',s:tStyle},{v:'',s:tStyle},
       {f:`SUM(D${first}:D${last})`,...tNum},
@@ -5210,8 +5243,37 @@ function exportarCierreExcel(modo){
     }
   }
 
-  XLSX.writeFile(wb,'Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx');
-  showAlert('Excel exportado','success');
+  // xlsx-js-style 1.2.0 no escribe freeze panes; se inyectan post-proceso en el XML
+  const nombreArchivo='Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx';
+  try{
+    const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+    const JSZip=await loadJSZip();
+    const zip=await JSZip.loadAsync(buf);
+    const hojas=Object.keys(zip.files).filter(f=>/^xl\/worksheets\/sheet\d+\.xml$/.test(f));
+    const pane='<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/>';
+    for(const h of hojas){
+      let xml=await zip.file(h).async('string');
+      if(xml.includes('<pane '))continue;
+      if(/<sheetView[^>]*\/>/.test(xml)){
+        // sheetView auto-cerrado → expandir e insertar pane
+        xml=xml.replace(/<sheetView([^>]*)\/>/, '<sheetView$1>'+pane+'</sheetView>');
+      }else{
+        // sheetView con contenido → insertar pane justo tras la apertura
+        xml=xml.replace(/(<sheetView[^>]*>)/, '$1'+pane);
+      }
+      zip.file(h,xml);
+    }
+    const out=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(out);
+    const a=document.createElement('a');
+    a.href=url;a.download=nombreArchivo;document.body.appendChild(a);a.click();
+    document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);
+    showAlert('Excel exportado','success');
+  }catch(e){
+    console.error('Error exportando Excel con freeze, fallback:',e);
+    XLSX.writeFile(wb,nombreArchivo);
+    showAlert('Excel exportado','success');
+  }
 }
 
 // ============================================================
