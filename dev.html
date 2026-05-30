@@ -71,8 +71,8 @@ input[readonly]{background:#f5f5f3;color:#555}
 .divider::before,.divider::after{content:'';flex:1;height:0.5px;background:#e8e8e2}
 .pill{display:inline-flex;align-items:center;gap:5px;background:#E1F5EE;border:0.5px solid #5DCAA5;border-radius:20px;padding:3px 9px;font-size:11px;color:#085041;margin-top:5px}
 .pill strong{color:#04342C}.pill button{background:none;border:none;cursor:pointer;color:#0F6E56;font-size:14px;line-height:1;padding:0 0 0 2px}
-.lineas-hdr{display:grid;grid-template-columns:2fr 1fr 50px 70px 90px 28px;gap:5px;padding:3px 6px;font-size:10px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid #e0e0da;margin-bottom:3px}
-.linea-row{display:grid;grid-template-columns:2fr 1fr 50px 70px 90px 28px;gap:5px;align-items:center;padding:3px 4px;border-radius:4px}
+.lineas-hdr{display:grid;grid-template-columns:1.6fr 1fr 46px 64px 88px 104px 26px;gap:5px;padding:3px 6px;font-size:10px;color:#888;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-bottom:0.5px solid #e0e0da;margin-bottom:3px}
+.linea-row{display:grid;grid-template-columns:1.6fr 1fr 46px 64px 88px 104px 26px;gap:5px;align-items:center;padding:3px 4px;border-radius:4px}
 .linea-row:hover{background:#f5f5f3}
 .linea-row input,.linea-row select{font-size:12px;height:29px;padding:4px 6px}
 .dot-cb{width:18px;height:12px;border-radius:3px;border:0.5px solid #C8C6BE;display:inline-block;margin-right:4px;vertical-align:middle}
@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.7.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.9.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.7.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.9.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -374,24 +374,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <div><label>Categoría</label><select id="sel-cat" onchange="onCatChange(this.value)"><option value="">— Categoría —</option></select></div>
         <div><label>Producto</label><select id="sel-prod" disabled onchange="onProdSel(this.value)"><option value="">— Producto —</option></select></div>
       </div>
-      <div class="frow four" style="margin-bottom:8px">
+      <div class="frow three" style="margin-bottom:8px">
         <div><label>Cantidad</label><input type="number" id="inp-qty" min="1" value="1" oninput="recalcPrev()"></div>
         <div><label>Precio unit.</label><input type="number" id="inp-precio" placeholder="0" oninput="recalcPrev()"></div>
         <div><label>Subtotal</label><input type="text" id="inp-sub" readonly></div>
-        <div><label>Método pago</label>
-          <select id="inp-pago">
-            <option value="tbd">TBD</option>
-            <option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option>
-            <option value="transferencia">Transferencia</option><option value="debito">Débito</option>
-            <option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option>
-          </select>
-        </div>
       </div>
       <div style="display:flex;justify-content:flex-end"><button class="btn btn-primary" onclick="addLinea()">+ Agregar a la lista</button></div>
     </div>
     <div class="card" id="lineas-card" style="display:none">
       <p class="ctitle">Lista de consumos</p>
-      <div class="lineas-hdr"><span>Producto</span><span>Categ.</span><span>Cant.</span><span>Precio</span><span>Pago</span><span></span></div>
+      <div class="lineas-hdr"><span>Producto</span><span>Categ.</span><span>Cant.</span><span>Precio</span><span>Pago</span><span>Fecha</span><span></span></div>
       <div id="lineas-list"></div>
       <div style="background:#f5f5f3;border-radius:6px;padding:9px 12px;margin-top:9px">
         <div class="tline sub"><span>Subtotal</span><span id="c-sub">$0</span></div>
@@ -400,7 +392,14 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       </div>
     </div>
     <div class="card">
-      <div class="frow"><div><label>Fecha de pago (referencia)</label><input type="date" id="c-fecha"></div><div></div></div>
+      <p class="ctitle">Pago predeterminado</p>
+      <div class="frow"><div><label>Fecha de pago</label><input type="date" id="c-fecha-def" onchange="onDefPagoChange()"></div><div><label>Método</label>
+        <select id="c-metodo-def" onchange="onDefPagoChange()">
+          <option value="tbd">Por definir</option>
+          <option value="efectivo">Efectivo</option><option value="efectivo-nd">Efectivo ND</option>
+          <option value="transferencia">Transferencia</option><option value="debito">Débito</option>
+          <option value="mercadopago">Mercado Pago</option><option value="stripe">Stripe</option><option value="cloudbeds">Cloudbeds</option>
+        </select></div></div>
       <div class="frow full"><label>Nota</label><input type="text" id="c-nota" placeholder="Opcional"></div>
       <div class="acts"><button class="btn btn-primary" onclick="guardarConsumo()">✓ Guardar consumo</button></div>
     </div>
@@ -879,7 +878,7 @@ function login(rol){
     if(!gd(KP).length)sd(KP,DP);
     if(!gd(KH).length)sd(KH,DEFAULT_HABS);
     if(!gd(KR).length)sd(KR,[...CLOUDBEDS_RES]);
-    document.getElementById('c-fecha').value=today();
+    document.getElementById('c-fecha-def').value=today();
     document.getElementById('r-antifecha').value='';
     populateAll();renderDash();
     document.getElementById('loading-overlay').style.display='none';
@@ -891,7 +890,7 @@ function login(rol){
     showAlert('Error conectando con Google Sheets','error');
     if(!gd(KP).length)sd(KP,DP);
     if(!gd(KH).length)sd(KH,DEFAULT_HABS);
-    document.getElementById('c-fecha').value=today();
+    document.getElementById('c-fecha-def').value=today();
     document.getElementById('r-antifecha').value='';
     populateAll();renderDash();
   });
@@ -978,10 +977,16 @@ function getMonthlyData(months){
     // Hospedaje base (sin IVA, sin ISH) - proporcional al pago
     const hospBase=hospRes.reduce((s,r)=>s+Math.round((r.base||0)*(r.total>0?(r.anticipo||0)/r.total:0)*100)/100,0)
       +hospResSald.reduce((s,r)=>s+Math.round((r.base||0)*(r.total>0?(r.saldo||0)/r.total:0)*100)/100,0);
-    // Consumos (con IVA)
-    const consumos=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+(c.total||0),0);
-    // Consumos base (sin IVA)
-    const consumosBase=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+Math.round((c.subtotal||c.total/1.16||0)*100)/100,0);
+    // Consumos: sumar cada item por su fechaPago (no por la fecha general del consumo)
+    let consumos=0, consumosBase=0;
+    cons.forEach(c=>{(c.items||[]).forEach(it=>{
+      if(!String(it.fechaPago||'').startsWith(prefix))return;
+      const bruto=(it.precio||0)*(it.cantidad||0);
+      consumos+=bruto;
+      consumosBase+=bruto/1.16;
+    });});
+    consumos=Math.round(consumos*100)/100;
+    consumosBase=Math.round(consumosBase*100)/100;
     // Egresos (con IVA) — exclude gastos personales unless toggle on; always exclude deducibles anuales
     const egrFilt=egr.filter(e=>(e.fecha||'').startsWith(prefix)&&!e.deducibleAnual&&(_dashEgrIncludeGP||!e.gastoPersonal));
     const egresos=egrFilt.reduce((s,e)=>s+(e.total||0),0);
@@ -1103,9 +1108,18 @@ function dashRenderChart(gId,months){
       if(e.gastoPersonal)catPers[e.categoria]=(catPers[e.categoria]||0)+(e.subtotal||0);
     });
     const top=Object.entries(catTot).sort((a,b)=>b[1]-a[1]).slice(0,8);
-    const tot=top.reduce((s,e)=>s+e[1],0);
-    const isPers=cat=>_dashEgrIncludeGP&&(catPers[cat]||0)>((catTot[cat]||0)/2);
-    mkChart('cv-g9',{type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{label:'Monto',data:top.map(e=>Math.round(e[1])),backgroundColor:top.map((e,i)=>isPers(e[0])?'#BA7517':(i===0?'#185FA5':i<3?'#378ADD':i<6?'#85B7EB':'#B5D4F4')),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.x.toLocaleString()+' · '+Math.round(ctx.parsed.x/tot*100)+'%'+(isPers(top[ctx.dataIndex][0])?' · personal':'')}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+    const labels9=top.map(e=>e[0]);
+    if(_dashEgrIncludeGP){
+      const operData=top.map(e=>Math.round((e[1]-(catPers[e[0]]||0))*100)/100);
+      const persData=top.map(e=>Math.round((catPers[e[0]]||0)*100)/100);
+      mkChart('cv-g9',{type:'bar',data:{labels:labels9,datasets:[
+        {label:'Operativo',data:operData,backgroundColor:'#378ADD',stack:'s',borderRadius:4,borderSkipped:false},
+        {label:'Personal',data:persData,backgroundColor:'#BA7517',stack:'s',borderRadius:4,borderSkipped:false}
+      ]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': $'+ctx.parsed.x.toLocaleString()}}},scales:{x:{stacked:true,grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{stacked:true,grid:{display:false},ticks:{font:{size:10}}}}}});
+    } else {
+      const tot=top.reduce((s,e)=>s+e[1],0);
+      mkChart('cv-g9',{type:'bar',data:{labels:labels9,datasets:[{label:'Monto',data:top.map(e=>Math.round(e[1])),backgroundColor:top.map((_,i)=>i===0?'#185FA5':i<3?'#378ADD':i<6?'#85B7EB':'#B5D4F4'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.x.toLocaleString()+' · '+Math.round(ctx.parsed.x/tot*100)+'%'}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+    }
   }
   if(gId==='g10'){
     mkChart('cv-g10',{type:'bar',data:{labels,datasets:[
@@ -1150,7 +1164,8 @@ function dashRenderChart(gId,months){
       // Map producto nombre -> conceptoCFDI (catálogo)
       const prods=gd(KP);
       const byNombre={};prods.forEach(p=>{if(p.nombre)byNombre[String(p.nombre).trim().toLowerCase()]=p;});
-      gd(KC).filter(c=>(c.fecha||'').slice(0,7)>=cutoff).forEach(c=>{(c.items||[]).forEach(it=>{
+      gd(KC).forEach(c=>{(c.items||[]).forEach(it=>{
+        if((String(it.fechaPago||'').slice(0,7))<cutoff)return;
         const monto=it.precio*it.cantidad;
         const p=byNombre[String(it.nombre||'').trim().toLowerCase()];
         let grupo;
@@ -1160,7 +1175,7 @@ function dashRenderChart(gId,months){
         catTot[grupo]=(catTot[grupo]||0)+monto;
       });});
     } else {
-      gd(KC).filter(c=>(c.fecha||'').slice(0,7)>=cutoff).forEach(c=>{(c.items||[]).forEach(it=>{const cat=it.cat||'otro';catTot[cat]=(catTot[cat]||0)+(it.precio*it.cantidad);});});
+      gd(KC).forEach(c=>{(c.items||[]).forEach(it=>{if((String(it.fechaPago||'').slice(0,7))<cutoff)return;const cat=it.cat||'otro';catTot[cat]=(catTot[cat]||0)+(it.precio*it.cantidad);});});
     }
     const entries=Object.entries(catTot).sort((a,b)=>b[1]-a[1]);
     _tot11=entries.reduce((s,e)=>s+e[1],0);
@@ -1176,7 +1191,8 @@ function renderDash(){
   const prefix=y+'-'+String(m+1).padStart(2,'0');
   const anti=res.filter(r=>(r.antiFecha||'').startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd').reduce((s,r)=>s+(r.anticipo||0),0);
   const saldos=res.filter(r=>(r.saldFecha||'').startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd').reduce((s,r)=>s+(r.saldo||0),0);
-  const totCons=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+(c.total||0),0);
+  let totCons=0;cons.forEach(c=>{(c.items||[]).forEach(it=>{if(String(it.fechaPago||'').startsWith(prefix))totCons+=(it.precio||0)*(it.cantidad||0);});});
+  totCons=Math.round(totCons*100)/100;
   const pendHosp=res.filter(r=>!r.saldFecha&&(r.saldo||0)>0).reduce((s,r)=>s+(r.saldo||0),0);
   const enCasa=res.filter(r=>r.estado==='checkin').length;
   const nReservaciones=res.filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.estado!=='cancelada').length;
@@ -2073,16 +2089,21 @@ function recalcPrev(){
   const q=parseInt(document.getElementById('inp-qty').value)||1,pr=parseFloat(document.getElementById('inp-precio').value)||0;
   document.getElementById('inp-sub').value=fmt(q*pr);
 }
+function onDefPagoChange(){
+  // Solo informativo: los nuevos productos heredan; no repinta líneas existentes (decisión 2a)
+}
 function addLinea(){
   const nombre=document.getElementById('p-search').value.trim()||(document.getElementById('sel-cat').value?catLabel(document.getElementById('sel-cat').value):'');
   if(!nombre){showAlert('Selecciona un producto','error');return}
   const cat=curProd?curProd.cat:(document.getElementById('sel-cat').value||'');
   const qty=parseInt(document.getElementById('inp-qty').value)||1;
   const precio=parseFloat(document.getElementById('inp-precio').value)||0;
-  const pago=document.getElementById('inp-pago').value;
-  lineas.push({id:Date.now()+Math.random(),cat,nombre:curProd?curProd.nombre:nombre,cantidad:qty,precio,pago});
+  // Hereda método y fecha de la cabecera "Pago predeterminado"
+  const pago=document.getElementById('c-metodo-def')?.value||'tbd';
+  const fechaDef=document.getElementById('c-fecha-def')?.value||'';
+  const fechaPago=(pago&&pago!=='tbd')?fechaDef:'';
+  lineas.push({id:Date.now()+Math.random(),cat,nombre:curProd?curProd.nombre:nombre,cantidad:qty,precio,pago,fechaPago});
   clearProd();document.getElementById('inp-qty').value=1;
-  // Keep the last selected método de pago for the next item (don't reset to tbd)
   renderLineas();
 }
 
@@ -2090,7 +2111,9 @@ function renderLineas(){
   const card=document.getElementById('lineas-card');
   if(!lineas.length){card.style.display='none';updateTotals();return}
   card.style.display='block';
-  document.getElementById('lineas-list').innerHTML=lineas.map(l=>`
+  document.getElementById('lineas-list').innerHTML=lineas.map(l=>{
+    const sinMetodo=(!l.pago||l.pago==='tbd');
+    return `
     <div class="linea-row">
       <span style="font-size:12px;font-weight:500">${l.nombre}</span>
       <span style="font-size:11px;color:#888">${catLabel(l.cat)}</span>
@@ -2099,12 +2122,22 @@ function renderLineas(){
       <select onchange="updL(${l.id},'pago',this.value)" style="font-size:11px">
         ${['tbd','cloudbeds','efectivo','efectivo-nd','transferencia','debito','mercadopago','stripe'].map(v=>`<option value="${v}" ${v===l.pago?'selected':''}>${pagoLabel(v)}</option>`).join('')}
       </select>
+      <input type="date" value="${l.fechaPago||''}" ${sinMetodo?'disabled style="font-size:11px;opacity:.4"':'style="font-size:11px"'} onchange="updL(${l.id},'fechaPago',this.value)">
       <button class="btn btn-sm" onclick="delLinea(${l.id})" title="Eliminar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;font-size:15px;opacity:.65">🗑</button>
-    </div>`).join('');
+    </div>`;}).join('');
   updateTotals();
 }
 
-function updL(id,f,v){const l=lineas.find(x=>x.id===id);if(!l)return;l[f]=f==='cantidad'?parseInt(v)||1:f==='precio'?parseFloat(v)||0:v;renderLineas()}
+function updL(id,f,v){
+  const l=lineas.find(x=>x.id===id);if(!l)return;
+  l[f]=f==='cantidad'?parseInt(v)||1:f==='precio'?parseFloat(v)||0:v;
+  // Regla: sin método => sin fecha. Al asignar método, hereda la fecha del default si la línea no tiene.
+  if(f==='pago'){
+    if(v==='tbd'){l.fechaPago='';}
+    else if(!l.fechaPago){l.fechaPago=document.getElementById('c-fecha-def')?.value||'';}
+  }
+  renderLineas();
+}
 function delLinea(id){lineas=lineas.filter(x=>x.id!==id);renderLineas()}
 function updateTotals(){
   const sub=lineas.reduce((s,l)=>s+(l.precio*l.cantidad),0);
@@ -2118,7 +2151,16 @@ async function guardarConsumo(){
   if(!nombre){showAlert('Indica el huésped','error');return;}
   if(!lineas.length){showAlert('Agrega al menos un producto','error');return;}
   const sub=lineas.reduce((s,l)=>s+(l.precio*l.cantidad),0);
-  const fecha=document.getElementById('c-fecha').value;
+  // Cada línea ya tiene su propia fechaPago (heredada del default o editada). Regla: sin método => sin fecha.
+  const _mkItems=()=>lineas.map(l=>({
+    id:l.id||(Date.now()+Math.random()),
+    cat:l.cat,nombre:l.nombre,cantidad:l.cantidad,precio:l.precio,
+    pago:l.pago,
+    fechaPago:(l.pago&&l.pago!=='tbd')?(l.fechaPago||''):''
+  }));
+  // c.fecha (en desuso, se mantiene en el Sheet): fecha de pago más temprana de los ítems
+  const _fechasPago=lineas.map(l=>(l.pago&&l.pago!=='tbd')?(l.fechaPago||''):'').filter(Boolean).sort();
+  const fecha=_fechasPago.length?_fechasPago[0]:(document.getElementById('c-fecha-def')?.value||'');
   const cons=gd(KC);
   const _backupC=JSON.parse(JSON.stringify(cons));
 
@@ -2128,12 +2170,7 @@ async function guardarConsumo(){
     if(idx>-1){
       cons[idx]={...cons[idx],
         fecha,
-        items:lineas.map(l=>({
-          id:l.id||(Date.now()+Math.random()),
-          cat:l.cat,nombre:l.nombre,cantidad:l.cantidad,precio:l.precio,
-          pago:l.pago,
-          fechaPago:l.pago&&l.pago!=='tbd'?fecha:''
-        })),
+        items:_mkItems(),
         subtotal:Math.round(sub/1.16*100)/100,
         iva:Math.round((sub-sub/1.16)*100)/100,
         total:sub,
@@ -2150,16 +2187,11 @@ async function guardarConsumo(){
     const reservaId=selGuest?selGuest.id:null;
     const existing=cons.find(c=>
       (reservaId&&c.reservaId===reservaId) ||
-      (!reservaId&&c.huesped===nombre&&c.fecha===fecha)
+      (!reservaId&&c.huesped===nombre)
     );
     if(existing){
       // Merge into existing group
-      const newItems=lineas.map(l=>({
-        id:l.id||(Date.now()+Math.random()),
-        cat:l.cat,nombre:l.nombre,cantidad:l.cantidad,precio:l.precio,
-        pago:l.pago,fechaPago:l.pago&&l.pago!=='tbd'?fecha:''
-      }));
-      existing.items=[...(existing.items||[]),...newItems];
+      existing.items=[...(existing.items||[]),..._mkItems()];
       const newTotal=existing.items.reduce((s,i)=>s+i.precio*i.cantidad,0);
       existing.subtotal=Math.round(newTotal/1.16*100)/100;
       existing.iva=Math.round((newTotal-newTotal/1.16)*100)/100;
@@ -2173,11 +2205,7 @@ async function guardarConsumo(){
         habitacion:selGuest?selGuest.habitacion:'',
         pais:selGuest?selGuest.pais:(document.getElementById('cons-pais')?.value||''),
         fecha,
-        items:lineas.map(l=>({
-          id:Date.now()+Math.random(),
-          cat:l.cat,nombre:l.nombre,cantidad:l.cantidad,precio:l.precio,
-          pago:l.pago,fechaPago:l.pago&&l.pago!=='tbd'?fecha:''
-        })),
+        items:_mkItems(),
         subtotal:Math.round(sub/1.16*100)/100,
         iva:Math.round((sub-sub/1.16)*100)/100,
         total:sub,
@@ -2358,7 +2386,8 @@ function showNuevoConsumo(){
   if(ah){ah.readOnly=false;ah.style.background='';ah.style.color='';}
   const titleEl=document.getElementById('cons-form-title');
   if(titleEl)titleEl.textContent='Nuevo consumo';
-  const fd=document.getElementById('c-fecha');if(fd)fd.value=today();
+  const fd=document.getElementById('c-fecha-def');if(fd)fd.value=today();
+  const md=document.getElementById('c-metodo-def');if(md)md.value='tbd';
   showTab('nuevo-consumo');
 }
 
@@ -2372,12 +2401,13 @@ function editConsumo(id){
 
   resetC();
 
-  // Fill date and note BEFORE showTab
-  const fd=document.getElementById('c-fecha');if(fd)fd.value=fmtDate(c.fecha)||today();
+  // Cabecera "Pago predeterminado" vacía al editar: cada ítem ya trae su fecha/método reales
+  const fd=document.getElementById('c-fecha-def');if(fd)fd.value='';
+  const md=document.getElementById('c-metodo-def');if(md)md.value='tbd';
   const fn2=document.getElementById('c-nota');if(fn2)fn2.value=c.nota||'';
 
-  // Set lineas AFTER resetC
-  lineas=(c.items||[]).map(i=>({...i}));
+  // Set lineas AFTER resetC — normalizar fechaPago a YYYY-MM-DD para el input date
+  lineas=(c.items||[]).map(i=>({...i,fechaPago:i.fechaPago?fmtDate(i.fechaPago):''}));
 
   // Find reservation
   const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
