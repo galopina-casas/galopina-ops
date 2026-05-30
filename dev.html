@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.9.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.10.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.9.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.10.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -916,7 +916,7 @@ function populateAll(){
 function populateIngMeses(){
   const s=new Set();
   gd(KR).forEach(r=>{if(r.antiFecha)s.add(r.antiFecha.slice(0,7));if(r.saldFecha)s.add(r.saldFecha.slice(0,7))});
-  gd(KC).forEach(c=>{if(c.fecha)s.add(c.fecha.slice(0,7))});
+  gd(KC).forEach(c=>{(c.items||[]).forEach(it=>{if(it.fechaPago){const fp=fmtDate(it.fechaPago).slice(0,7);if(fp)s.add(fp);}});});
   const sel=document.getElementById('ing-mes');if(!sel)return;
   sel.innerHTML='<option value="">Todos</option>'+[...s].sort().reverse().map(m=>{const[y,mo]=m.split('-');return`<option value="${m}">${MESES[parseInt(mo)-1]} ${y}</option>`}).join('');
 }
@@ -2252,12 +2252,22 @@ function resetC(){
 }
 
 
+// Meses (YYYY-MM) en que un consumo tiene ítems pagados (por fechaPago de cada ítem)
+function _consMesesPago(c){
+  const s=new Set();
+  (c.items||[]).forEach(it=>{const fp=it.fechaPago?fmtDate(it.fechaPago).slice(0,7):'';if(fp)s.add(fp);});
+  return [...s];
+}
+// ¿El consumo tiene algún ítem pagado en el mes/prefijo dado?
+function _consTienePagoEn(c,prefix){
+  return (c.items||[]).some(it=>it.fechaPago&&fmtDate(it.fechaPago).startsWith(prefix));
+}
 function initConsList(){
   const mesEl=document.getElementById('cons-mes');
   if(!mesEl||mesEl.options.length>1)return;
   const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   const cons=gd(KC);
-  const meses=new Set(cons.map(c=>(c.fecha||'').substring(0,7)).filter(Boolean));
+  const meses=new Set();cons.forEach(c=>_consMesesPago(c).forEach(m=>meses.add(m)));
   [...meses].sort().reverse().forEach(m=>{
     const [y,mo]=m.split('-');
     const opt=document.createElement('option');
@@ -2271,7 +2281,7 @@ function renderConsList(){
   if(mesEl){
     const currentValue=mesEl.value;
     const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-    const meses=new Set(gd(KC).map(c=>(c.fecha||'').substring(0,7)).filter(Boolean));
+    const meses=new Set();gd(KC).forEach(c=>_consMesesPago(c).forEach(m=>meses.add(m)));
     mesEl.innerHTML='<option value="">Todos los meses</option>'+[...meses].sort().reverse().map(m=>{
       const [y,mo]=m.split('-');
       return `<option value="${m}">${MN[parseInt(mo)-1]} ${y}</option>`;
@@ -2282,9 +2292,12 @@ function renderConsList(){
   const mes=document.getElementById('cons-mes')?.value||'';
   const split=document.getElementById('cons-split-mes')?.checked||false;
   let cons=[...gd(KC)];
-  if(mes) cons=cons.filter(c=>(c.fecha||'').startsWith(mes));
+  // Filtro por mes: el consumo aparece si tiene algún ítem pagado en ese mes (Decisión 1c)
+  if(mes) cons=cons.filter(c=>_consTienePagoEn(c,mes));
   if(search) cons=cons.filter(c=>(c.huesped||'').toLowerCase().includes(search));
-  cons.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  // Orden por fecha de pago más reciente del consumo (sin pagos al final)
+  const _maxPago=c=>{const ms=_consMesesPago(c);const fechas=(c.items||[]).map(it=>it.fechaPago?fmtDate(it.fechaPago):'').filter(Boolean).sort();return fechas.length?fechas[fechas.length-1]:'';};
+  cons.sort((a,b)=>(_maxPago(b)||'').localeCompare(_maxPago(a)||''));
   const box=document.getElementById('cons-list');
   if(!cons.length){box.innerHTML='<p class="empty">Sin consumos registrados</p>';return;}
 
@@ -2298,8 +2311,15 @@ function renderConsList(){
     const cid=c.id;
     const editBtn=`<button class="btn btn-sm" onclick="event.stopPropagation();editConsumo('`+cid+`')" title="Editar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;font-size:15px;opacity:.65">✏️</button>`;
     const delBtn=CU==='admin'?`<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delConsumo('`+cid+`')" title="Eliminar" style="width:28px;height:28px;border:none;background:transparent;cursor:pointer;font-size:15px;opacity:.65">🗑</button>`:'';
-    // Detail rows (read-only)
-    const detailRows=(c.items||[]).map(it=>`
+    // Detail rows (read-only) — ordenados por fecha de pago ascendente (recientes abajo; sin fecha al final)
+    const itemsOrden=[...(c.items||[])].sort((a,b)=>{
+      const fa=a.fechaPago?fmtDate(a.fechaPago):'', fb=b.fechaPago?fmtDate(b.fechaPago):'';
+      if(!fa&&!fb)return 0;
+      if(!fa)return 1;
+      if(!fb)return -1;
+      return fa.localeCompare(fb);
+    });
+    const detailRows=itemsOrden.map(it=>`
       <div style="display:grid;grid-template-columns:2fr 1fr 40px 70px 90px 80px;gap:4px;align-items:center;padding:5px 0;border-bottom:0.5px solid #F0EDE8;font-size:12px">
         <span style="font-weight:500">${it.nombre}</span>
         <span style="color:#888">${catLabel(it.cat)}</span>
@@ -2356,16 +2376,29 @@ function renderConsList(){
   if(split){
     const MN=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
     const groups={};
-    cons.forEach(c=>{const m=(c.fecha||'').substring(0,7)||'Sin fecha';if(!groups[m])groups[m]=[];groups[m].push(c);});
+    const pendientes=[];
+    cons.forEach(c=>{
+      const ms=_consMesesPago(c);
+      if(!ms.length){pendientes.push(c);return;}
+      // Decisión 1c: el consumo aparece (card completo) en cada mes donde tenga un pago
+      ms.forEach(m=>{if(!groups[m])groups[m]=[];groups[m].push(c);});
+    });
     const sorted=Object.keys(groups).sort().reverse();
-    box.innerHTML=sorted.map(m=>{
+    let html=sorted.map(m=>{
       const [y,mo]=m.split('-');
-      const label=mo?MN[parseInt(mo)-1]+' '+y:m;
+      const label=MN[parseInt(mo)-1]+' '+y;
       return `<div style="margin-bottom:1.2rem">
         <p style="font-size:11px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.06em;padding:4px 0;border-bottom:1px solid #EEE;margin-bottom:6px">${label}</p>
         ${groups[m].map(renderCard).join('')}
       </div>`;
     }).join('');
+    if(pendientes.length){
+      html+=`<div style="margin-bottom:1.2rem">
+        <p style="font-size:11px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.06em;padding:4px 0;border-bottom:1px solid #EEE;margin-bottom:6px">Pendientes (sin pago)</p>
+        ${pendientes.map(renderCard).join('')}
+      </div>`;
+    }
+    box.innerHTML=html;
   } else {
     box.innerHTML=cons.map(renderCard).join('');
   }
