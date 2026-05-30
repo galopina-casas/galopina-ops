@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.13.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.13.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.13.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.13.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -4368,7 +4368,7 @@ function openIngModal(gKey){
     const ish=Math.round(ishH*ratio*100)/100;
     const iva=Math.round(ivaH*ratio*100)/100;
     const isPend=it.pago==='pendiente'||it.pago==='tbd';
-    const pct=grandHosp>0?Math.round(monto/grandHosp*100)+'%':'';
+    const pct=hospTotalR>0?Math.round(montoH/hospTotalR*100)+'%':'';
     hospRows+=`<tr>
       <td style="${tdL};border-left:3px solid #185FA5${isPend?';color:#E24B4A':''}">${it.label}<span style="font-size:10px;color:#AAA;margin-left:6px">${pct}</span></td>
       <td style="${td};${muted}">—</td>
@@ -4383,9 +4383,10 @@ function openIngModal(gKey){
     if(cenasTotal>0){
       const cbase=Math.round(montoC/1.16*100)/100;
       const civa=Math.round((montoC-cbase)*100)/100;
+      const pctC=cenasTotal>0?Math.round(montoC/cenasTotal*100)+'%':'';
       sumCenBase+=cbase;sumCenIva+=civa;sumCenTot+=montoC;
       cenasRows+=`<tr>
-        <td style="${tdL};border-left:3px solid #1D9E75${isPend?';color:#E24B4A':''}">${it.label.replace('hospedaje','cena').replace('Hospedaje','Cena')}<span style="font-size:10px;color:#AAA;margin-left:6px">${pct}</span></td>
+        <td style="${tdL};border-left:3px solid #1D9E75${isPend?';color:#E24B4A':''}">${it.label.replace('hospedaje','cena').replace('Hospedaje','Cena')}<span style="font-size:10px;color:#AAA;margin-left:6px">${pctC}</span></td>
         <td style="${td};${muted}">—</td>
         <td style="${td}">${fmt(cbase)}</td>
         <td style="${td};${muted}">—</td>
@@ -4944,6 +4945,16 @@ function exportarCierreExcel(modo){
   let _pxcLast=null,_pxcTog=false;
   // For Conta: Nota only "Anticipo Hospedaje/Cena" or "Saldo Hospedaje/Cena" for reservation payments; empty otherwise
   const RESERVATION_NOTAS=['Anticipo Hospedaje','Anticipo Cena','Saldo Hospedaje','Saldo Cena'];
+  const CENA_NOTAS=['Anticipo Cena','Saldo Cena'];
+  // Reservas que tienen cenas incluidas Y otros consumos (no-cena): en Conta, al agrupar por CFDI
+  // la nota "Anticipo/Saldo Cena" se ve incoherente, así que se omite para esas reservas.
+  const _cenaByRes={},_otroConsByRes={};
+  rowsSorted.forEach(r=>{
+    const rid=String(r.cbId||r.id||'');
+    if(r.tipo==='consumo'&&r.cat==='cenas')_cenaByRes[rid]=true;
+    if(r.tipo==='consumo'&&r.cat&&r.cat!=='cenas')_otroConsByRes[rid]=true;
+  });
+  const _omitCenaNota=rid=>_cenaByRes[rid]&&_otroConsByRes[rid];
   pxcRows.forEach(g=>{
     const rid=String(g.cbId||'');
     if(rid!==_pxcLast){_pxcTog=!_pxcTog;_pxcLast=rid;}
@@ -4952,7 +4963,8 @@ function exportarCierreExcel(modo){
     const nm=(bg,v)=>({v:r2(v),t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
     let nota=[...g.notaSet].join(' + ');
     if(isConta){
-      const notas=[...g.notaSet].filter(n=>RESERVATION_NOTAS.includes(n));
+      const omitCena=_omitCenaNota(String(g.cbId||''));
+      const notas=[...g.notaSet].filter(n=>RESERVATION_NOTAS.includes(n)&&!(omitCena&&CENA_NOTAS.includes(n)));
       nota=notas.join(' + ');
     }
     const rowCells=[
