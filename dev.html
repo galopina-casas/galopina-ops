@@ -80,6 +80,9 @@ input[readonly]{background:#f5f5f3;color:#555}
 .dseg{display:flex;background:var(--color-background-secondary);border-radius:6px;padding:2px;gap:2px}
 .dsb{border:none;background:none;padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;color:var(--color-text-secondary);white-space:nowrap}
 .dsb.on{background:var(--color-background-primary);color:var(--color-text-primary);font-weight:500;border:0.5px solid var(--color-border-tertiary)}
+.gres-badge{display:inline-flex;align-items:center;gap:6px;background:transparent;color:var(--color-text-secondary);border:1px solid var(--color-border-secondary);padding:5px 12px;border-radius:999px;font-size:12px;cursor:pointer;white-space:nowrap;line-height:1}
+.gres-badge:hover{background:var(--color-background-secondary)}
+.gres-badge.on{background:#E6F1FB;color:#0C447C;border:1px solid #185FA5;font-weight:500}
 .res-item{padding:9px 10px;border:0.5px solid #e0e0da;border-radius:6px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .import-zone{border:1.5px dashed #d5d5cf;border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer}
 .import-zone:hover{border-color:#E07A1F}
@@ -123,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.3.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.5.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.3.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.5.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1022,7 +1025,25 @@ function dashRenderChart(gId,months){
     mkChart('cv-g4',{type:'pie',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols.slice(0,entries.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.parsed}}}}});
   }
   if(gId==='g6'){
-    mkChart('cv-g6',{type:'bar',data:{labels,datasets:[{label:'Noches',data:d.map(x=>x.nRes>0?Math.round(x.noches/x.nRes*10)/10:0),backgroundColor:'#85B7EB',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.y.toFixed(1)+' noches'}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{font:{size:11}},border:{display:false}}}}});
+    const totNoches=d.reduce((s,x)=>s+(x.noches||0),0);
+    const totRes=d.reduce((s,x)=>s+(x.nRes||0),0);
+    const avgPond=totRes>0?Math.round(totNoches/totRes*10)/10:0;
+    const avgLinePlugin={
+      id:'g6avgLine',
+      afterDraw:(c)=>{
+        if(!(avgPond>0))return;
+        const y=c.scales.y.getPixelForValue(avgPond);
+        const a=c.chartArea;const ctx=c.ctx;
+        ctx.save();
+        ctx.beginPath();ctx.setLineDash([5,4]);ctx.lineWidth=1.5;ctx.strokeStyle='#185FA5';
+        ctx.moveTo(a.left,y);ctx.lineTo(a.right,y);ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle='#185FA5';ctx.font='600 11px sans-serif';ctx.textAlign='right';ctx.textBaseline='bottom';
+        ctx.fillText('Promedio '+avgPond.toFixed(1),a.right-4,y-3);
+        ctx.restore();
+      }
+    };
+    mkChart('cv-g6',{type:'bar',data:{labels,datasets:[{label:'Noches',data:d.map(x=>x.nRes>0?Math.round(x.noches/x.nRes*10)/10:0),backgroundColor:'#85B7EB',borderRadius:4,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.y.toFixed(1)+' noches'}}},scales:{x:{grid:{display:false},ticks:{font:{size:11}}},y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{font:{size:11}},border:{display:false}}}},plugins:[avgLinePlugin]});
   }
   if(gId==='g7'){
     const paisCnt={};const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
@@ -1153,18 +1174,19 @@ function renderDash(){
 
   const ORIGEN_LABELS={directo:'Directo',booking:'Booking',airbnb:'Airbnb',whatsapp:'WhatsApp',agencia:'Agencia',tablet:'Tablet',otro:'Otro'};
   const legendHtml=Object.entries(ORIGEN_COLORS).map(([k,c])=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${ORIGEN_LABELS[k]||k}</span>`).join('');
-  document.getElementById('dash-gres').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+  const _icoCal='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  const _icoArr='<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><path d="M3 21h18"/><path d="M5 18l14-3"/><path d="M12 16.5l-3-6.5 1.8-.4 2.4 3.2 4-1 .8 1.5z"/></svg>';
+  document.getElementById('dash-gres').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">
     <div><p style="font-size:13px;font-weight:500;margin:0">Reservas recibidas por mes</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Detalle por origen</p></div>
     <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
-      <div style="display:flex;gap:6px">
-        <div class="dseg" id="seg-gres-f">
-          <button class="dsb on" onclick="setGresToggle(this,'reserva')">Fecha reserva</button>
-          <button class="dsb" onclick="setGresToggle(this,'llegada')">Fecha llegada</button>
-        </div>
-        ${dashSegHdr('gres',[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12)}
-      </div>
+      ${dashSegHdr('gres',[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12)}
       <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">${legendHtml}</div>
     </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px" id="seg-gres-f">
+    <span style="font-size:11px;color:var(--color-text-tertiary)">Agrupar por</span>
+    <button class="gres-badge on" onclick="setGresToggle(this,'reserva')">${_icoCal}Fecha reserva</button>
+    <button class="gres-badge" onclick="setGresToggle(this,'llegada')">${_icoArr}Fecha llegada</button>
   </div>
   <div style="position:relative;height:220px"><canvas id="cv-gres" role="img" aria-label="Reservas por mes y origen">Reservas por mes y origen.</canvas></div>`;
   document.getElementById('dash-g11').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Consumos por categoría</p>${seg12('g11')}</div><div style="position:relative;height:200px"><canvas id="cv-g11" role="img" aria-label="Consumos por categoría">Consumos por categoría.</canvas></div>`;
@@ -1180,16 +1202,7 @@ function renderDash(){
   }
 }
 function setGresToggle(btn,tipo){
-  document.querySelectorAll('#seg-gres-f .dsb').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  document.getElementById('gres-fecha-toggle').value=tipo;
-  dashRenderChart('gres',parseInt(document.querySelector('#seg-gres .dsb.on')?.textContent)||12);
-}
-// ── NUEVA RESERVA: multiple habitaciones ──
-
-
-function setGresToggle(btn,tipo){
-  document.querySelectorAll('#seg-gres-f .dsb').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('#seg-gres-f .gres-badge').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('gres-fecha-toggle').value=tipo;
   dashRenderChart('gres',parseInt(document.querySelector('#seg-gres .dsb.on')?.textContent)||12);
@@ -4306,7 +4319,7 @@ const CAT_LABELS={
   'Propina':'Propina','Rembolso daño':'Reembolso daño',
   'hospedaje':'Hospedaje'
 };
-const ORIGEN_COLORS={directo:'#1D9E75',booking:'#003580',airbnb:'#FF5A5F',whatsapp:'#25D366',agencia:'#888780',tablet:'#8B6914',otro:'#B4B2A9'};
+const ORIGEN_COLORS={directo:'#1D9E75',booking:'#003580',airbnb:'#FF5A5F',whatsapp:'#25D366',agencia:'#85B7EB',tablet:'#8B6914',otro:'#B4B2A9'};
 const ORDER=['efectivo','transferencia','debito','stripe','cloudbeds','mercadopago','efectivo-nd'];
 const METODOS_LABELS={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe',cloudbeds:'CloudBeds'};
 
