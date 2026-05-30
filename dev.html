@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.2-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.5-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.2-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.5-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -200,18 +200,18 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <span><span class="dot-cb"></span>Cloudbeds</span><span><span class="dot-m"></span>Manual</span>
     </div>
     <div class="card" style="padding:.6rem 1rem;margin-bottom:.5rem">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="text" id="res-search" placeholder="Buscar hu&#233;sped..." oninput="renderRes()"
-          style="flex:1;min-width:160px;height:32px;font-size:13px">
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;color:#888">Mes de salida
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Mes de salida</label>
         <select id="res-mes" onchange="renderRes()" style="height:32px;font-size:13px;min-width:150px">
           <option value="">Todos los meses</option>
-        </select></label>
+        </select></div>
+        <input type="text" id="res-search" placeholder="Buscar hu&#233;sped..." oninput="renderRes()"
+          style="flex:1;min-width:160px;height:32px;font-size:13px">
         <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;font-weight:normal;cursor:pointer">
           <input type="checkbox" id="res-split-mes" onchange="renderRes()" style="width:15px;height:15px;margin:0;cursor:pointer" checked>
           Agrupar por mes
         </label>
-        <button class="btn btn-sm" onclick="clearResFilters()" style="height:32px;padding:0 10px;margin-left:auto;white-space:nowrap">Limpiar &#x2715;</button>
+        <button class="btn btn-sm" onclick="clearResFilters()" title="Limpiar filtros" style="height:32px;padding:0 12px;margin-left:auto">&#x2715;</button>
       </div>
     </div>
     <div id="lista-res"></div>
@@ -330,18 +330,18 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     </div>
     <!-- Filtros -->
     <div class="card" style="padding:.6rem 1rem;margin-bottom:.5rem">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input type="text" id="cons-search" placeholder="Buscar hu&#233;sped..." oninput="renderConsList()"
-          style="flex:1;min-width:160px;height:32px;font-size:13px">
-        <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;color:#888">Mes de pago
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Mes de pago</label>
         <select id="cons-mes" onchange="renderConsList()" style="height:32px;font-size:13px;min-width:150px">
           <option value="">Todos los meses</option>
-        </select></label>
+        </select></div>
+        <input type="text" id="cons-search" placeholder="Buscar hu&#233;sped..." oninput="renderConsList()"
+          style="flex:1;min-width:160px;height:32px;font-size:13px">
         <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;font-weight:normal;cursor:pointer">
           <input type="checkbox" id="cons-split-mes" onchange="renderConsList()" style="width:15px;height:15px;margin:0;cursor:pointer" checked>
           Agrupar por mes
         </label>
-        <button class="btn btn-sm" onclick="clearConsFilters()" style="height:32px;padding:0 10px;margin-left:auto;white-space:nowrap">Limpiar &#x2715;</button>
+        <button class="btn btn-sm" onclick="clearConsFilters()" title="Limpiar filtros" style="height:32px;padding:0 12px;margin-left:auto">&#x2715;</button>
       </div>
     </div>
     <!-- Lista consumos -->
@@ -422,7 +422,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <div id="ing-pago-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:0.5px solid #e0e0da;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.08);z-index:10;margin-top:2px;padding:6px;max-height:240px;overflow-y:auto"></div>
         </div>
         <div style="flex:1;min-width:140px"><label>Agrupar por</label><select id="ing-group" onchange="renderIngresos()" style="font-size:13px"><option value="cards">Tarjetas</option><option value="byGuest">Tabla por huésped</option><option value="chrono">Tabla cronológica</option></select></div>
-        <button class="btn btn-sm" onclick="clearFiltros()">✕</button>
+        <button class="btn btn-sm" onclick="clearFiltros()" title="Limpiar filtros" style="height:32px;padding:0 12px;margin-left:auto">✕</button>
       </div>
     </div>
     <div id="ing-summary" class="ing-sum-grid"></div>
@@ -439,17 +439,20 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <input type="file" id="zip-input" accept=".zip" style="display:none" onchange="procesarZip(this)">
     <input type="file" id="pdf-input" accept=".pdf,.jpg,.jpeg,.png" multiple style="display:none" onchange="procesarPDFsNoCFDI(this)">
   </div>
-  <div style="display:flex;gap:8px;margin-bottom:10px;align-items:center;flex-wrap:wrap">
-    <label style="display:flex;align-items:center;gap:5px;font-size:13px;white-space:nowrap;margin:0;color:#888">Mes de Factura
+  <div class="card" style="padding:.6rem 1rem;margin-bottom:.5rem">
+  <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+    <div><label style="font-size:11px;color:#888;display:block;margin-bottom:3px">Mes de Factura</label>
     <select id="eg-mes" onchange="renderEgresos()" style="height:32px;font-size:13px">
       <option value="">Todos los meses</option>
-    </select></label>
+    </select></div>
     <input type="text" id="eg-search" placeholder="Buscar proveedor..." oninput="renderEgresos()" style="height:32px;font-size:13px;width:200px">
     <input type="text" id="eg-cat-filter" placeholder="Buscar categoría..." oninput="renderEgresos()" style="height:32px;font-size:13px;width:200px">
-    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;height:32px">
       <input type="checkbox" id="eg-solo-sincat" onchange="renderEgresos()" style="width:15px;height:15px">
       Solo sin categoría
     </label>
+    <button class="btn btn-sm" onclick="clearEgrFilters()" title="Limpiar filtros" style="height:32px;padding:0 12px;margin-left:auto">&#x2715;</button>
+  </div>
   </div>
   <div id="eg-metrics" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
   <div id="eg-progress" style="margin-bottom:12px"></div>
@@ -3149,6 +3152,13 @@ function initEgresos(){
   renderEgresos();
 }
 
+function clearEgrFilters(){
+  const m=document.getElementById('eg-mes');if(m)m.value='';
+  const s=document.getElementById('eg-search');if(s)s.value='';
+  const c=document.getElementById('eg-cat-filter');if(c)c.value='';
+  const sc=document.getElementById('eg-solo-sincat');if(sc)sc.checked=false;
+  renderEgresos();
+}
 function renderEgresos(){
   const mes=document.getElementById('eg-mes')?.value||'';
   const search=(document.getElementById('eg-search')?.value||'').toLowerCase();
