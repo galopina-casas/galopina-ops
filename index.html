@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.13.2</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.15.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.13.2</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.15.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -3430,6 +3430,9 @@ async function procesarPDFsNoCFDI(input){
       parsed.montoMXN=parsed.monedaOriginal==='MXN'?parsed.montoOriginal:null;
       // IVA from extraction (fallback to 0)
       parsed.iva=Number(parsed.iva)||0;
+      // Retención: IVA e ISR retenidos por separado (CFDI de Retención plataformas)
+      parsed.ivaRetenido=Number(parsed.ivaRetenido)||0;
+      parsed.isrRetenido=Number(parsed.isrRetenido)||0;
       // Apply existing rules
       const reglaMatch=gd(KRE).find(r=>r.proveedor&&parsed.proveedor&&parsed.proveedor.toLowerCase().includes(r.proveedor.toLowerCase()));
       parsed.categoria=reglaMatch?reglaMatch.categoria:'';
@@ -3515,11 +3518,18 @@ function mostrarPreviewNoCFDI(){
       <div style="margin-bottom:10px"><label style="${lbl}">Descripción</label><input value="${e.descripcion||''}" onchange="_nocfdiPending[${i}].descripcion=this.value" style="width:100%;font-size:13px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
         <div><label style="${lbl}">Categoría</label>
-          <select onchange="_nocfdiPending[${i}].categoria=this.value" style="width:100%;font-size:13px">
+          <select onchange="_nocfdiPending[${i}].categoria=this.value;_toggleRetPreview(${i},this.value)" style="width:100%;font-size:13px">
             ${optsHtml.replace(`value="${e.categoria}"`,`value="${e.categoria}" selected`)}
           </select>
         </div>
         <div><label style="${lbl}">Nota</label><input value="${e.nota||''}" onchange="_nocfdiPending[${i}].nota=this.value" style="width:100%;font-size:13px"></div>
+      </div>
+      <div id="ret-box-${i}" style="display:${e.categoria==='Retenciones plataformas'?'block':'none'};background:#FAEEDA;border:0.5px solid #BA7517;border-radius:8px;padding:10px 12px;margin-bottom:10px">
+        <p style="font-size:11px;font-weight:600;color:#633806;margin:0 0 8px">Detalle de retención (plataformas)</p>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div><label style="${lbl}">IVA retenido</label><input type="number" step="0.01" value="${e.ivaRetenido||0}" onchange="_nocfdiPending[${i}].ivaRetenido=parseFloat(this.value)||0" style="width:100%;font-size:13px"></div>
+          <div><label style="${lbl}">ISR retenido</label><input type="number" step="0.01" value="${e.isrRetenido||0}" onchange="_nocfdiPending[${i}].isrRetenido=parseFloat(this.value)||0" style="width:100%;font-size:13px"></div>
+        </div>
       </div>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#5F5E5A;cursor:pointer;padding:8px 10px;background:#F5F5F2;border-radius:6px">
         <input type="checkbox" id="regla-${i}" style="width:15px;height:15px;flex-shrink:0">
@@ -3538,6 +3548,11 @@ function mostrarPreviewNoCFDI(){
 function actualizarMontoMXN(i){
   const e=_nocfdiPending[i];
   if(e.monedaOriginal==='MXN') e.montoMXN=e.montoOriginal;
+}
+
+function _toggleRetPreview(i,cat){
+  const box=document.getElementById('ret-box-'+i);
+  if(box)box.style.display=(cat==='Retenciones plataformas')?'block':'none';
 }
 
 function cerrarPreviewNoCFDI(){
@@ -3593,7 +3608,9 @@ async function confirmarNoCFDI(){
       nFactura:e.nFactura||'',
       fechaImportacion:e.fechaImportacion||new Date().toISOString().slice(0,10),
       gastoPersonal:false,
-      deducibleAnual:false
+      deducibleAnual:false,
+      ivaRetenido:(e.categoria==='Retenciones plataformas')?(Math.round((Number(e.ivaRetenido)||0)*100)/100):0,
+      isrRetenido:(e.categoria==='Retenciones plataformas')?(Math.round((Number(e.isrRetenido)||0)*100)/100):0
     });
     guardadas++;
   });
@@ -3631,6 +3648,13 @@ function abrirFormNoCFDI(){
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
       <div><label style="font-size:11px;color:#888780">CATEGORÍA</label><select id="nc-cat" onchange="ncFormCatChange(this.value)" style="width:100%;font-size:13px;margin-top:2px">${optsHtml}</select></div>
       <div><label style="font-size:11px;color:#888780">NOTA</label><input id="nc-nota" style="width:100%;font-size:13px;margin-top:2px"></div>
+    </div>
+    <div id="nc-retencion-box" style="display:none;background:#FAEEDA;border:0.5px solid #BA7517;border-radius:8px;padding:10px 12px;margin-bottom:12px">
+      <p style="font-size:11px;font-weight:600;color:#633806;margin:0 0 8px">Detalle de retención (plataformas)</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label style="font-size:11px;color:#888780">IVA RETENIDO</label><input type="number" id="nc-iva-ret" step="0.01" style="width:100%;font-size:13px;margin-top:2px"></div>
+        <div><label style="font-size:11px;color:#888780">ISR RETENIDO</label><input type="number" id="nc-isr-ret" step="0.01" style="width:100%;font-size:13px;margin-top:2px"></div>
+      </div>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:14px">
       <label id="nc-gasto-label" style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px 12px;border:0.5px solid #d5d5cf;border-radius:6px;background:#F5F5F2;flex:1">
@@ -3674,6 +3698,8 @@ function ncFormCatChange(cat){
   const isDeducible=c&&(c.deducibleAnual===true||c.deducibleAnual==='TRUE'||c.deducibleAnual===1);
   const cb=document.getElementById('nc-deducible-anual');
   if(cb)cb.checked=!!isDeducible;
+  const retBox=document.getElementById('nc-retencion-box');
+  if(retBox)retBox.style.display=(cat==='Retenciones plataformas')?'block':'none';
 }
 
 function ncFormGPToggle(){
@@ -4756,7 +4782,7 @@ function _renderCmReconcil(prefix){
   return warning+`<div style="${mismatchMonth?'opacity:.5;pointer-events:none':''}">${tableHtml}</div>`;
 }
 
-function exportarCierreExcel(modo){
+async function exportarCierreExcel(modo){
   modo=modo||'ops';
   const isConta=modo==='conta';
   // For Conta: exclude these payment methods from all sheets
@@ -4804,8 +4830,19 @@ function exportarCierreExcel(modo){
       {v:Math.round(((r.hospTotal||r.total||0)+(r.consumoCena||0))*100)/100,t:'n',z:'#,##0.00',s:{...cs(bg)}},
     ]);
   });
+  // Fila TOTAL con fórmulas (Base/ISH/IVA/Total Reserva = columnas G,H,I,J)
+  {
+    const f=2,l=resRows.length;
+    const tS={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+    const tN=col=>({f:`SUM(${col}${f}:${col}${l})`,v:0,t:'n',z:'#,##0.00',s:tS});
+    if(l>=f)resRows.push([
+      {v:'TOTAL',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},
+      tN('G'),tN('H'),tN('I'),tN('J')
+    ]);
+  }
   const wsRes=XLSX.utils.aoa_to_sheet(resRows);
   wsRes['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}];
+  wsRes['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
   XLSX.utils.book_append_sheet(wb,wsRes,'Reservas');
 
   // === HOJA 2: DETALLE PAGOS ===
@@ -4873,9 +4910,19 @@ function exportarCierreExcel(modo){
     if(!isConta)rowCells.push({v:rep?'Sí':'No',s:cs(rowBg)});
     detData.push(rowCells);
   });
+  // Fila TOTAL del detalle con fórmulas (Base/ISH/IVA/Exento/Total pago = K,L,M,N,O)
+  {
+    const f=2,l=detData.length;
+    const tS={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+    const tN=col=>({f:`SUM(${col}${f}:${col}${l})`,v:0,t:'n',z:'#,##0.00',s:tS});
+    if(l>=f)detData.push([
+      {v:'TOTAL',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},
+      tN('K'),tN('L'),tN('M'),tN('N'),tN('O')
+    ]);
+  }
   // --- Resumen por Concepto CFDI (formulas SUMIF) at the bottom of Detalle Pagos ---
   // Columns: F=Concepto CFDI, K=Base, L=ISH, M=IVA, N=Exento, O=Total
-  const detDetailFirst=2, detDetailLast=detData.length;
+  const detDetailFirst=2, detDetailLast=detData.length-1; // -1 para excluir la fila TOTAL recién agregada
   const detConceptosUnicos=[...new Set(rowsSorted.map(r=>conceptoCFDIof(r)||'(sin concepto)'))].sort((a,b)=>a.localeCompare(b));
   detData.push([]);
   detData.push([{v:'Resumen por Concepto CFDI',s:{font:{bold:true,sz:12}}}]);
@@ -4883,7 +4930,7 @@ function exportarCierreExcel(modo){
   detData.push([
     {v:'Concepto CFDI',s:detSumHdrStyle},{v:'Base',s:detSumHdrStyle},{v:'ISH',s:detSumHdrStyle},{v:'IVA',s:detSumHdrStyle},{v:'Exento',s:detSumHdrStyle},{v:'Total',s:detSumHdrStyle}
   ]);
-  const detSumNum={t:'n',z:'#,##0.00'};
+  const detSumNum={v:0,t:'n',z:'#,##0.00'};
   detConceptosUnicos.forEach(c=>{
     const lit='"'+String(c).replace(/"/g,'""')+'"';
     const rng=(col)=>`${col}${detDetailFirst}:${col}${detDetailLast}`;
@@ -4896,7 +4943,8 @@ function exportarCierreExcel(modo){
       {f:`SUMIF(${rng('F')},${lit},${rng('O')})`,...detSumNum},
     ]);
   });
-  const detSumFirst=detDetailLast+4, detSumLast=detSumFirst+detConceptosUnicos.length-1;
+  // detDetailLast = última fila de datos; +1 fila TOTAL detalle, +1 separador, +1 título, +1 header → primer concepto en +5
+  const detSumFirst=detDetailLast+5, detSumLast=detSumFirst+detConceptosUnicos.length-1;
   detData.push([
     {v:'TOTAL',s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
     {f:`SUM(B${detSumFirst}:B${detSumLast})`,...detSumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
@@ -4911,6 +4959,7 @@ function exportarCierreExcel(modo){
   ws1['!cols']=isConta
     ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}]
     : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
+  ws1['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
   if(!isConta)XLSX.utils.book_append_sheet(wb,ws1,'Detalle Pagos');
 
   // === HOJA: PAGO x CONCEPTO (agrupado por reserva + Concepto CFDI + fecha pago + método pago) ===
@@ -4976,10 +5025,21 @@ function exportarCierreExcel(modo){
     pxcData.push(rowCells);
   });
 
+  // Fila TOTAL del detalle con fórmulas (Base/ISH/IVA/Exento/Total pago = J,K,L,M,N)
+  {
+    const f=2,l=pxcData.length;
+    const tS={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+    const tN=col=>({f:`SUM(${col}${f}:${col}${l})`,v:0,t:'n',z:'#,##0.00',s:tS});
+    if(l>=f)pxcData.push([
+      {v:'TOTAL',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},{v:'',s:tS},
+      tN('J'),tN('K'),tN('L'),tN('M'),tN('N')
+    ]);
+  }
+
   // --- Resumen por Concepto CFDI (formulas SUMIF) at the bottom of PagoxConcepto ---
   // Columns in PagoxConcepto (1-based):
   // F=Concepto CFDI, J=Base pago, K=ISH pago, L=IVA pago, M=Exento pago, N=Total pago
-  const pxcDetailFirst=2, pxcDetailLast=pxcData.length; // sheet row numbers
+  const pxcDetailFirst=2, pxcDetailLast=pxcData.length-1; // -1 para excluir la fila TOTAL recién agregada
   const pxcConceptosUnicos=[...new Set(pxcRows.map(g=>g.conceptoCFDI||'(sin concepto)'))].sort((a,b)=>a.localeCompare(b));
   // blank separator
   pxcData.push([]);
@@ -4991,7 +5051,7 @@ function exportarCierreExcel(modo){
   pxcData.push([
     {v:'Concepto CFDI',s:sumHdrStyle},{v:'Base',s:sumHdrStyle},{v:'ISH',s:sumHdrStyle},{v:'IVA',s:sumHdrStyle},{v:'Exento',s:sumHdrStyle},{v:'Total',s:sumHdrStyle}
   ]);
-  const sumNum={t:'n',z:'#,##0.00'};
+  const sumNum={v:0,t:'n',z:'#,##0.00'};
   pxcConceptosUnicos.forEach(c=>{
     const lit='"'+String(c).replace(/"/g,'""')+'"';
     const rng=(col)=>`${col}${pxcDetailFirst}:${col}${pxcDetailLast}`;
@@ -5005,7 +5065,8 @@ function exportarCierreExcel(modo){
     ]);
   });
   // TOTAL row
-  const pxcSumFirst=pxcDetailLast+4, pxcSumLast=pxcSumFirst+pxcConceptosUnicos.length-1;
+  // pxcDetailLast = última fila de datos; +1 fila TOTAL detalle, +1 separador, +1 título, +1 header → primer concepto en +5
+  const pxcSumFirst=pxcDetailLast+5, pxcSumLast=pxcSumFirst+pxcConceptosUnicos.length-1;
   pxcData.push([
     {v:'TOTAL',s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
     {f:`SUM(B${pxcSumFirst}:B${pxcSumLast})`,...sumNum,s:{font:{bold:true},border:{top:{style:'thin',color:{rgb:'888888'}}}}},
@@ -5019,6 +5080,7 @@ function exportarCierreExcel(modo){
   wsPxc['!cols']=isConta
     ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12}]
     : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:13}];
+  wsPxc['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
   XLSX.utils.book_append_sheet(wb,wsPxc,'PagoxConcepto');
   const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
@@ -5085,24 +5147,75 @@ function exportarCierreExcel(modo){
   ws3['!cols']=isConta?[{wch:20},{wch:14}]:[{wch:20},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
   // === HOJA EGRESOS ===
-  const egMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const egMesAll=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  // Las retenciones de plataformas van debajo del TOTAL (no se suman)
+  const egNormales=egMesAll.filter(e=>e.categoria!=='Retenciones plataformas');
+  const egReten=egMesAll.filter(e=>e.categoria==='Retenciones plataformas');
   const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Fuente','Moneda orig.','Monto orig.','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
   const egData=[egHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
-  egMes.forEach((e,i)=>{
-    const bg=i%2===0?null:'F2F2F2';
-    const cs=bg=>bg?{fill:{fgColor:{rgb:bg}}}:{};
-    const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
-    egData.push([
-      {v:e.fecha||'',s:cs(bg)},{v:e.rfc||'',s:cs(bg)},{v:e.proveedor||'',s:cs(bg)},
-      {v:e.descripcion||'',s:cs(bg)},{v:e.tipoDoc||'Factura',s:cs(bg)},{v:e.fuente||'cfdi',s:cs(bg)},{v:e.monedaOriginal||e.moneda||'MXN',s:cs(bg)},{v:e.montoOriginal||e.total||0,s:{...cs(bg),t:'n',z:'#,##0.00'}},
-      {v:e.formaPago||'',s:cs(bg)},{v:e.metodoPago||'',s:cs(bg)},
-      nm(bg,e.subtotal||0),nm(bg,e.descuento||0),nm(bg,e.iva||0),nm(bg,e.total||0),
-      {v:e.categoria||'',s:cs(bg)},{v:e.nota||'',s:cs(bg)}
-    ]);
-  });
+  const egRow=(e,bg)=>{
+    const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
+    const nm=v=>({v,t:'n',z:'#,##0.00',s:cs});
+    return [
+      {v:e.fecha||'',s:cs},{v:e.rfc||'',s:cs},{v:e.proveedor||'',s:cs},
+      {v:e.descripcion||'',s:cs},{v:e.tipoDoc||'Factura',s:cs},{v:e.fuente||'cfdi',s:cs},{v:e.monedaOriginal||e.moneda||'MXN',s:cs},{v:e.montoOriginal||e.total||0,s:{...cs,t:'n',z:'#,##0.00'}},
+      {v:e.formaPago||'',s:cs},{v:e.metodoPago||'',s:cs},
+      nm(e.subtotal||0),nm(e.descuento||0),nm(e.iva||0),nm(e.total||0),
+      {v:e.categoria||'',s:cs},{v:e.nota||'',s:cs}
+    ];
+  };
+  egNormales.forEach((e,i)=>{egData.push(egRow(e,i%2===0?null:'F2F2F2'));});
+  // Fila TOTAL con fórmulas Excel (suma solo las filas de egresos normales)
+  const egFirst=2, egLast=egData.length; // filas de datos (sin encabezado)
+  const egTotStyle={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+  const egTotNum=col=>({f:`SUM(${col}${egFirst}:${col}${egLast})`,v:0,t:'n',z:'#,##0.00',s:egTotStyle});
+  egData.push([
+    {v:'TOTAL',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},
+    egTotNum('K'),egTotNum('L'),egTotNum('M'),egTotNum('N'),
+    {v:'',s:egTotStyle},{v:'',s:egTotStyle}
+  ]);
+  // Retenciones de plataformas DEBAJO del total (no suman)
+  if(egReten.length){
+    egData.push(egHdrs.map(()=>({v:''}))); // separador
+    egData.push([{v:'RETENCIONES DE PLATAFORMAS (no suman al total)',s:{font:{bold:true,italic:true,color:{rgb:'633806'}},fill:{fgColor:{rgb:'FAEEDA'}}}},...Array(15).fill({v:'',s:{fill:{fgColor:{rgb:'FAEEDA'}}}})]);
+    egReten.forEach((e,i)=>{egData.push(egRow(e,i%2===0?null:'F2F2F2'));});
+  }
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
   wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
+  wsEg['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
+
+  // === HOJA RETENCIÓN (retenciones de plataformas del mes) ===
+  const retMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)&&e.categoria==='Retenciones plataformas')
+    .sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  if(retMes.length){
+    const RBLU='BDD7EE',RGRN='E2EFDA';
+    const rHdr=(t)=>({v:t,s:{font:{bold:true},fill:{fgColor:{rgb:RBLU}},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}});
+    const retData=[[rHdr('Fecha'),rHdr('Proveedor'),rHdr('N° Factura'),rHdr('IVA Retenido'),rHdr('ISR Retenido'),rHdr('Total')]];
+    retMes.forEach((e,i)=>{
+      const bg=i%2===0?null:'F2F2F2';
+      const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
+      const nm=v=>({v:Math.round((Number(v)||0)*100)/100,t:'n',z:'#,##0.00',s:cs});
+      retData.push([
+        {v:e.fecha||'',s:cs},{v:e.proveedor||'',s:cs},{v:e.nFactura||'',s:cs},
+        nm(e.ivaRetenido),nm(e.isrRetenido),nm((Number(e.ivaRetenido)||0)+(Number(e.isrRetenido)||0))
+      ]);
+    });
+    // Totales con fórmulas Excel
+    const first=2,last=retData.length;
+    const tStyle={font:{bold:true},fill:{fgColor:{rgb:RGRN}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+    const tNum={v:0,t:'n',z:'#,##0.00',s:tStyle};
+    retData.push([
+      {v:'TOTAL',s:tStyle},{v:'',s:tStyle},{v:'',s:tStyle},
+      {f:`SUM(D${first}:D${last})`,...tNum},
+      {f:`SUM(E${first}:E${last})`,...tNum},
+      {f:`SUM(F${first}:F${last})`,...tNum}
+    ]);
+    const wsRet=XLSX.utils.aoa_to_sheet(retData);
+    wsRet['!cols']=[{wch:12},{wch:28},{wch:18},{wch:14},{wch:14},{wch:14}];
+    wsRet['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+    XLSX.utils.book_append_sheet(wb,wsRet,'Retención');
+  }
 
   // ---------- Pestaña Reconciliación (solo si hay archivos cargados) ----------
   // Solo agregar pestaña Reconciliación si hay archivos cargados Y corresponden al mes exportado
@@ -5125,13 +5238,42 @@ function exportarCierreExcel(modo){
         return {hpt:18};
       });
       // Freeze first row (panel congelado)
-      wsRec['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
+      wsRec['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
       XLSX.utils.book_append_sheet(wb,wsRec,'Reconciliación');
     }
   }
 
-  XLSX.writeFile(wb,'Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx');
-  showAlert('Excel exportado','success');
+  // xlsx-js-style 1.2.0 no escribe freeze panes; se inyectan post-proceso en el XML
+  const nombreArchivo='Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx';
+  try{
+    const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
+    const JSZip=await loadJSZip();
+    const zip=await JSZip.loadAsync(buf);
+    const hojas=Object.keys(zip.files).filter(f=>/^xl\/worksheets\/sheet\d+\.xml$/.test(f));
+    const pane='<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/>';
+    for(const h of hojas){
+      let xml=await zip.file(h).async('string');
+      if(xml.includes('<pane '))continue;
+      if(/<sheetView[^>]*\/>/.test(xml)){
+        // sheetView auto-cerrado → expandir e insertar pane
+        xml=xml.replace(/<sheetView([^>]*)\/>/, '<sheetView$1>'+pane+'</sheetView>');
+      }else{
+        // sheetView con contenido → insertar pane justo tras la apertura
+        xml=xml.replace(/(<sheetView[^>]*>)/, '$1'+pane);
+      }
+      zip.file(h,xml);
+    }
+    const out=await zip.generateAsync({type:'blob',mimeType:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(out);
+    const a=document.createElement('a');
+    a.href=url;a.download=nombreArchivo;document.body.appendChild(a);a.click();
+    document.body.removeChild(a);setTimeout(()=>URL.revokeObjectURL(url),1000);
+    showAlert('Excel exportado','success');
+  }catch(e){
+    console.error('Error exportando Excel con freeze, fallback:',e);
+    XLSX.writeFile(wb,nombreArchivo);
+    showAlert('Excel exportado','success');
+  }
 }
 
 // ============================================================
