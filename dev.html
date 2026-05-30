@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.14.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.15.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.14.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.15.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -4832,6 +4832,7 @@ function exportarCierreExcel(modo){
   });
   const wsRes=XLSX.utils.aoa_to_sheet(resRows);
   wsRes['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}];
+  wsRes['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
   XLSX.utils.book_append_sheet(wb,wsRes,'Reservas');
 
   // === HOJA 2: DETALLE PAGOS ===
@@ -4937,6 +4938,7 @@ function exportarCierreExcel(modo){
   ws1['!cols']=isConta
     ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}]
     : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
+  ws1['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
   if(!isConta)XLSX.utils.book_append_sheet(wb,ws1,'Detalle Pagos');
 
   // === HOJA: PAGO x CONCEPTO (agrupado por reserva + Concepto CFDI + fecha pago + método pago) ===
@@ -5045,6 +5047,7 @@ function exportarCierreExcel(modo){
   wsPxc['!cols']=isConta
     ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12}]
     : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:13}];
+  wsPxc['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
   XLSX.utils.book_append_sheet(wb,wsPxc,'PagoxConcepto');
   const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
@@ -5111,23 +5114,42 @@ function exportarCierreExcel(modo){
   ws3['!cols']=isConta?[{wch:20},{wch:14}]:[{wch:20},{wch:14},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
   // === HOJA EGRESOS ===
-  const egMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const egMesAll=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  // Las retenciones de plataformas van debajo del TOTAL (no se suman)
+  const egNormales=egMesAll.filter(e=>e.categoria!=='Retenciones plataformas');
+  const egReten=egMesAll.filter(e=>e.categoria==='Retenciones plataformas');
   const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Fuente','Moneda orig.','Monto orig.','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
   const egData=[egHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
-  egMes.forEach((e,i)=>{
-    const bg=i%2===0?null:'F2F2F2';
-    const cs=bg=>bg?{fill:{fgColor:{rgb:bg}}}:{};
-    const nm=(bg,v)=>({v,t:'n',z:'#,##0.00',s:bg?{fill:{fgColor:{rgb:bg}}}:{}});
-    egData.push([
-      {v:e.fecha||'',s:cs(bg)},{v:e.rfc||'',s:cs(bg)},{v:e.proveedor||'',s:cs(bg)},
-      {v:e.descripcion||'',s:cs(bg)},{v:e.tipoDoc||'Factura',s:cs(bg)},{v:e.fuente||'cfdi',s:cs(bg)},{v:e.monedaOriginal||e.moneda||'MXN',s:cs(bg)},{v:e.montoOriginal||e.total||0,s:{...cs(bg),t:'n',z:'#,##0.00'}},
-      {v:e.formaPago||'',s:cs(bg)},{v:e.metodoPago||'',s:cs(bg)},
-      nm(bg,e.subtotal||0),nm(bg,e.descuento||0),nm(bg,e.iva||0),nm(bg,e.total||0),
-      {v:e.categoria||'',s:cs(bg)},{v:e.nota||'',s:cs(bg)}
-    ]);
-  });
+  const egRow=(e,bg)=>{
+    const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
+    const nm=v=>({v,t:'n',z:'#,##0.00',s:cs});
+    return [
+      {v:e.fecha||'',s:cs},{v:e.rfc||'',s:cs},{v:e.proveedor||'',s:cs},
+      {v:e.descripcion||'',s:cs},{v:e.tipoDoc||'Factura',s:cs},{v:e.fuente||'cfdi',s:cs},{v:e.monedaOriginal||e.moneda||'MXN',s:cs},{v:e.montoOriginal||e.total||0,s:{...cs,t:'n',z:'#,##0.00'}},
+      {v:e.formaPago||'',s:cs},{v:e.metodoPago||'',s:cs},
+      nm(e.subtotal||0),nm(e.descuento||0),nm(e.iva||0),nm(e.total||0),
+      {v:e.categoria||'',s:cs},{v:e.nota||'',s:cs}
+    ];
+  };
+  egNormales.forEach((e,i)=>{egData.push(egRow(e,i%2===0?null:'F2F2F2'));});
+  // Fila TOTAL con fórmulas Excel (suma solo las filas de egresos normales)
+  const egFirst=2, egLast=egData.length; // filas de datos (sin encabezado)
+  const egTotStyle={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+  const egTotNum=col=>({f:`SUM(${col}${egFirst}:${col}${egLast})`,t:'n',z:'#,##0.00',s:egTotStyle});
+  egData.push([
+    {v:'TOTAL',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},
+    egTotNum('K'),egTotNum('L'),egTotNum('M'),egTotNum('N'),
+    {v:'',s:egTotStyle},{v:'',s:egTotStyle}
+  ]);
+  // Retenciones de plataformas DEBAJO del total (no suman)
+  if(egReten.length){
+    egData.push(egHdrs.map(()=>({v:''}))); // separador
+    egData.push([{v:'RETENCIONES DE PLATAFORMAS (no suman al total)',s:{font:{bold:true,italic:true,color:{rgb:'633806'}},fill:{fgColor:{rgb:'FAEEDA'}}}},...Array(15).fill({v:'',s:{fill:{fgColor:{rgb:'FAEEDA'}}}})]);
+    egReten.forEach((e,i)=>{egData.push(egRow(e,i%2===0?null:'F2F2F2'));});
+  }
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
   wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
+  wsEg['!freeze']={xSplit:0,ySplit:1,topLeftCell:'A2',activePane:'bottomLeft',state:'frozen'};
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
 
   // === HOJA RETENCIÓN (retenciones de plataformas del mes) ===
