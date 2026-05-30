@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.10.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.10.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.10.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.10.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2301,9 +2301,12 @@ function renderConsList(){
   const box=document.getElementById('cons-list');
   if(!cons.length){box.innerHTML='<p class="empty">Sin consumos registrados</p>';return;}
 
-  const renderCard=c=>{
+  const renderCard=(c,mesCtx)=>{
     const res=gd(KR).find(r=>r.id===c.reservaId||r.nombre===c.huesped);
-    const total=c.total||(c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0);
+    const totalFull=c.total||(c.items||[]).reduce((s,i)=>s+i.precio*i.cantidad,0);
+    // Si la card se muestra dentro de un mes (split), el encabezado suma solo los ítems pagados ese mes
+    const totalMes=mesCtx?(c.items||[]).reduce((s,i)=>s+((i.fechaPago&&fmtDate(i.fechaPago).startsWith(mesCtx))?(i.precio*i.cantidad):0),0):totalFull;
+    const total=mesCtx?totalMes:totalFull;
     const origen=res?res.origen:'directo';
     const pais=res?res.pais:(c.pais||'');
     const ci=res?fmtDate(res.checkin):'';
@@ -2353,6 +2356,7 @@ function renderConsList(){
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
           <span style="font-size:15px;font-weight:700">${fmt(total)}</span>
+          ${(mesCtx&&Math.round(totalMes*100)!==Math.round(totalFull*100))?`<span style="font-size:9px;color:#AAA">pagado este mes · total ${fmt(totalFull)}</span>`:''}
           <div style="display:flex;gap:4px">${editBtn}${delBtn}</div>
         </div>
       </div>
@@ -2389,7 +2393,7 @@ function renderConsList(){
       const label=MN[parseInt(mo)-1]+' '+y;
       return `<div style="margin-bottom:1.2rem">
         <p style="font-size:11px;font-weight:700;color:#AAA;text-transform:uppercase;letter-spacing:.06em;padding:4px 0;border-bottom:1px solid #EEE;margin-bottom:6px">${label}</p>
-        ${groups[m].map(renderCard).join('')}
+        ${groups[m].map(c=>renderCard(c,m)).join('')}
       </div>`;
     }).join('');
     if(pendientes.length){
