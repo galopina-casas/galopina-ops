@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.5-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.13.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.5-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.13.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -997,7 +997,7 @@ function getMonthlyData(months){
     consumos=Math.round(consumos*100)/100;
     consumosBase=Math.round(consumosBase*100)/100;
     // Egresos (con IVA) — exclude gastos personales unless toggle on; always exclude deducibles anuales
-    const egrFilt=egr.filter(e=>(e.fecha||'').startsWith(prefix)&&!e.deducibleAnual&&(_dashEgrIncludeGP||!e.gastoPersonal));
+    const egrFilt=egr.filter(e=>(e.fecha||'').startsWith(prefix)&&!e.deducibleAnual&&!e.egresoInformativo&&(_dashEgrIncludeGP||!e.gastoPersonal));
     const egresos=egrFilt.reduce((s,e)=>s+(e.total||0),0);
     // Egresos base (sin IVA)
     const egresosBase=egrFilt.reduce((s,e)=>s+(e.subtotal||0),0);
@@ -1112,7 +1112,7 @@ function dashRenderChart(gId,months){
   if(gId==='g9'){
     const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
     const catTot={},catPers={};
-    gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria&&!e.deducibleAnual&&(_dashEgrIncludeGP||!e.gastoPersonal)).forEach(e=>{
+    gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria&&!e.deducibleAnual&&!e.egresoInformativo&&(_dashEgrIncludeGP||!e.gastoPersonal)).forEach(e=>{
       catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);
       if(e.gastoPersonal)catPers[e.categoria]=(catPers[e.categoria]||0)+(e.subtotal||0);
     });
@@ -3184,20 +3184,21 @@ function renderEgresos(){
     return _sd==='desc'?-c:c;
   });
 
-  // Metrics
-  const total=Math.round(egresos.reduce((s,e)=>s+(e.total||0),0)*100)/100;
-  const totalSinDeducibles=Math.round(egresos.filter(e=>!e.deducibleAnual).reduce((s,e)=>s+(e.total||0),0)*100)/100;
-  const totalIva=Math.round(egresos.reduce((s,e)=>s+(e.iva||0),0)*100)/100;
+  // Metrics — los egresos informativos/no operativos NO suman a ningún total (sí se ven en la lista)
+  const egresosContables=egresos.filter(e=>!e.egresoInformativo);
+  const total=Math.round(egresosContables.reduce((s,e)=>s+(e.total||0),0)*100)/100;
+  const totalSinDeducibles=Math.round(egresosContables.filter(e=>!e.deducibleAnual).reduce((s,e)=>s+(e.total||0),0)*100)/100;
+  const totalIva=Math.round(egresosContables.reduce((s,e)=>s+(e.iva||0),0)*100)/100;
   const sinCat=egresos.filter(e=>!e.categoria).length;
   const conCat=egresos.length-sinCat;
-  const gastosPersonales=egresos.filter(e=>e.gastoPersonal);
+  const gastosPersonales=egresosContables.filter(e=>e.gastoPersonal);
   const totalGP=gastosPersonales.reduce((s,e)=>s+(e.total||0),0);
   const ivaGP=gastosPersonales.reduce((s,e)=>s+(e.iva||0),0);
-  const egresosOp=egresos.filter(e=>!e.gastoPersonal);
+  const egresosOp=egresosContables.filter(e=>!e.gastoPersonal);
   const totalOp=egresosOp.reduce((s,e)=>s+(e.total||0),0);
   const ivaOp=egresosOp.reduce((s,e)=>s+(e.iva||0),0);
   // Net amounts (excluding their own IVA) for display coherence with Cierre Mensual
-  const totalSinDeducIva=Math.round(egresos.filter(e=>!e.deducibleAnual).reduce((s,e)=>s+(e.iva||0),0)*100)/100;
+  const totalSinDeducIva=Math.round(egresosContables.filter(e=>!e.deducibleAnual).reduce((s,e)=>s+(e.iva||0),0)*100)/100;
   const netoSinDeduc=Math.round((totalSinDeducibles-totalSinDeducIva)*100)/100;
   const netoGP=Math.round((totalGP-ivaGP)*100)/100;
   const netoOp=Math.round((totalOp-ivaOp)*100)/100;
@@ -3259,6 +3260,7 @@ function renderEgresos(){
           ${esNoCFDI?'<span style="background:#E6F1FB;color:#0C447C;border:0.5px solid #85B7EB;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">noCFDI</span>':''}
           ${e.gastoPersonal?'<span style="background:#FAEEDA;color:#633806;border:0.5px solid #FAC775;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Gasto personal</span>':''}
           ${e.deducibleAnual?'<span style="background:#E6F1FB;color:#0C447C;border:0.5px solid #85B7EB;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Deducible anual</span>':''}
+          ${e.egresoInformativo?'<span style="background:#FAEEDA;color:#633806;border:0.5px solid #BA7517;border-radius:4px;padding:1px 6px;font-size:10px;font-weight:500;white-space:nowrap;flex-shrink:0">Informativo · no suma</span>':''}
         </div>
         <p style="color:#999;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${e.descripcion||''}</p>
       </div>
@@ -3314,6 +3316,13 @@ function openEgModal(uuid){
         </div>
       </label>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px 12px;border:0.5px solid ${e.egresoInformativo?'#854F0B':'#d5d5cf'};border-radius:6px;background:${e.egresoInformativo?'#FAEEDA':'#F5F5F2'};margin-bottom:10px">
+      <input type="checkbox" id="eg-informativo" style="width:14px;height:14px;accent-color:#854F0B" ${e.egresoInformativo?'checked':''}>
+      <div>
+        <p style="font-weight:500;color:${e.egresoInformativo?'#633806':'#444'};font-size:12px;margin:0">Egreso informativo / no operativo</p>
+        <p style="font-size:10px;color:#888;margin:0">No suma a ningún total (ej. retención Airbnb). No pasó por el banco.</p>
+      </div>
+    </label>
     <textarea id="eg-nota-inp" placeholder="Nota opcional..." style="width:100%;height:54px;font-size:12px;resize:none;margin-bottom:12px">${e.nota||''}</textarea>
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#666;margin-bottom:14px;cursor:pointer">
       <input type="checkbox" id="eg-save-rule" style="width:14px;height:14px">
@@ -3344,18 +3353,20 @@ async function saveEgCategoria(uuid){
   const nota=document.getElementById('eg-nota-inp').value;
   const saveRule=document.getElementById('eg-save-rule').checked;
   const gastoPersonal=document.getElementById('eg-gasto-personal')?.checked||false;
+  const egresoInformativo=document.getElementById('eg-informativo')?.checked||false;
   const c=gd(KCE).find(x=>x.nombre===cat);
   const deducibleAnual=c&&(c.deducibleAnual===true||c.deducibleAnual==='TRUE'||c.deducibleAnual===1);
   const egresos=gd(KE);
   const e=egresos.find(x=>x.uuid===uuid);
   if(!e)return;
-  const _prev={categoria:e.categoria,nota:e.nota,gastoPersonal:e.gastoPersonal,deducibleAnual:e.deducibleAnual};
+  const _prev={categoria:e.categoria,nota:e.nota,gastoPersonal:e.gastoPersonal,deducibleAnual:e.deducibleAnual,egresoInformativo:e.egresoInformativo};
   e.categoria=cat;
   e.nota=nota;
   e.gastoPersonal=gastoPersonal;
   e.deducibleAnual=!!deducibleAnual;
+  e.egresoInformativo=egresoInformativo;
   const ok=await sd(KE,egresos);
-  if(!ok){e.categoria=_prev.categoria;e.nota=_prev.nota;e.gastoPersonal=_prev.gastoPersonal;e.deducibleAnual=_prev.deducibleAnual;showAlert('No se pudo guardar. Revisa tu conexión e intenta de nuevo.','error');return;}
+  if(!ok){e.categoria=_prev.categoria;e.nota=_prev.nota;e.gastoPersonal=_prev.gastoPersonal;e.deducibleAnual=_prev.deducibleAnual;e.egresoInformativo=_prev.egresoInformativo;showAlert('No se pudo guardar. Revisa tu conexión e intenta de nuevo.','error');return;}
   if(saveRule&&cat){
     const reglas=gd(KRE);
     const idx=reglas.findIndex(r=>r.rfc===e.rfc);
@@ -3637,6 +3648,13 @@ function abrirFormNoCFDI(){
         </div>
       </label>
     </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px 12px;border:0.5px solid #d5d5cf;border-radius:6px;background:#F5F5F2;margin-bottom:14px">
+      <input type="checkbox" id="nc-informativo" style="width:14px;height:14px;accent-color:#854F0B">
+      <div>
+        <p style="font-weight:500;font-size:12px;margin:0">Egreso informativo / no operativo</p>
+        <p style="font-size:10px;color:#888;margin:0">No suma a ningún total (ej. retención Airbnb). No pasó por el banco.</p>
+      </div>
+    </label>
     <div style="display:flex;justify-content:flex-end;gap:8px">
       <button class="btn" onclick="cerrarFormNoCFDI()">Cancelar</button>
       <button class="btn btn-primary" onclick="guardarFormNoCFDI()">Guardar</button>
@@ -3688,6 +3706,7 @@ async function guardarFormNoCFDI(){
   const cCat=gd(KCE).find(x=>x.nombre===categoria);
   const deducibleAnual=!!(cCat&&(cCat.deducibleAnual===true||cCat.deducibleAnual==='TRUE'||cCat.deducibleAnual===1));
   const gastoPersonal=document.getElementById('nc-gasto-personal')?.checked||false;
+  const egresoInformativo=document.getElementById('nc-informativo')?.checked||false;
   const egresos=gd(KE);
   egresos.push({
     uuid:'NC-'+Date.now(),
@@ -3704,7 +3723,8 @@ async function guardarFormNoCFDI(){
     nFactura:document.getElementById('nc-nfactura').value,
     fechaImportacion:new Date().toISOString().slice(0,10),
     gastoPersonal,
-    deducibleAnual
+    deducibleAnual,
+    egresoInformativo
   });
   const ok=await sd(KE,egresos);
   if(!ok){egresos.pop();showAlert('No se pudo guardar. Revisa tu conexión e intenta de nuevo.','error');return;}
@@ -4605,7 +4625,7 @@ function renderCierre(){
   const baseHosp=sv(_hospM,'base'),baseCons=sv(_consGM,'base'),montoExentos=sv(_consEM,'exento');
   const ingresosNetos=Math.round((baseHosp+baseCons+montoExentos)*100)/100;
   const ivaCobrado=Math.round((sv(_hospM,'iva')+sv(_consGM,'iva'))*100)/100;
-  const egresosMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)&&!e.gastoPersonal&&!e.deducibleAnual);
+  const egresosMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)&&!e.gastoPersonal&&!e.deducibleAnual&&!e.egresoInformativo);
   const egresosNetos=Math.round(egresosMes.reduce((s,e)=>s+((e.total||0)-(e.iva||0)),0)*100)/100;
   const ivaAcreditable=Math.round(egresosMes.reduce((s,e)=>s+(e.iva||0),0)*100)/100;
   const ivaNeto=Math.round((ivaCobrado-ivaAcreditable)*100)/100;
@@ -4632,6 +4652,10 @@ function renderCierre(){
   ${fmt(Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100)}
   <span style="color:#AAA;font-size:11px">(suma ISH de reservas con fecha de salida en ${mesNombre})</span>
 </p>
+${(()=>{
+  const ishAirbnb=Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.origen==='airbnb').reduce((s,r)=>s+(r.ish||0),0)*100)/100;
+  return ishAirbnb>0?`<p style="font-size:11px;color:#888;margin-top:2px;font-style:italic">De lo anterior, ${fmt(ishAirbnb)} de ISH corresponde a reservas Airbnb, pagado directamente por Airbnb al fisco estatal.</p>`:'';
+})()}
 `;
 
   // ---- Reconciliación bancaria (lee del módulo Reconciliación) ----
@@ -5011,6 +5035,10 @@ function exportarCierreExcel(modo){
   fis.push(['','','','','']);
   const ishReservas=Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100;
   fis.push([{v:'ISH Reservas '+mesNombre+':',s:{font:{bold:true}}},{v:ishReservas,t:'n',z:'#,##0.00'},{v:'(suma ISH reservas con salida en '+mesNombre+')'},{v:''},{v:''}]);
+  const ishAirbnb=Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.origen==='airbnb').reduce((s,r)=>s+(r.ish||0),0)*100)/100;
+  if(ishAirbnb>0){
+    fis.push([{v:'De lo anterior, ISH Airbnb:',s:{font:{italic:true,color:{rgb:'888888'}}}},{v:ishAirbnb,t:'n',z:'#,##0.00',s:{font:{italic:true,color:{rgb:'888888'}}}},{v:'(pagado directamente por Airbnb al fisco estatal)',s:{font:{italic:true,color:{rgb:'888888'}}}},{v:''},{v:''}]);
+  }
   const ws2=XLSX.utils.aoa_to_sheet(fis);
   ws2['!cols']=[{wch:22},{wch:14},{wch:35},{wch:12},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws2,'CFDI global');
@@ -6629,9 +6657,18 @@ function _renderReconcilEgresos(prefix){
 
   // App: egresos (facturas + notas de crédito + noCFDI) del mes
   const egresos=gd(KE);
+  // Facturas informativas/no operativas del mes: no entran al cuadre, se listan aparte al final
+  const facturasExcluidas=egresos.filter(e=>{
+    const fecha=String(e.fecha||'').slice(0,10);
+    if(!fecha.startsWith(prefix))return false;
+    if(!e.egresoInformativo)return false;
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    return monto>=0.01;
+  });
   const facturas=egresos.filter(e=>{
     const fecha=String(e.fecha||'').slice(0,10);
     if(!fecha.startsWith(prefix))return false;
+    if(e.egresoInformativo)return false;
     if(e.tipoDoc==='Nota de crédito')return false;
     // Excluir facturas con monto 0 (no representan un pago real)
     const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
@@ -6641,6 +6678,7 @@ function _renderReconcilEgresos(prefix){
   const notasCredito=egresos.filter(e=>{
     const fecha=String(e.fecha||'').slice(0,10);
     if(!fecha.startsWith(prefix))return false;
+    if(e.egresoInformativo)return false;
     if(e.tipoDoc!=='Nota de crédito')return false;
     const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
     if(monto<0.01)return false;
@@ -6990,6 +7028,22 @@ function _renderReconcilEgresos(prefix){
         </tr></thead>
         <tbody>${ncRowsHtml}</tbody>
       </table>
+    </div>`:''}
+    ${facturasExcluidas.length>0?`
+    <div style="background:#FAEEDA;border:0.5px solid #BA7517;border-radius:10px;padding:14px 16px;margin-top:10px">
+      <p style="font-size:13px;font-weight:600;margin:0 0 4px;color:#633806">Facturas excluidas de reconciliación</p>
+      <p style="font-size:11px;color:#634009;margin:0 0 10px">Egresos informativos / no operativos — no pasaron por el banco y no suman a ningún total</p>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;background:#fff;border-radius:6px;overflow:hidden">
+        <thead><tr style="border-bottom:2px solid #EEE">
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Proveedor</th>
+          <th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
+          <th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
+        </tr></thead>
+        <tbody>${facturasExcluidas.map(e=>`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:6px 8px">${String(e.fecha||'').slice(0,10)}</td><td style="padding:6px 8px"><strong>${e.proveedor||''}</strong></td><td style="padding:6px 8px;color:#888">${e.descripcion||''}</td><td style="padding:6px 8px;text-align:right">${fmt(Math.abs(parseFloat(e.montoMXN||e.total)||0))}</td></tr>`).join('')}
+        <tr style="border-top:2px solid #EEE;font-weight:600"><td colspan="3" style="padding:7px 8px;color:#634009">Total excluidas (${facturasExcluidas.length})</td><td style="padding:7px 8px;text-align:right;color:#634009">${fmt(facturasExcluidas.reduce((s,e)=>s+Math.abs(parseFloat(e.montoMXN||e.total)||0),0))}</td></tr>
+        </tbody>
+      </table>
     </div>`:''}`;
 }
 
@@ -7229,6 +7283,24 @@ function _buildReconcilExcelData(prefix){
         probsNc.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
       }
     }
+  }
+
+  // ---- Facturas excluidas de reconciliación (informativas / no operativas) ----
+  const facturasExcl=gd(KE).filter(e=>{
+    const f=String(e.fecha||'').slice(0,10);
+    if(!f.startsWith(prefix))return false;
+    if(!e.egresoInformativo)return false;
+    return Math.abs(parseFloat(e.montoMXN||e.total)||0)>=0.01;
+  });
+  if(facturasExcl.length){
+    sep();
+    sectionRow('Excluidas','FACTURAS EXCLUIDAS DE RECONCILIACIÓN (no suman a totales)');
+    facturasExcl.forEach(e=>{
+      const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+      data.push(mkRow(['Excluida',(e.proveedor||'')+' · '+String(e.fecha||'').slice(0,10),monto,'','','','—',e.descripcion||''],stDetailBase,false));
+    });
+    const totExcl=Math.round(facturasExcl.reduce((s,e)=>s+Math.abs(parseFloat(e.montoMXN||e.total)||0),0)*100)/100;
+    data.push(mkRow(['Excluidas','TOTAL excluidas ('+facturasExcl.length+')',totExcl,'','','','',''],stTotalBase,true));
   }
 
   return data.length>1?data:[];
