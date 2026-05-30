@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.5.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.6.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.5.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.6.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -987,13 +987,16 @@ function getMonthlyData(months){
     const egresos=egrFilt.reduce((s,e)=>s+(e.total||0),0);
     // Egresos base (sin IVA)
     const egresosBase=egrFilt.reduce((s,e)=>s+(e.subtotal||0),0);
+    // Egresos base separados: operativo vs personal (para g1 con toggle ON)
+    const egresosPersonalBase=egrFilt.filter(e=>e.gastoPersonal).reduce((s,e)=>s+(e.subtotal||0),0);
+    const egresosOperBase=Math.round((egresosBase-egresosPersonalBase)*100)/100;
     const ivaEgr=egrFilt.reduce((s,e)=>s+(e.iva||0),0);
     const ivaIng=res.filter(r=>(r.antiFecha||'').startsWith(prefix)).reduce((s,r)=>s+(r.iva||0),0);
     // Noches
     const resM=res.filter(r=>(r.checkin||'').startsWith(prefix));
     const noches=resM.reduce((s,r)=>s+(r.noches||0),0);
     const nRes=resM.length;
-    result.push({prefix,label,hosp,hospBase,consumos,consumosBase,egresos,egresosBase,ivaEgr,ivaIng,noches,nRes});
+    result.push({prefix,label,hosp,hospBase,consumos,consumosBase,egresos,egresosBase,egresosOperBase,egresosPersonalBase,ivaEgr,ivaIng,noches,nRes});
   }
   return result;
 }
@@ -1007,14 +1010,20 @@ function dashRenderChart(gId,months){
   const labels=d.map(x=>x.label);
   if(gId==='g1'){
     const neto=d.map(x=>Math.round((x.hospBase+x.consumosBase-x.egresosBase)*100)/100);
+    const egrDatasets=_dashEgrIncludeGP?[
+      {label:'Egresos oper.',data:d.map(x=>Math.round(x.egresosOperBase)),backgroundColor:'#F5C4B3',stack:'egr',order:2},
+      {label:'Egresos personal',data:d.map(x=>Math.round(x.egresosPersonalBase)),backgroundColor:'#BA7517',stack:'egr',order:2}
+    ]:[
+      {label:'Egresos',data:d.map(x=>Math.round(x.egresosBase)),backgroundColor:'#F5C4B3',stack:'egr',order:2}
+    ];
     mkChart('cv-g1',{type:'bar',data:{labels,datasets:[
       {label:'Hospedaje',data:d.map(x=>Math.round(x.hospBase)),backgroundColor:'#185FA5',stack:'ing',order:2},
       {label:'Consumos',data:d.map(x=>Math.round(x.consumosBase)),backgroundColor:'#1D9E75',stack:'ing',order:2},
-      {label:'Egresos',data:d.map(x=>Math.round(x.egresosBase)),backgroundColor:'#F5C4B3',stack:'egr',order:2},
+      ...egrDatasets,
       {label:'Neto',data:neto,type:'line',borderColor:'#0C447C',backgroundColor:'transparent',
        tension:.3,pointRadius:3,pointBackgroundColor:'#0C447C',order:1,borderWidth:2}
     ]},options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' $'+Math.round(ctx.parsed.y).toLocaleString()}}},
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.dataset.label+': $'+Math.round(ctx.parsed.y).toLocaleString()}}},
       scales:{x:{grid:{display:false},ticks:{font:{size:11}}},
         y:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>(v<0?'-$':'$')+Math.abs(Math.round(v/1000))+'K',font:{size:11}},border:{display:false}}}}});
   }
@@ -1088,10 +1097,15 @@ function dashRenderChart(gId,months){
 
   if(gId==='g9'){
     const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
-    const catTot={};gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria&&!e.deducibleAnual&&(_dashEgrIncludeGP||!e.gastoPersonal)).forEach(e=>{catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);});
+    const catTot={},catPers={};
+    gd(KE).filter(e=>(e.fecha||'').slice(0,7)>=cutoff&&e.categoria&&!e.deducibleAnual&&(_dashEgrIncludeGP||!e.gastoPersonal)).forEach(e=>{
+      catTot[e.categoria]=(catTot[e.categoria]||0)+(e.subtotal||0);
+      if(e.gastoPersonal)catPers[e.categoria]=(catPers[e.categoria]||0)+(e.subtotal||0);
+    });
     const top=Object.entries(catTot).sort((a,b)=>b[1]-a[1]).slice(0,8);
     const tot=top.reduce((s,e)=>s+e[1],0);
-    mkChart('cv-g9',{type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{label:'Monto',data:top.map(e=>Math.round(e[1])),backgroundColor:top.map((_,i)=>i===0?'#185FA5':i<3?'#378ADD':i<6?'#85B7EB':'#B5D4F4'),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.x.toLocaleString()+' · '+Math.round(ctx.parsed.x/tot*100)+'%'}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
+    const isPers=cat=>_dashEgrIncludeGP&&(catPers[cat]||0)>((catTot[cat]||0)/2);
+    mkChart('cv-g9',{type:'bar',data:{labels:top.map(e=>e[0]),datasets:[{label:'Monto',data:top.map(e=>Math.round(e[1])),backgroundColor:top.map((e,i)=>isPers(e[0])?'#BA7517':(i===0?'#185FA5':i<3?'#378ADD':i<6?'#85B7EB':'#B5D4F4')),borderRadius:4,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>'$'+ctx.parsed.x.toLocaleString()+' · '+Math.round(ctx.parsed.x/tot*100)+'%'+(isPers(top[ctx.dataIndex][0])?' · personal':'')}}},scales:{x:{grid:{color:'rgba(128,128,128,.1)'},ticks:{callback:v=>'$'+Math.round(v/1000)+'K',font:{size:11}},border:{display:false}},y:{grid:{display:false},ticks:{font:{size:10}}}}}});
   }
   if(gId==='g10'){
     mkChart('cv-g10',{type:'bar',data:{labels,datasets:[
@@ -1129,11 +1143,30 @@ function dashRenderChart(gId,months){
   }
   if(gId==='g11'){
     const cutoff=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})();
+    const modo=window._g11Modo||'cat';
     const catTot={};
-    gd(KC).filter(c=>(c.fecha||'').slice(0,7)>=cutoff).forEach(c=>{(c.items||[]).forEach(it=>{const cat=it.cat||'otro';catTot[cat]=(catTot[cat]||0)+(it.precio*it.cantidad);});});
+    let _tot11=0;
+    if(modo==='cfdi'){
+      // Map producto nombre -> conceptoCFDI (catálogo)
+      const prods=gd(KP);
+      const byNombre={};prods.forEach(p=>{if(p.nombre)byNombre[String(p.nombre).trim().toLowerCase()]=p;});
+      gd(KC).filter(c=>(c.fecha||'').slice(0,7)>=cutoff).forEach(c=>{(c.items||[]).forEach(it=>{
+        const monto=it.precio*it.cantidad;
+        const p=byNombre[String(it.nombre||'').trim().toLowerCase()];
+        let grupo;
+        if(!p)grupo='Sin producto';
+        else if(!p.conceptoCFDI||!String(p.conceptoCFDI).trim())grupo='Sin concepto';
+        else grupo=String(p.conceptoCFDI).trim();
+        catTot[grupo]=(catTot[grupo]||0)+monto;
+      });});
+    } else {
+      gd(KC).filter(c=>(c.fecha||'').slice(0,7)>=cutoff).forEach(c=>{(c.items||[]).forEach(it=>{const cat=it.cat||'otro';catTot[cat]=(catTot[cat]||0)+(it.precio*it.cantidad);});});
+    }
     const entries=Object.entries(catTot).sort((a,b)=>b[1]-a[1]);
-    const cols=['#185FA5','#1D9E75','#D85A30','#EF9F27','#7F77DD','#B4B2A9'];
-    mkChart('cv-g11',{type:'doughnut',data:{labels:entries.map(e=>catLabel(e[0])),datasets:[{data:entries.map(e=>Math.round(e[1])),backgroundColor:cols.slice(0,entries.length),borderWidth:2,borderColor:'#fff',hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{font:{size:11},boxWidth:10,padding:8}},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()}}}}});
+    _tot11=entries.reduce((s,e)=>s+e[1],0);
+    const cols=['#185FA5','#1D9E75','#D85A30','#EF9F27','#7F77DD','#B4B2A9','#85B7EB','#9FE1CB','#F0997B','#FAC775','#AFA9EC','#D3D1C7'];
+    const labels11=entries.map(e=>modo==='cfdi'?e[0]:catLabel(e[0]));
+    mkChart('cv-g11',{type:'doughnut',data:{labels:labels11,datasets:[{data:entries.map(e=>Math.round(e[1])),backgroundColor:entries.map((_,i)=>cols[i%cols.length]),borderWidth:2,borderColor:'#fff',hoverOffset:4}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:true,position:'right',labels:{font:{size:11},boxWidth:10,padding:8}},tooltip:{callbacks:{label:ctx=>' $'+ctx.parsed.toLocaleString()+(_tot11>0?' · '+Math.round(ctx.parsed/_tot11*100)+'%':'')}}}}});
   }
 }
 
@@ -1156,7 +1189,7 @@ function renderDash(){
   const seg12mes=(gId)=>dashSegHdr(gId,[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12);
   const segMes=(gId)=>dashSegHdr(gId,[{l:'Mes',v:1},{l:'3m',v:3},{l:'12m',v:12}],12);
 
-  document.getElementById('dash-g1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos vs egresos</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Con resultado neto</p></div><div style="display:flex;align-items:center;gap:8px"><button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;updateGPBtn();dashRenderChart('g1',_dashSegN['g1']||12);dashRenderChart('g9',_dashSegN['g9']||12);" id="btn-dash-gp" class="btn-dash-gp" style="border:0.5px solid #d5d5cf;background:transparent;color:var(--color-text-secondary);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;font-weight:400">+ Gastos personales</button><div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-secondary)">${[['#185FA5','Hospedaje'],['#1D9E75','Consumos'],['#F5C4B3','Egresos']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}<span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#0C447C;display:inline-block"></span>Neto</span></div>${seg12('g1')}</div></div><div style="position:relative;height:240px"><canvas id="cv-g1" role="img" aria-label="Ingresos vs egresos mensuales">Ingresos vs egresos mensuales.</canvas></div>`;
+  document.getElementById('dash-g1').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Ingresos vs egresos</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Con resultado neto · Montos netos (base sin IVA)</p></div><div style="display:flex;align-items:center;gap:8px"><button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;updateGPBtn();dashRenderChart('g1',_dashSegN['g1']||12);dashRenderChart('g9',_dashSegN['g9']||12);" id="btn-dash-gp" class="btn-dash-gp" style="border:0.5px solid #d5d5cf;background:transparent;color:var(--color-text-secondary);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;font-weight:400">+ Gastos personales</button><div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-secondary)">${[['#185FA5','Hospedaje'],['#1D9E75','Consumos'],['#F5C4B3','Egresos']].map(([c,l])=>`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${l}</span>`).join('')}${_dashEgrIncludeGP?`<span style="display:flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:2px;background:#BA7517"></span>Personal</span>`:''}<span style="display:flex;align-items:center;gap:4px"><span style="width:16px;height:2px;background:#0C447C;display:inline-block"></span>Neto</span></div>${seg12('g1')}</div></div><div style="position:relative;height:240px"><canvas id="cv-g1" role="img" aria-label="Ingresos vs egresos mensuales">Ingresos vs egresos mensuales.</canvas></div>`;
 
   document.getElementById('dash-g4').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Orígenes</p>${seg12('g4')}</div><div style="position:relative;height:180px"><canvas id="cv-g4" role="img" aria-label="Orígenes de reservas">Orígenes de reservas.</canvas></div>`;
 
@@ -1168,9 +1201,9 @@ function renderDash(){
 
   document.getElementById('dash-g8').style.display='none';
 
-  document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Base sin IVA</p></div><div style="display:flex;align-items:center;gap:8px"><button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;updateGPBtn();dashRenderChart('g1',_dashSegN['g1']||12);dashRenderChart('g9',_dashSegN['g9']||12);" class="btn-dash-gp" style="border:0.5px solid #d5d5cf;background:transparent;color:var(--color-text-secondary);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;font-weight:400">+ Gastos personales</button>${segMes('g9')}</div></div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
+  document.getElementById('dash-g9').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">Top egresos por categoría</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Montos netos (base sin IVA)</p></div><div style="display:flex;align-items:center;gap:8px">${_dashEgrIncludeGP?`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:8px;border-radius:2px;background:#BA7517"></span>Gasto personal</span>`:''}<button onclick="_dashEgrIncludeGP=!_dashEgrIncludeGP;updateGPBtn();dashRenderChart('g1',_dashSegN['g1']||12);dashRenderChart('g9',_dashSegN['g9']||12);" class="btn-dash-gp" style="border:0.5px solid #d5d5cf;background:transparent;color:var(--color-text-secondary);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer;font-weight:400">+ Gastos personales</button>${segMes('g9')}</div></div><div style="position:relative;height:260px"><canvas id="cv-g9" role="img" aria-label="Top categorías egresos">Top categorías egresos.</canvas></div>`;
 
-  document.getElementById('dash-g10').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">IVA cobrado vs acreditable</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Solo IVA</p></div>${seg12('g10')}</div><div style="position:relative;height:260px"><canvas id="cv-g10" role="img" aria-label="IVA cobrado vs acreditable">IVA cobrado vs acreditable.</canvas></div>`;
+  document.getElementById('dash-g10').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><div><p style="font-size:13px;font-weight:500;margin:0">IVA cobrado vs acreditable</p><p style="font-size:11px;color:var(--color-text-secondary);margin:2px 0 0">Montos de IVA</p></div>${seg12('g10')}</div><div style="position:relative;height:260px"><canvas id="cv-g10" role="img" aria-label="IVA cobrado vs acreditable">IVA cobrado vs acreditable.</canvas></div>`;
 
   const ORIGEN_LABELS={directo:'Directo',booking:'Booking',airbnb:'Airbnb',whatsapp:'WhatsApp',agencia:'Agencia',tablet:'Tablet',otro:'Otro'};
   const legendHtml=Object.entries(ORIGEN_COLORS).map(([k,c])=>`<span style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--color-text-secondary)"><span style="width:8px;height:8px;border-radius:2px;background:${c}"></span>${ORIGEN_LABELS[k]||k}</span>`).join('');
@@ -1189,7 +1222,14 @@ function renderDash(){
     <button class="gres-badge" onclick="setGresToggle(this,'llegada')">${_icoArr}Fecha llegada</button>
   </div>
   <div style="position:relative;height:220px"><canvas id="cv-gres" role="img" aria-label="Reservas por mes y origen">Reservas por mes y origen.</canvas></div>`;
-  document.getElementById('dash-g11').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><p style="font-size:13px;font-weight:500;margin:0">Consumos por categoría</p>${seg12('g11')}</div><div style="position:relative;height:200px"><canvas id="cv-g11" role="img" aria-label="Consumos por categoría">Consumos por categoría.</canvas></div>`;
+  const _g11cal='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>';
+  document.getElementById('dash-g11').innerHTML=`<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px"><div><p style="font-size:13px;font-weight:500;margin:0">Consumos por categoría</p><p style="font-size:11px;color:var(--color-text-secondary);margin:3px 0 0">Montos brutos (IVA incluido)</p></div>${seg12('g11')}</div>
+  <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px" id="seg-g11-f">
+    <span style="font-size:11px;color:var(--color-text-tertiary)">Agrupar por</span>
+    <button class="gres-badge${_g11Modo==='cat'?' on':''}" onclick="setG11Modo(this,'cat')">Categoría</button>
+    <button class="gres-badge${_g11Modo==='cfdi'?' on':''}" onclick="setG11Modo(this,'cfdi')">Concepto CFDI</button>
+  </div>
+  <div style="position:relative;height:200px"><canvas id="cv-g11" role="img" aria-label="Consumos por categoría">Consumos por categoría.</canvas></div>`;
 
   const _renderAll=()=>requestAnimationFrame(()=>['g1','g4','g6','g7','g12','gres','g9','g10','g11'].forEach(g=>dashRenderChart(g,12)));
   if(!window.Chart){
@@ -1206,6 +1246,13 @@ function setGresToggle(btn,tipo){
   btn.classList.add('on');
   document.getElementById('gres-fecha-toggle').value=tipo;
   dashRenderChart('gres',parseInt(document.querySelector('#seg-gres .dsb.on')?.textContent)||12);
+}
+var _g11Modo='cat';
+function setG11Modo(btn,modo){
+  _g11Modo=modo;
+  document.querySelectorAll('#seg-g11-f .gres-badge').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  dashRenderChart('g11',_dashSegN['g11']||12);
 }
 // ── NUEVA RESERVA: multiple habitaciones ──
 var habRows=[];
