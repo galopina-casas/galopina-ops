@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.11.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2170,10 +2170,9 @@ async function guardarConsumo(){
     pago:l.pago,
     fechaPago:(l.pago&&l.pago!=='tbd')?(l.fechaPago||''):''
   }));
-  // c.fecha: ya NO se lee en ninguna parte de la app. Se sigue escribiendo (fecha de pago más
-  // temprana) solo para no dejar la columna del Sheet vacía hasta que se elimine del SCHEMA (Apps Script).
-  const _fechasPago=lineas.map(l=>(l.pago&&l.pago!=='tbd')?(l.fechaPago||''):'').filter(Boolean).sort();
-  const fecha=_fechasPago.length?_fechasPago[0]:'';
+  // c.fecha: ya NO se usa en la app y NO se puebla de ahora en adelante (se escribe vacío).
+  // La columna se eliminará del Sheet y del SCHEMA del Apps Script en una limpieza futura.
+  const fecha='';
   const cons=gd(KC);
   const _backupC=JSON.parse(JSON.stringify(cons));
 
