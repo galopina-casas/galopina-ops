@@ -123,7 +123,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.9</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.11</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -146,7 +146,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.9</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v32.8.11</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2100,6 +2100,8 @@ function resetC(){
   const dd=document.getElementById('ac-hdd');if(dd)dd.style.display='none';
   const rp=document.getElementById('res-preview');if(rp)rp.innerHTML='';
   safe('c-nota').value='';
+  // Reset país del huésped sin hospedaje (no debe heredar del consumo previo)
+  const cp=document.getElementById('cons-pais');if(cp)cp.value='';
   const lc=document.getElementById('lineas-card');if(lc)lc.style.display='none';
   const ll=document.getElementById('lineas-list');if(ll)ll.innerHTML='';
   // Reset product search fields safely
@@ -2178,7 +2180,15 @@ function renderConsList(){
               <span style="font-size:13px;font-weight:700">${c.huesped}</span>
             </div>
             <p style="font-size:12px;color:#888;margin-top:2px">${ci?`${c.habitacion||''} &nbsp;${ci} &rarr; ${co}`:'Cliente sin hospedaje'}</p>
-            <p style="font-size:12px;color:#AAA">${(c.items||[]).reduce((s,i)=>s+i.cantidad,0)} producto${(c.items||[]).reduce((s,i)=>s+i.cantidad,0)!==1?'s':''}</p>
+            ${(()=>{
+              const nProds=(c.items||[]).reduce((s,i)=>s+i.cantidad,0);
+              const fechas=(c.items||[]).map(i=>i.fechaPago).filter(f=>f&&f!=='tbd');
+              const maxFecha=fechas.length?fechas.sort().reverse()[0]:'';
+              return `<div style="display:flex;align-items:center;gap:8px;margin-top:3px;flex-wrap:wrap">
+                <span style="font-size:12px;color:#AAA">${nProds} producto${nProds!==1?'s':''}</span>
+                ${maxFecha?`<span style="font-size:10px;color:#666;background:#F0EDE8;padding:2px 7px;border-radius:4px">Pago ${fmtDate(maxFecha)}</span>`:''}
+              </div>`;
+            })()}
           </div>
         </div>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0">
@@ -2473,6 +2483,22 @@ function _ingPagoUpdateButton(){
   else btn.textContent=sel.length+' métodos';
 }
 
+function ingChronoSort(col){
+  const cur=window._ingChronoSort||{col:'fecha',dir:'asc'};
+  // For monto, default first click = desc (más grande arriba). Para texto/fecha, asc.
+  const defaultDir=col==='monto'?'desc':'asc';
+  if(cur.col===col)window._ingChronoSort={col,dir:cur.dir==='asc'?'desc':'asc'};
+  else window._ingChronoSort={col,dir:defaultDir};
+  renderIngresos();
+}
+function ingGuestSort(col){
+  const cur=window._ingGuestSort||{col:'total',dir:'desc'};
+  const defaultDir=col==='nombre'?'asc':'desc';
+  if(cur.col===col)window._ingGuestSort={col,dir:cur.dir==='asc'?'desc':'asc'};
+  else window._ingGuestSort={col,dir:defaultDir};
+  renderIngresos();
+}
+
 function renderIngresos(){
   const mes=document.getElementById('ing-mes').value;
   const cli=(document.getElementById('ing-cli').value||'').toLowerCase();
@@ -2574,10 +2600,21 @@ function renderIngresos(){
       });
       const total=hosp+cenas+cons;
       return {nombre,hosp:Math.round(hosp*100)/100,cenas:Math.round(cenas*100)/100,cons:Math.round(cons*100)/100,total:Math.round(total*100)/100};
-    }).filter(t=>t.total>0.5).sort((a,b)=>b.total-a.total);
+    }).filter(t=>t.total>0.5);
+    // Sort: by user choice (default total desc)
+    const defaultSortG={col:'total',dir:'desc'};
+    const sortG=window._ingGuestSort||defaultSortG;
+    const cmpStrG=(a,b,d)=>{const av=String(a||'').toLowerCase(),bv=String(b||'').toLowerCase();return d==='asc'?av.localeCompare(bv):bv.localeCompare(av);};
+    const cmpNumG=(a,b,d)=>{const av=parseFloat(a)||0,bv=parseFloat(b)||0;return d==='asc'?av-bv:bv-av;};
+    tableRows.sort((a,b)=>{
+      if(sortG.col==='nombre')return cmpStrG(a.nombre,b.nombre,sortG.dir);
+      return cmpNumG(a[sortG.col],b[sortG.col],sortG.dir);
+    });
     const tot={hosp:0,cenas:0,cons:0,total:0};
     tableRows.forEach(t=>{tot.hosp+=t.hosp;tot.cenas+=t.cenas;tot.cons+=t.cons;tot.total+=t.total;});
-    box.innerHTML=`<div class="card" style="padding:14px 16px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Huésped</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Hospedaje</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Cenas</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Consumos</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody>${tableRows.map(t=>`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${t.nombre}</td><td style="padding:7px 8px;text-align:right;color:#1860A5">${t.hosp>0?fmt(t.hosp):'—'}</td><td style="padding:7px 8px;text-align:right;color:#1D9E75">${t.cenas>0?fmt(t.cenas):'—'}</td><td style="padding:7px 8px;text-align:right;color:#1D9E75">${t.cons>0?fmt(t.cons):'—'}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(t.total)}</td></tr>`).join('')}<tr style="font-weight:700;border-top:2px solid #EEE"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right;color:#1860A5">${fmt(tot.hosp)}</td><td style="padding:8px;text-align:right;color:#1D9E75">${fmt(tot.cenas)}</td><td style="padding:8px;text-align:right;color:#1D9E75">${fmt(tot.cons)}</td><td style="padding:8px;text-align:right;color:#1A1916">${fmt(tot.total)}</td></tr></tbody></table></div>`;
+    const thStyleG='padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase;cursor:pointer;user-select:none';
+    const sortArrowG=(col)=>sortG.col===col?(sortG.dir==='asc'?' ↑':' ↓'):'';
+    box.innerHTML=`<div class="card" style="padding:14px 16px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;${thStyleG}" onclick="ingGuestSort('nombre')">Huésped${sortArrowG('nombre')}</th><th style="text-align:right;${thStyleG}" onclick="ingGuestSort('hosp')">Hospedaje${sortArrowG('hosp')}</th><th style="text-align:right;${thStyleG}" onclick="ingGuestSort('cenas')">Cenas${sortArrowG('cenas')}</th><th style="text-align:right;${thStyleG}" onclick="ingGuestSort('cons')">Consumos${sortArrowG('cons')}</th><th style="text-align:right;${thStyleG}" onclick="ingGuestSort('total')">Total${sortArrowG('total')}</th></tr></thead><tbody>${tableRows.map(t=>`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${t.nombre}</td><td style="padding:7px 8px;text-align:right;color:#1860A5">${t.hosp>0?fmt(t.hosp):'—'}</td><td style="padding:7px 8px;text-align:right;color:#1D9E75">${t.cenas>0?fmt(t.cenas):'—'}</td><td style="padding:7px 8px;text-align:right;color:#1D9E75">${t.cons>0?fmt(t.cons):'—'}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(t.total)}</td></tr>`).join('')}<tr style="font-weight:700;border-top:2px solid #EEE"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right;color:#1860A5">${fmt(tot.hosp)}</td><td style="padding:8px;text-align:right;color:#1D9E75">${fmt(tot.cenas)}</td><td style="padding:8px;text-align:right;color:#1D9E75">${fmt(tot.cons)}</td><td style="padding:8px;text-align:right;color:#1A1916">${fmt(tot.total)}</td></tr></tbody></table></div>`;
     return;
   }
 
@@ -2610,9 +2647,27 @@ function renderIngresos(){
         });
       }
     });
-    chronoRows.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    // Default sort: fecha asc, then huesped asc
+    const defaultSort={col:'fecha',dir:'asc'};
+    const sort=window._ingChronoSort||defaultSort;
+    const cmpStr=(a,b,d)=>{const av=String(a||'').toLowerCase(),bv=String(b||'').toLowerCase();return d==='asc'?av.localeCompare(bv):bv.localeCompare(av);};
+    const cmpNum=(a,b,d)=>{const av=parseFloat(a)||0,bv=parseFloat(b)||0;return d==='asc'?av-bv:bv-av;};
+    chronoRows.sort((a,b)=>{
+      let c=0;
+      if(sort.col==='fecha')c=cmpStr(a.fecha,b.fecha,sort.dir);
+      else if(sort.col==='huesped')c=cmpStr(a.huesped,b.huesped,sort.dir);
+      else if(sort.col==='concepto')c=cmpStr(a.concepto,b.concepto,sort.dir);
+      else if(sort.col==='monto')c=cmpNum(a.monto,b.monto,sort.dir);
+      else if(sort.col==='pago')c=cmpStr(a.pago,b.pago,sort.dir);
+      // Tie-breaker
+      if(c===0&&sort.col!=='huesped')c=cmpStr(a.huesped,b.huesped,'asc');
+      if(c===0&&sort.col!=='fecha')c=cmpStr(a.fecha,b.fecha,'asc');
+      return c;
+    });
     const totMonto=chronoRows.reduce((s,r)=>s+r.monto,0);
-    box.innerHTML=`<div class="card" style="padding:14px 16px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase;width:100px">Fecha</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Huésped</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase;width:120px">Método</th></tr></thead><tbody>${chronoRows.map(r=>`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${fmtDate(r.fecha)}</td><td style="padding:7px 8px">${r.huesped}</td><td style="padding:7px 8px;color:${r.color}">${r.concepto}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(r.monto)}</td><td style="padding:7px 8px">${pagoLabel(r.pago)}</td></tr>`).join('')}<tr style="font-weight:700;border-top:2px solid #EEE"><td style="padding:8px" colspan="3">TOTAL</td><td style="padding:8px;text-align:right;color:#1D9E75">${fmt(totMonto)}</td><td></td></tr></tbody></table></div>`;
+    const thStyle='text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase;cursor:pointer;user-select:none';
+    const sortArrow=(col)=>sort.col===col?(sort.dir==='asc'?' ↑':' ↓'):'';
+    box.innerHTML=`<div class="card" style="padding:14px 16px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="border-bottom:2px solid #EEE"><th style="${thStyle};width:100px" onclick="ingChronoSort('fecha')">Fecha${sortArrow('fecha')}</th><th style="${thStyle}" onclick="ingChronoSort('huesped')">Huésped${sortArrow('huesped')}</th><th style="${thStyle}" onclick="ingChronoSort('concepto')">Concepto${sortArrow('concepto')}</th><th style="${thStyle.replace('text-align:left','text-align:right')}" onclick="ingChronoSort('monto')">Monto${sortArrow('monto')}</th><th style="${thStyle};width:120px" onclick="ingChronoSort('pago')">Método${sortArrow('pago')}</th></tr></thead><tbody>${chronoRows.map(r=>`<tr style="border-bottom:0.5px solid #F0EDE8"><td style="padding:7px 8px">${fmtDate(r.fecha)}</td><td style="padding:7px 8px">${r.huesped}</td><td style="padding:7px 8px;color:${r.color}">${r.concepto}</td><td style="padding:7px 8px;text-align:right;font-weight:600">${fmt(r.monto)}</td><td style="padding:7px 8px">${pagoLabel(r.pago)}</td></tr>`).join('')}<tr style="font-weight:700;border-top:2px solid #EEE"><td style="padding:8px" colspan="3">TOTAL</td><td style="padding:8px;text-align:right;color:#1D9E75">${fmt(totMonto)}</td><td></td></tr></tbody></table></div>`;
     return;
   }
 
