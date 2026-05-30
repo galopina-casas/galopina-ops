@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.6.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.7.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.6.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.7.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1031,7 +1031,7 @@ function dashRenderChart(gId,months){
     const origenCnt={};gd(KR).filter(r=>(r.checkin||'').slice(0,7)>=(()=>{const n=new Date();n.setMonth(n.getMonth()-(months-1));return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')})()).forEach(r=>{const o=r.origen||'otro';origenCnt[o]=(origenCnt[o]||0)+1;});
     const entries=Object.entries(origenCnt).sort((a,b)=>b[1]-a[1]);
     const cols=['#185FA5','#1D9E75','#D85A30','#7F77DD','#EF9F27','#B4B2A9'];
-    mkChart('cv-g4',{type:'pie',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols.slice(0,entries.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.label+': '+ctx.parsed}}}}});
+    mkChart('cv-g4',{type:'pie',data:{labels:entries.map(e=>e[0]),datasets:[{data:entries.map(e=>e[1]),backgroundColor:cols.slice(0,entries.length),borderWidth:2,borderColor:'#fff'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>{const t=ctx.dataset.data.reduce((s,v)=>s+v,0);return ctx.label+': '+ctx.parsed+(t>0?' · '+Math.round(ctx.parsed/t*100)+'%':'');}}}}}});
   }
   if(gId==='g6'){
     const totNoches=d.reduce((s,x)=>s+(x.noches||0),0);
@@ -1179,11 +1179,13 @@ function renderDash(){
   const totCons=cons.filter(c=>(c.fecha||'').startsWith(prefix)).reduce((s,c)=>s+(c.total||0),0);
   const pendHosp=res.filter(r=>!r.saldFecha&&(r.saldo||0)>0).reduce((s,r)=>s+(r.saldo||0),0);
   const enCasa=res.filter(r=>r.estado==='checkin').length;
+  const nReservaciones=res.filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.estado!=='cancelada').length;
+  const _mb='<p style="font-size:10px;color:#aaa;margin-top:2px">Bruto</p>';
   document.getElementById('dash-metrics').innerHTML=`
-    <div class="metric"><p class="mlabel">Cobrado este mes</p><p class="mval" style="color:#185FA5">${fmt(anti+saldos)}</p></div>
-    <div class="metric"><p class="mlabel">Consumos este mes</p><p class="mval" style="color:#1D9E75">${fmt(totCons)}</p></div>
-    <div class="metric"><p class="mlabel">Saldos pendientes</p><p class="mval" style="color:#E24B4A">${fmt(pendHosp)}</p></div>
-    <div class="metric"><p class="mlabel">En casa ahora</p><p class="mval">${enCasa}</p></div>`;
+    <div class="metric"><p class="mlabel">Cobrado este mes</p><p class="mval" style="color:#185FA5">${fmt(anti+saldos)}</p>${_mb}</div>
+    <div class="metric"><p class="mlabel">Consumos este mes</p><p class="mval" style="color:#1D9E75">${fmt(totCons)}</p>${_mb}</div>
+    <div class="metric"><p class="mlabel">Saldos pendientes</p><p class="mval" style="color:#E24B4A">${fmt(pendHosp)}</p>${_mb}</div>
+    <div class="metric"><p class="mlabel">Reservaciones</p><p class="mval">${nReservaciones}</p></div>`;
 
   const seg12=(gId)=>dashSegHdr(gId,[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12);
   const seg12mes=(gId)=>dashSegHdr(gId,[{l:'6m',v:6},{l:'12m',v:12},{l:'2 años',v:24}],12);
@@ -2666,10 +2668,10 @@ function renderIngresos(){
   pend=Math.round(pend*100)/100;
 
   document.getElementById('ing-summary').innerHTML=`
-    <div class="ing-sum"><p class="lbl">Total cobrado</p><p class="val">${fmt(cobrado)}</p></div>
-    <div class="ing-sum"><p class="lbl">Hospedaje</p><p class="val" style="color:#185FA5">${fmt(totH)}</p></div>
-    <div class="ing-sum"><p class="lbl">Consumos</p><p class="val" style="color:#1D9E75">${fmt(totC)}</p></div>
-    <div class="ing-sum"><p class="lbl">Pendiente cobro</p><p class="val" style="color:#E24B4A">${fmt(pend)}</p></div>`;
+    <div class="ing-sum"><p class="lbl">Total cobrado</p><p class="val">${fmt(cobrado)}</p><p style="font-size:10px;color:#aaa;margin-top:2px">Bruto</p></div>
+    <div class="ing-sum"><p class="lbl">Hospedaje</p><p class="val" style="color:#185FA5">${fmt(totH)}</p><p style="font-size:10px;color:#aaa;margin-top:2px">Bruto</p></div>
+    <div class="ing-sum"><p class="lbl">Consumos</p><p class="val" style="color:#1D9E75">${fmt(totC)}</p><p style="font-size:10px;color:#aaa;margin-top:2px">Bruto</p></div>
+    <div class="ing-sum"><p class="lbl">Pendiente cobro</p><p class="val" style="color:#E24B4A">${fmt(pend)}</p><p style="font-size:10px;color:#aaa;margin-top:2px">Bruto</p></div>`;
 
   // Group rows by reservation id
   const byRes={};
@@ -3072,7 +3074,20 @@ function renderEgresos(){
   if(search)egresos=egresos.filter(e=>(e.proveedor||'').toLowerCase().includes(search)||(e.descripcion||'').toLowerCase().includes(search));
   if(catFilter)egresos=egresos.filter(e=>(e.categoria||'').toLowerCase().includes(catFilter.toLowerCase()));
   if(soloSin)egresos=egresos.filter(e=>!e.categoria);
-  egresos.sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const _sc=window._egrSortCol||'fecha';
+  const _sd=window._egrSortDir||'desc';
+  const _egrVal=(e,col)=>{
+    if(col==='total')return e.total||0;
+    if(col==='iva')return e.iva||0;
+    if(col==='proveedor')return (e.proveedor||'').toLowerCase();
+    if(col==='categoria')return (e.categoria||'').toLowerCase();
+    return e.fecha||'';
+  };
+  egresos.sort((a,b)=>{
+    const va=_egrVal(a,_sc),vb=_egrVal(b,_sc);
+    let c=(typeof va==='number')?(va-vb):String(va).localeCompare(String(vb));
+    return _sd==='desc'?-c:c;
+  });
 
   // Metrics
   const total=Math.round(egresos.reduce((s,e)=>s+(e.total||0),0)*100)/100;
@@ -3157,10 +3172,17 @@ function renderEgresos(){
       <span onclick="openEgModal('${e.uuid}')" style="cursor:pointer">${catBadge}</span>
     </div>`;
   }).join('');
+  const _arr=(col)=>_sc===col?(_sd==='desc'?' ▼':' ▲'):'';
+  const _thStyle='cursor:pointer;user-select:none';
   document.getElementById('eg-list').innerHTML=`
     <div style="display:grid;grid-template-columns:90px 1fr 90px 70px 130px;gap:8px;padding:4px 6px 8px;border-bottom:0.5px solid #d5d5cf;font-size:11px;color:#999;text-transform:uppercase;letter-spacing:.04em">
-      <span>Fecha</span><span>Proveedor / Descripción</span><span style="text-align:right">Total</span><span style="text-align:right">IVA</span><span>Categoría</span>
+      <span style="${_thStyle}" onclick="setEgrSort('fecha')">Fecha${_arr('fecha')}</span><span style="${_thStyle}" onclick="setEgrSort('proveedor')">Proveedor / Descripción${_arr('proveedor')}</span><span style="text-align:right;${_thStyle}" onclick="setEgrSort('total')">Total${_arr('total')}</span><span style="text-align:right;${_thStyle}" onclick="setEgrSort('iva')">IVA${_arr('iva')}</span><span style="${_thStyle}" onclick="setEgrSort('categoria')">Categoría${_arr('categoria')}</span>
     </div>${rows}`;
+}
+function setEgrSort(col){
+  if(window._egrSortCol===col){window._egrSortDir=(window._egrSortDir==='desc')?'asc':'desc';}
+  else{window._egrSortCol=col;window._egrSortDir=(col==='total'||col==='iva')?'desc':'asc';}
+  renderEgresos();
 }
 
 function openEgModal(uuid){
@@ -4503,8 +4525,8 @@ function renderCierre(){
     <div style="display:flex;gap:8px;flex-wrap:wrap">
       <div class="metric"><p style="${mLabel}">Reservaciones</p><p style="${mVal}">${nReservaciones}</p></div>
       <div class="metric"><p style="${mLabel}">Noches vendidas</p><p style="${mVal}">${noches}</p></div>
-      <div class="metric"><p style="${mLabel}">Ingresos netos</p><p style="${mVal};color:#1860A5">${fmt(ingresosNetos)}</p><p style="font-size:11px;color:#888;margin-top:3px">+IVA ${fmt(ivaCobrado)}</p></div>
-      <div class="metric"><p style="${mLabel}">Egresos netos</p><p style="${mVal};color:#BA7517">${fmt(egresosNetos)}</p><p style="font-size:11px;color:#888;margin-top:3px">+IVA ${fmt(ivaAcreditable)}</p></div>
+      <div class="metric"><p style="${mLabel}">Ingresos netos</p><p style="${mVal};color:#1860A5">${fmt(ingresosNetos)}</p><p style="font-size:10px;color:#aaa;margin-top:2px">Neto · +IVA ${fmt(ivaCobrado)}</p></div>
+      <div class="metric"><p style="${mLabel}">Egresos netos</p><p style="${mVal};color:#BA7517">${fmt(egresosNetos)}</p><p style="font-size:10px;color:#aaa;margin-top:2px">Neto · +IVA ${fmt(ivaAcreditable)}</p></div>
       <div class="metric"><p style="${mLabel}">IVA ${ivaEsAFavor?'a favor':'a pagar'}</p><p style="${mVal};color:${ivaEsAFavor?'#1D9E75':'#E24B4A'}">${fmt(ivaAbs)}</p></div>
       <div class="metric"><p style="${mLabel}">Utilidad</p><p style="${mVal};color:${utilidad>=0?'#1D9E75':'#E24B4A'}">${fmt(utilidad)}</p></div>
     </div></div>`;
