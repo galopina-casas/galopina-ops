@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.11.4</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.12.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.11.4</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.12.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -211,7 +211,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <input type="checkbox" id="res-split-mes" onchange="renderRes()" style="width:15px;height:15px;margin:0;cursor:pointer" checked>
           Agrupar por mes
         </label>
-        <button class="btn btn-sm" onclick="clearResFilters()" style="height:32px;padding:0 10px;margin-left:auto;white-space:nowrap">Limpiar &#x2715;</button>
+        <button class="btn btn-sm" onclick="clearResFilters()" title="Limpiar filtros" style="height:32px;padding:0 12px;margin-left:auto">&#x2715;</button>
       </div>
     </div>
     <div id="lista-res"></div>
@@ -341,7 +341,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <input type="checkbox" id="cons-split-mes" onchange="renderConsList()" style="width:15px;height:15px;margin:0;cursor:pointer" checked>
           Agrupar por mes
         </label>
-        <button class="btn btn-sm" onclick="clearConsFilters()" style="height:32px;padding:0 10px;margin-left:auto;white-space:nowrap">Limpiar &#x2715;</button>
+        <button class="btn btn-sm" onclick="clearConsFilters()" title="Limpiar filtros" style="height:32px;padding:0 12px;margin-left:auto">&#x2715;</button>
       </div>
     </div>
     <!-- Lista consumos -->
@@ -422,7 +422,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
           <div id="ing-pago-dd" style="display:none;position:absolute;top:100%;left:0;right:0;background:#fff;border:0.5px solid #e0e0da;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,0.08);z-index:10;margin-top:2px;padding:6px;max-height:240px;overflow-y:auto"></div>
         </div>
         <div style="flex:1;min-width:140px"><label>Agrupar por</label><select id="ing-group" onchange="renderIngresos()" style="font-size:13px"><option value="cards">Tarjetas</option><option value="byGuest">Tabla por huésped</option><option value="chrono">Tabla cronológica</option></select></div>
-        <button class="btn btn-sm" onclick="clearFiltros()">✕</button>
+        <button class="btn btn-sm" onclick="clearFiltros()" title="Limpiar filtros" style="height:32px;padding:0 12px;margin-left:auto">✕</button>
       </div>
     </div>
     <div id="ing-summary" class="ing-sum-grid"></div>
@@ -451,7 +451,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       <input type="checkbox" id="eg-solo-sincat" onchange="renderEgresos()" style="width:15px;height:15px">
       Solo sin categoría
     </label>
-    <button class="btn btn-sm" onclick="clearEgrFilters()" style="height:32px;padding:0 10px;margin-left:auto;white-space:nowrap">Limpiar &#x2715;</button>
+    <button class="btn btn-sm" onclick="clearEgrFilters()" title="Limpiar filtros" style="height:32px;padding:0 12px;margin-left:auto">&#x2715;</button>
   </div>
   </div>
   <div id="eg-metrics" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px"></div>
@@ -4632,6 +4632,10 @@ function renderCierre(){
   ${fmt(Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100)}
   <span style="color:#AAA;font-size:11px">(suma ISH de reservas con fecha de salida en ${mesNombre})</span>
 </p>
+${(()=>{
+  const ishAirbnb=Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.origen==='airbnb').reduce((s,r)=>s+(r.ish||0),0)*100)/100;
+  return ishAirbnb>0?`<p style="font-size:11px;color:#888;margin-top:2px;font-style:italic">De lo anterior, ${fmt(ishAirbnb)} de ISH corresponde a reservas Airbnb, pagado directamente por Airbnb al fisco estatal.</p>`:'';
+})()}
 `;
 
   // ---- Reconciliación bancaria (lee del módulo Reconciliación) ----
@@ -5011,6 +5015,10 @@ function exportarCierreExcel(modo){
   fis.push(['','','','','']);
   const ishReservas=Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100;
   fis.push([{v:'ISH Reservas '+mesNombre+':',s:{font:{bold:true}}},{v:ishReservas,t:'n',z:'#,##0.00'},{v:'(suma ISH reservas con salida en '+mesNombre+')'},{v:''},{v:''}]);
+  const ishAirbnb=Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.origen==='airbnb').reduce((s,r)=>s+(r.ish||0),0)*100)/100;
+  if(ishAirbnb>0){
+    fis.push([{v:'De lo anterior, ISH Airbnb:',s:{font:{italic:true,color:{rgb:'888888'}}}},{v:ishAirbnb,t:'n',z:'#,##0.00',s:{font:{italic:true,color:{rgb:'888888'}}}},{v:'(pagado directamente por Airbnb al fisco estatal)',s:{font:{italic:true,color:{rgb:'888888'}}}},{v:''},{v:''}]);
+  }
   const ws2=XLSX.utils.aoa_to_sheet(fis);
   ws2['!cols']=[{wch:22},{wch:14},{wch:35},{wch:12},{wch:14}];
   XLSX.utils.book_append_sheet(wb,ws2,'CFDI global');
