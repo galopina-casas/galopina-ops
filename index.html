@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.21.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.22.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.21.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.22.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5240,7 +5240,7 @@ async function exportarCierreExcel(modo){
   // Las retenciones de plataformas van debajo del TOTAL (no se suman)
   const egNormales=egMesAll.filter(e=>e.categoria!=='Retenciones plataformas');
   const egReten=egMesAll.filter(e=>e.categoria==='Retenciones plataformas');
-  const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Fuente','Moneda orig.','Monto orig.','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota','Reconciliación','Notas reconciliación'];
+  const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Fuente','Moneda orig.','Monto orig.','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota factura','Reconciliación','Notas reconciliación'];
   const egData=[egHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
   const egRow=(e,bg)=>{
     const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
@@ -5276,6 +5276,58 @@ async function exportarCierreExcel(modo){
   wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20},{wch:16},{wch:28}];
   wsEg['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
+
+  // === HOJA MOVIMIENTOS BANCO (cargos / egresos) ===
+  // Lista los cargos de las 3 cuentas con su estatus de reconciliación.
+  // Solo si hay reconciliación de egresos cargada del mes.
+  const _bx=window._recLastEgresos;
+  if(_bx){
+    const cargosRows=[];
+    // Cargos que matchearon una factura → Reconciliado
+    (_bx.facturaMatches||[]).forEach(m=>{
+      if(!m.ok)return; // sin banco no es un cargo bancario reconciliado
+      cargosRows.push({
+        cuenta:m.bankAcc||'',fecha:m.bankFecha||m.fecha||'',
+        descripcion:m.bankDesc||'',monto:m.total||0,
+        estatus:'Reconciliado',proveedor:m.proveedor||''
+      });
+    });
+    // Cargos huérfanos → Sin factura
+    (_bx.huerfanosBank||[]).forEach(h=>{
+      cargosRows.push({
+        cuenta:h.acc||'',fecha:h.fecha||'',
+        descripcion:h.desc||'',monto:h.monto||0,
+        estatus:'Sin factura',proveedor:''
+      });
+    });
+    if(cargosRows.length){
+      cargosRows.sort((a,b)=>String(a.cuenta).localeCompare(String(b.cuenta))||String(a.fecha).localeCompare(String(b.fecha)));
+      const bHdrs=['Banco','Fecha','Descripción','Proveedor (factura)','Monto','Reconciliación'];
+      const bData=[bHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
+      cargosRows.forEach((c,i)=>{
+        const bg=i%2===0?null:'F2F2F2';
+        const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
+        const recCell=c.estatus==='Reconciliado'
+          ?{v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}}
+          :{v:'✗ Sin factura',s:{...cs,font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
+        bData.push([
+          {v:c.cuenta,s:cs},{v:c.fecha,s:cs},{v:c.descripcion,s:cs},{v:c.proveedor,s:cs},
+          {v:c.monto,t:'n',z:'#,##0.00',s:cs},recCell
+        ]);
+      });
+      // Total
+      const bFirst=2,bLast=bData.length;
+      const bTot={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+      bData.push([
+        {v:'TOTAL ('+cargosRows.length+' cargos)',s:bTot},{v:'',s:bTot},{v:'',s:bTot},{v:'',s:bTot},
+        {f:`SUM(E${bFirst}:E${bLast})`,v:0,t:'n',z:'#,##0.00',s:bTot},{v:'',s:bTot}
+      ]);
+      const wsBank=XLSX.utils.aoa_to_sheet(bData);
+      wsBank['!cols']=[{wch:18},{wch:12},{wch:42},{wch:28},{wch:13},{wch:16}];
+      wsBank['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+      XLSX.utils.book_append_sheet(wb,wsBank,'Movimientos banco');
+    }
+  }
 
   // === HOJA RETENCIÓN (retenciones de plataformas del mes) ===
   const retMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)&&e.categoria==='Retenciones plataformas')
