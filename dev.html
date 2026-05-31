@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.17.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.18.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.17.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.18.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -685,10 +685,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       </div>
     </div>
 
+    <h2 id="rec-h-ingresos" style="display:none;font-size:16px;font-weight:700;margin:18px 0 4px;color:#1A1916;border-bottom:2px solid #1D9E75;padding-bottom:4px">Ingresos</h2>
     <div id="rec-stripe-block"><div id="rec-summary"></div><div id="rec-detail"></div></div>
     <div id="rec-cb-block"></div>
     <div id="rec-trans-block"></div>
     <div id="rec-debito-block"></div>
+    <div id="rec-otros-block"></div>
+    <h2 id="rec-h-egresos" style="display:none;font-size:16px;font-weight:700;margin:24px 0 4px;color:#1A1916;border-bottom:2px solid #C83232;padding-bottom:4px">Egresos</h2>
     <div id="rec-egresos-block"></div>
   </div>
 
@@ -762,6 +765,7 @@ let CU=null,selGuest=null,lineas=[],curProd=null,editingProdId=null,coRes=null,c
 let SESSION_TOKEN=null; // session token (in-memory only; re-login on reload)
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
+const fmtD=c=>'$'+Number(c||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
 const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxQ60YzG4l1kS8pZt7CnzrFALV64BZyWlfSVIbmGiYZY_rCQ-V2jwfrRTKZibLPwOLf/exec';
 const ENV='dev'; // 'dev' | 'prod'
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos',KRN:'reconciliacionNotas'};
@@ -4688,15 +4692,15 @@ function renderCierre(){
       <div class="metric"><p style="${mLabel}">Utilidad</p><p style="${mVal};color:${utilidad>=0?'#1D9E75':'#E24B4A'}">${fmt(utilidad)}</p></div>
     </div></div>`;
 
-  document.getElementById('cm-fiscal').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Base</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">ISH 4.5%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">IVA 16%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody><tr style="border-bottom:0.5px solid #F0EDE8;color:#1860A5"><td style="padding:7px 8px;font-weight:600">Hospedaje</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'base'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:7px 8px;text-align:right">${fmt(sv(hospR,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(hospR,'monto'))}</td></tr><tr style="border-bottom:0.5px solid #F0EDE8;color:#1D9E75"><td style="padding:7px 8px;font-weight:600">Consumos</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'base'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">${fmt(sv(consG,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consG,'monto'))}</td></tr>${consE.length?`<tr style="border-bottom:0.5px solid #F0EDE8;color:#888"><td style="padding:7px 8px;font-weight:600">Exentos <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#888;color:#fff;font-size:9px;font-weight:700;vertical-align:middle;cursor:help" onmouseover="this.querySelector('span').style.display='block'" onmouseout="this.querySelector('span').style.display='none'">i<span style="display:none;position:absolute;left:20px;top:-4px;background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:400;white-space:nowrap;z-index:99">${EXENTOS_PRODS.join(', ')}</span></span></td><td style="padding:7px 8px;text-align:right">${fmt(sv(consE,'exento'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmt(sv(consE,'monto'))}</td></tr>`:''}<tr style="border-top:2px solid #EEE;font-weight:700;font-size:14px"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'ish'))}</td><td style="padding:8px;text-align:right">${fmt(sv(hospR,'iva')+sv(consG,'iva'))}</td><td style="padding:8px;text-align:right;color:#1A1916;font-size:15px">${fmt(sv(rep,'monto'))}</td></tr></tbody></table>
+  document.getElementById('cm-fiscal').innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:2px solid #EEE"><th style="text-align:left;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Concepto</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Base</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">ISH 4.5%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">IVA 16%</th><th style="text-align:right;padding:6px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Total</th></tr></thead><tbody><tr style="border-bottom:0.5px solid #F0EDE8;color:#1860A5"><td style="padding:7px 8px;font-weight:600">Hospedaje</td><td style="padding:7px 8px;text-align:right">${fmtD(sv(hospR,'base'))}</td><td style="padding:7px 8px;text-align:right">${fmtD(sv(hospR,'ish'))}</td><td style="padding:7px 8px;text-align:right">${fmtD(sv(hospR,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmtD(sv(hospR,'monto'))}</td></tr><tr style="border-bottom:0.5px solid #F0EDE8;color:#1D9E75"><td style="padding:7px 8px;font-weight:600">Consumos</td><td style="padding:7px 8px;text-align:right">${fmtD(sv(consG,'base'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">${fmtD(sv(consG,'iva'))}</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmtD(sv(consG,'monto'))}</td></tr>${consE.length?`<tr style="border-bottom:0.5px solid #F0EDE8;color:#888"><td style="padding:7px 8px;font-weight:600">Exentos <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:#888;color:#fff;font-size:9px;font-weight:700;vertical-align:middle;cursor:help" onmouseover="this.querySelector('span').style.display='block'" onmouseout="this.querySelector('span').style.display='none'">i<span style="display:none;position:absolute;left:20px;top:-4px;background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;font-weight:400;white-space:nowrap;z-index:99">${EXENTOS_PRODS.join(', ')}</span></span></td><td style="padding:7px 8px;text-align:right">${fmtD(sv(consE,'exento'))}</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right">&mdash;</td><td style="padding:7px 8px;text-align:right;font-weight:700">${fmtD(sv(consE,'monto'))}</td></tr>`:''}<tr style="border-top:2px solid #EEE;font-weight:700;font-size:14px"><td style="padding:8px">TOTAL</td><td style="padding:8px;text-align:right">${fmtD(sv(hospR,'base')+sv(consG,'base')+sv(consE,'exento'))}</td><td style="padding:8px;text-align:right">${fmtD(sv(hospR,'ish'))}</td><td style="padding:8px;text-align:right">${fmtD(sv(hospR,'iva')+sv(consG,'iva'))}</td><td style="padding:8px;text-align:right;color:#1A1916;font-size:15px">${fmtD(sv(rep,'monto'))}</td></tr></tbody></table>
 <p style="font-size:12px;color:#666;margin-top:10px;padding:8px 0;border-top:1px solid #EEE">
   <span style="font-weight:600">ISH Reservas ${mesNombre}:</span> 
-  ${fmt(Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100)}
+  ${fmtD(Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)).reduce((s,r)=>s+(r.ish||0),0)*100)/100)}
   <span style="color:#AAA;font-size:11px">(suma ISH de reservas con fecha de salida en ${mesNombre})</span>
 </p>
 ${(()=>{
   const ishAirbnb=Math.round(gd(KR).filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.origen==='airbnb').reduce((s,r)=>s+(r.ish||0),0)*100)/100;
-  return ishAirbnb>0?`<p style="font-size:11px;color:#888;margin-top:2px;font-style:italic">De lo anterior, ${fmt(ishAirbnb)} de ISH corresponde a reservas Airbnb, pagado directamente por Airbnb al fisco estatal.</p>`:'';
+  return ishAirbnb>0?`<p style="font-size:11px;color:#888;margin-top:2px;font-style:italic">De lo anterior, ${fmtD(ishAirbnb)} de ISH corresponde a reservas Airbnb, pagado directamente por Airbnb al fisco estatal.</p>`:'';
 })()}
 `;
 
@@ -5821,6 +5825,9 @@ function renderReconcil(){
     const transBlock=document.getElementById('rec-trans-block');if(transBlock)transBlock.innerHTML='';
     const debBlock=document.getElementById('rec-debito-block');if(debBlock)debBlock.innerHTML='';
     const egBlock=document.getElementById('rec-egresos-block');if(egBlock)egBlock.innerHTML='';
+    const otrosBlock=document.getElementById('rec-otros-block');if(otrosBlock)otrosBlock.innerHTML='';
+    const _hI=document.getElementById('rec-h-ingresos');if(_hI)_hI.style.display='none';
+    const _hE=document.getElementById('rec-h-egresos');if(_hE)_hE.style.display='none';
     if(!Array.isArray(window._recBbvaRows)&&!Array.isArray(window._recBbvaSndaRows)&&!Array.isArray(window._recSantanderRows))return;
     // Si solo hay banco, igual permitimos transferencias, débito y egresos
     summary.innerHTML='';
@@ -5844,7 +5851,13 @@ function renderReconcil(){
   _renderReconcilCb(prefix);
   _renderReconcilTrans(prefix);
   _renderReconcilDebito(prefix);
+  _renderReconcilIngresosAdic(prefix);
   _renderReconcilEgresos(prefix);
+  // Mostrar encabezados de sección si hay archivos de banco cargados
+  const hayBanco=Array.isArray(window._recBbvaRows)||Array.isArray(window._recBbvaSndaRows)||Array.isArray(window._recSantanderRows)||window._recStripeRows||window._recCbRows;
+  const hIng=document.getElementById('rec-h-ingresos');const hEg=document.getElementById('rec-h-egresos');
+  if(hIng)hIng.style.display=hayBanco?'block':'none';
+  if(hEg)hEg.style.display=hayBanco?'block':'none';
 }
 
 function _renderReconcilStripe(prefix,summary,detail){
@@ -6360,8 +6373,70 @@ function _recAllBankRows(includeAccounts){
   return out;
 }
 
+// ----- Ingresos adicionales: abonos del banco no clasificados en otros sub-bloques -----
+function _renderReconcilIngresosAdic(prefix){
+  const block=document.getElementById('rec-otros-block');if(!block)return;
+  const hasAnyBank=Array.isArray(window._recBbvaRows)||Array.isArray(window._recBbvaSndaRows)||Array.isArray(window._recSantanderRows);
+  if(!hasAnyBank){block.innerHTML='';return;}
+
+  // Notas de crédito del mes que se casan con abonos (para no listarlos aquí)
+  const ncMontos=(gd(KE)||[]).filter(e=>String(e.fecha||'').startsWith(prefix)&&e.tipoDoc==='Nota de crédito')
+    .map(e=>Math.abs(parseFloat(e.montoMXN||e.total)||0));
+
+  const all=_recAllBankRows();
+  const adic=all.filter(r=>{
+    if(!(r.abono>0))return false;
+    if(!String(r.fecha||'').startsWith(prefix))return false;
+    const d=String(r.descripcion||'').toUpperCase();
+    // Excluir lo ya clasificado en otros sub-bloques:
+    if(d.includes('VENTAS TDC')||d.includes('VENTAS CREDITO'))return false;       // Débito
+    if(d.includes('SPEI RECIBIDO'))return false;                                  // Transferencias / Stripe / CloudBeds
+    if(_recIsInternalMovement(r.descripcion))return false;                        // traspasos, etc.
+    // Excluir abonos que casan con una nota de crédito del mes (±1)
+    if(ncMontos.some(m=>Math.abs(m-r.abono)<=1))return false;
+    return true;
+  });
+
+  if(adic.length===0){
+    block.innerHTML=`<h3 style="font-size:14px;font-weight:600;margin:18px 0 6px;color:#1A1916">Ingresos adicionales</h3><p class="empty" style="padding:12px;font-size:12px">Sin ingresos adicionales no clasificados este mes.</p>`;
+    window._recLastIngAdic={prefix,items:[]};
+    return;
+  }
+
+  const total=Math.round(adic.reduce((s,r)=>s+r.abono,0)*100)/100;
+  const rowsHtml=adic.map((r,i)=>{
+    const ref='ingadic-'+r._acc+'-'+r.fecha+'-'+Math.round(r.abono*100)+'-'+i;
+    return `<tr style="border-bottom:0.5px solid #F0EDE8">
+      <td style="padding:7px 8px;font-size:12px">${r.fecha}</td>
+      <td style="padding:7px 8px;font-size:12px;color:#888">${r._acc}</td>
+      <td style="padding:7px 8px;font-size:12px">${r.descripcion}</td>
+      <td style="padding:7px 8px;font-size:12px;text-align:right;font-weight:500;color:#085041">${fmt(r.abono)}</td>
+      <td style="padding:7px 8px;text-align:center">${_recNoteBtn(prefix,'ingresos_adic',ref)}</td>
+    </tr>`;
+  }).join('');
+
+  block.innerHTML=`
+    <h3 style="font-size:14px;font-weight:600;margin:18px 0 6px;color:#1A1916">Ingresos adicionales</h3>
+    <p style="font-size:11px;color:#888;margin:0 0 8px">Abonos del banco que no corresponden a Stripe, CloudBeds, Débito ni Transferencias. Agrégales una nota para identificarlos.</p>
+    <div style="background:#fff;border:0.5px solid #E5E2DC;border-radius:10px;overflow:hidden">
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="background:#FAFAF8;border-bottom:2px solid #EEE">
+        <th style="text-align:left;padding:7px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Fecha</th>
+        <th style="text-align:left;padding:7px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Cuenta</th>
+        <th style="text-align:left;padding:7px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Descripción</th>
+        <th style="text-align:right;padding:7px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Monto</th>
+        <th style="text-align:center;padding:7px 8px;font-size:10px;color:#AAA;text-transform:uppercase">Nota</th>
+      </tr></thead>
+      <tbody>${rowsHtml}
+        <tr style="border-top:2px solid #EEE;font-weight:600;background:#FAFAF8"><td colspan="3" style="padding:8px;font-size:12px">Total ingresos adicionales (${adic.length})</td><td style="padding:8px;text-align:right;font-size:12px;color:#085041">${fmt(total)}</td><td></td></tr>
+      </tbody>
+    </table></div>`;
+  window._recLastIngAdic={prefix,items:adic.map(r=>({fecha:r.fecha,cuenta:r._acc,descripcion:r.descripcion,monto:r.abono})),total};
+}
+
 // ----- Transferencias -----
 function _renderReconcilTrans(prefix){
+
   const block=document.getElementById('rec-trans-block');if(!block)return;
   const hasAnyBank=Array.isArray(window._recBbvaRows)||Array.isArray(window._recSantanderRows);
   if(!hasAnyBank){block.innerHTML='';return;}
@@ -6999,21 +7074,29 @@ function _renderReconcilEgresos(prefix){
 
   // Matching notas de crédito → abono banco
   const usedAbono=new Set();
+  // Casar nota de crédito ↔ abono del banco: monto (±1) Y (proveedor coincide O fecha ±15 días)
+  const _provEnDesc=(prov,desc)=>{
+    const limpia=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9Ñ ]/g,' ').split(/\s+/).filter(w=>w.length>=4);
+    const pal=limpia(prov);const d=String(desc||'').toUpperCase();
+    return pal.some(w=>d.includes(w));
+  };
+  const win15=15*24*60*60*1000;
   const ncMatches=notasCredito.map(e=>{
     const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
     const cfdiDate=new Date(String(e.fecha||'').slice(0,10));
-    const ventana=60*24*60*60*1000;
     const elegibles=abonosBank.filter((a,i)=>{
       if(usedAbono.has(i))return false;
       if(Math.abs(a.abono-monto)>1)return false;
-      const bd=new Date(a.fecha);
-      const diff=bd-cfdiDate;
-      return diff>=-ventana&&diff<=ventana;
+      const diff=new Date(a.fecha)-cfdiDate;
+      const fechaCerca=diff>=-win15&&diff<=win15;
+      const provOk=_provEnDesc(e.proveedor,a.descripcion);
+      return provOk||fechaCerca; // monto ya coincide; basta proveedor O fecha cercana
     });
     if(elegibles.length>=1){
       const idx=abonosBank.indexOf(elegibles[0]);
       usedAbono.add(idx);
-      return {egreso:e,bank:elegibles[0],how:'monto'};
+      const how=_provEnDesc(e.proveedor,elegibles[0].descripcion)?'monto+proveedor':'monto+fecha';
+      return {egreso:e,bank:elegibles[0],how};
     }
     return {egreso:e,bank:null,how:'sin_match'};
   });
