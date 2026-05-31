@@ -9,7 +9,7 @@
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;background:#f8f8f6;color:#111;padding:1rem}
 .app{max-width:780px;margin:0 auto;padding:1rem 0}
 .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.2rem}
-.logo{font-size:17px;font-weight:600}.logo em{color:#E07A1F;font-style:normal}
+.logo{font-size:17px;font-weight:600}.logo em{color:#1D9E75;font-style:normal}
 .ver{font-size:10px;background:#f0f0ec;border:0.5px solid #e0e0da;border-radius:4px;padding:2px 7px;color:#999;margin-left:6px;vertical-align:middle}
 .ubadge{font-size:12px;background:#f5f5f3;border:0.5px solid #e0e0da;border-radius:6px;padding:4px 10px;color:#666;cursor:pointer}
 .gx-info{position:relative;display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border:1px solid #b0afa7;border-radius:50%;color:#888780;font-size:9px;font-weight:700;font-style:normal;font-family:Georgia,serif;cursor:help;line-height:1;vertical-align:middle}
@@ -19,7 +19,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 @keyframes gx-spin{to{transform:rotate(360deg)}}
 .tabs{display:flex;gap:2px;margin-bottom:1.2rem;border-bottom:0.5px solid #e0e0da;overflow-x:auto}
 .tab{font-size:13px;padding:7px 13px;border:none;background:none;color:#888;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-0.5px;white-space:nowrap}
-.tab.active{color:#E07A1F;border-bottom-color:#E07A1F;font-weight:500}
+.tab.active{color:#1D9E75;border-bottom-color:#1D9E75;font-weight:500}
 .sec{display:none}.sec.active{display:block}
 .card{background:#fff;border:0.5px solid #e0e0da;border-radius:10px;padding:.9rem 1.1rem;margin-bottom:.9rem}
 .ctitle{font-size:11px;font-weight:600;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em}
@@ -27,10 +27,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-siz
 .frow.full{grid-template-columns:1fr}.frow.three{grid-template-columns:1fr 1fr 1fr}.frow.four{grid-template-columns:1fr 1fr 1fr 1fr}
 label{font-size:11px;color:#888;display:block;margin-bottom:3px}
 input,select,textarea{width:100%;font-size:13px;border:0.5px solid #d5d5cf;border-radius:6px;padding:6px 8px;background:#fff;color:#111;outline:none}
-input:focus,select:focus{border-color:#E07A1F}
+input:focus,select:focus{border-color:#1D9E75}
 input[readonly]{background:#f5f5f3;color:#555}
 .btn{padding:7px 14px;border-radius:6px;font-size:13px;cursor:pointer;border:0.5px solid #d5d5cf;background:#fff;color:#111}
-.btn-primary{background:#E07A1F;color:#fff;border-color:#E07A1F;font-weight:500}
+.btn-primary{background:#1D9E75;color:#fff;border-color:#1D9E75;font-weight:500}
 .btn-danger{background:none;color:#E24B4A;border-color:#E24B4A}
 .btn-checkout{background:#185FA5;color:#fff;border-color:#185FA5;font-weight:500}
 .btn-sm{padding:4px 9px;font-size:12px}
@@ -85,7 +85,7 @@ input[readonly]{background:#f5f5f3;color:#555}
 .gres-badge.on{background:#E6F1FB;color:#0C447C;border:1px solid #185FA5;font-weight:500}
 .res-item{padding:9px 10px;border:0.5px solid #e0e0da;border-radius:6px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .import-zone{border:1.5px dashed #d5d5cf;border-radius:8px;padding:1.5rem;text-align:center;cursor:pointer}
-.import-zone:hover{border-color:#E07A1F}
+.import-zone:hover{border-color:#1D9E75}
 .colrow{border:0.5px solid #e0e0da;border-radius:6px;margin-bottom:6px;overflow:hidden}
 .colhdr{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;cursor:pointer;background:#fff}
 .colhdr:hover{background:#f8f8f6}
@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.21.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.21.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.21.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.21.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -766,8 +766,8 @@ let SESSION_TOKEN=null; // session token (in-memory only; re-login on reload)
 
 const fmt=c=>'$'+Number(c||0).toLocaleString('es-MX',{maximumFractionDigits:0});
 const fmtD=c=>'$'+Number(c||0).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
-const SCRIPT_URL='https://script.google.com/macros/s/AKfycbxQ60YzG4l1kS8pZt7CnzrFALV64BZyWlfSVIbmGiYZY_rCQ-V2jwfrRTKZibLPwOLf/exec';
-const ENV='dev'; // 'dev' | 'prod'
+const SCRIPT_URL='https://script.google.com/macros/s/AKfycbyqRMjR05R-36GbofU8oHfemEJcw4KcuR8I6Nfy4_KZr5lj9dvpNZDV0GyHSs5HI-Vk/exec';
+const ENV='prod'; // 'dev' | 'prod'
 const SHEET_MAP={KR:'reservas',KP:'productos',KH:'habitaciones',KC:'consumos',KE:'egresos',KRE:'reglasEgresos',KCE:'categoriasEgresos',KRN:'reconciliacionNotas'};
 
 // In-memory cache (loaded once at login)
