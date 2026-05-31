@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.18.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.25.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.18.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.25.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -4735,26 +4735,34 @@ function _renderCmReconcil(prefix){
     </div>
   </div>`:'';
 
-  // Build rows — only methods with data (app>0 OR plataforma>0 OR banco>0)
-  const rowsData=[];
+  // ----- INGRESOS: filas de Stripe, CloudBeds, Transferencia, Débito -----
+  const rowsIng=[];
   if(sx&&(sx.appBruto>0||sx.plataformaBruto>0||sx.bankTotal>0)){
     const diff=Math.round((sx.appBruto-sx.plataformaBruto)*100)/100;
-    rowsData.push({metodo:'Stripe',app:sx.appBruto,plat:sx.plataformaBruto,bank:sx.bankTotal,diff,bankInfo:true});
+    rowsIng.push({metodo:'Stripe',app:sx.appBruto,plat:sx.plataformaBruto,bank:sx.bankTotal,diff,bankInfo:true});
   }
   if(cx&&(cx.appBruto>0||cx.plataformaBruto>0||cx.bankTotal>0)){
     const diff=Math.round((cx.appBruto-cx.plataformaBruto)*100)/100;
-    rowsData.push({metodo:'CloudBeds',app:cx.appBruto,plat:cx.plataformaBruto,bank:cx.bankTotal,diff,bankInfo:true});
+    rowsIng.push({metodo:'CloudBeds',app:cx.appBruto,plat:cx.plataformaBruto,bank:cx.bankTotal,diff,bankInfo:true});
   }
   if(tx&&(tx.appBruto>0||tx.bankTotal>0)){
     const diff=Math.round((tx.appBruto-tx.bankTotal)*100)/100;
-    rowsData.push({metodo:'Transferencia',app:tx.appBruto,plat:null,bank:tx.bankTotal,diff,bankInfo:false});
+    rowsIng.push({metodo:'Transferencia',app:tx.appBruto,plat:null,bank:tx.bankTotal,diff,bankInfo:false});
   }
   if(dx&&(dx.appBruto>0||dx.bankTotal>0)){
-    rowsData.push({metodo:'D&#233;bito',app:dx.appBruto,plat:null,bank:dx.bankTotal,diff:dx.diff,bankInfo:true,bankInfoTxt:'Monto del banco = bruto cobrado en la terminal TDC. La comisi&#243;n TDC se carga aparte (no afecta el bruto). La diferencia con la app puede deberse a cierres pendientes.'});
+    rowsIng.push({metodo:'D&#233;bito',app:dx.appBruto,plat:null,bank:dx.bankTotal,diff:dx.diff,bankInfo:true,bankInfoTxt:'Monto del banco = bruto cobrado en la terminal TDC. La comisi&#243;n TDC se carga aparte (no afecta el bruto). La diferencia con la app puede deberse a cierres pendientes.'});
   }
 
-  if(rowsData.length===0){
-    return `<p style="font-size:13px;color:#666;text-align:center;padding:14px">Sin datos para el mes seleccionado.</p>`;
+  // ----- EGRESOS: facturas vs cargos del banco -----
+  const ex=window._recLastEgresos;
+  const rowsEg=[];
+  if(ex&&(ex.appBruto>0||ex.bankTotal>0)){
+    const diff=Math.round(((ex.appBruto||0)-(ex.bankTotal||0))*100)/100;
+    rowsEg.push({concepto:'Facturas vs cargos',app:ex.appBruto||0,bank:ex.bankTotal||0,diff});
+  }
+
+  if(rowsIng.length===0&&rowsEg.length===0){
+    return warning+`<p style="font-size:13px;color:#666;text-align:center;padding:14px">Sin datos para el mes seleccionado.</p>`;
   }
 
   const estadoBadge=(diff)=>{
@@ -4763,42 +4771,82 @@ function _renderCmReconcil(prefix){
     if(abs>1&&abs<=100)return `<span style="background:#FFF4E5;color:#634009;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:500">&#9888;</span>`;
     return `<span style="background:#FCE8E6;color:#7A1F1D;padding:2px 8px;border-radius:4px;font-size:13px;font-weight:500">&times;</span>`;
   };
-
-  // Info tooltip helper for bank column
   const bankInfoIcon=(txt)=>{
     const safe=String(txt||'').replace(/"/g,'&quot;');
     return ` <span style="position:relative;display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;background:#AAA;color:#fff;font-size:9px;font-weight:700;vertical-align:1px;cursor:help" onmouseover="this.querySelector('span').style.display='block'" onmouseout="this.querySelector('span').style.display='none'">i<span style="display:none;position:absolute;right:18px;top:-4px;background:#333;color:#fff;padding:6px 9px;border-radius:5px;font-size:11px;font-weight:400;width:240px;white-space:normal;line-height:1.4;z-index:99;text-align:left">${safe}</span></span>`;
   };
   const bankColInfo='El monto del banco es el neto recibido tras descontar las comisiones de la plataforma. La diferencia con "En app" se explica por esa comisi&#243;n.';
+  const dcolor=d=>Math.abs(d)<=1?'#888':(Math.abs(d)<=100?'#634009':'#7A1F1D');
+  const dweight=d=>Math.abs(d)<=1?'400':'500';
 
-  const tableHtml=`<table style="width:100%;border-collapse:collapse;font-size:13px">
-    <thead>
-      <tr style="border-bottom:1px solid #EEE">
-        <th style="text-align:left;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">M&#233;todo</th>
-        <th style="text-align:right;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">En app</th>
-        <th style="text-align:right;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Plataforma</th>
-        <th style="text-align:right;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Banco${bankInfoIcon(bankColInfo)}</th>
-        <th style="text-align:right;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Diferencia</th>
-        <th style="text-align:center;padding:8px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Estado</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${rowsData.map(r=>{
-        const diffColor=Math.abs(r.diff)<=1?'#888':(Math.abs(r.diff)<=100?'#634009':'#7A1F1D');
-        const diffWeight=Math.abs(r.diff)<=1?'400':'500';
-        return `<tr style="border-bottom:1px solid #F5F5F0">
-          <td style="padding:10px 0;font-size:13px">${r.metodo}</td>
-          <td style="padding:10px 0;text-align:right;font-size:13px;font-weight:500">${fmt(r.app)}</td>
-          <td style="padding:10px 0;text-align:right;font-size:13px">${r.plat===null?'<span style="color:#999">—</span>':fmt(r.plat)}</td>
-          <td style="padding:10px 0;text-align:right;font-size:13px">${r.bank===null||r.bank===undefined?'<span style="color:#999">—</span>':fmt(r.bank)}</td>
-          <td style="padding:10px 0;text-align:right;font-size:13px;color:${diffColor};font-weight:${diffWeight}">${fmt(r.diff)}</td>
-          <td style="padding:10px 0;text-align:center">${estadoBadge(r.diff)}</td>
-        </tr>`;
-      }).join('')}
-    </tbody>
-  </table>`;
+  // --- Tabla INGRESOS ---
+  const totIngApp=Math.round(rowsIng.reduce((s,r)=>s+(r.app||0),0)*100)/100;
+  const totIngBank=Math.round(rowsIng.reduce((s,r)=>s+(r.bank||0),0)*100)/100;
+  const totIngDiff=Math.round((totIngApp-totIngBank)*100)/100;
+  const ingHtml=rowsIng.length?`
+    <p style="font-size:13px;font-weight:600;color:#0F6E56;margin:0 0 6px;border-bottom:1.5px solid #5DCAA5;padding-bottom:3px">Ingresos</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;margin-bottom:4px">
+      <thead><tr style="border-bottom:1px solid #EEE">
+        <th style="text-align:left;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">M&#233;todo</th>
+        <th style="text-align:right;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">En app</th>
+        <th style="text-align:right;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Plataforma</th>
+        <th style="text-align:right;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Banco${bankInfoIcon(bankColInfo)}</th>
+        <th style="text-align:right;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Diferencia</th>
+        <th style="text-align:center;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Estado</th>
+      </tr></thead>
+      <tbody>
+        ${rowsIng.map(r=>`<tr style="border-bottom:1px solid #F5F5F0">
+          <td style="padding:9px 0;font-size:13px">${r.metodo}</td>
+          <td style="padding:9px 0;text-align:right;font-size:13px;font-weight:500">${fmt(r.app)}</td>
+          <td style="padding:9px 0;text-align:right;font-size:13px">${r.plat===null?'<span style="color:#999">—</span>':fmt(r.plat)}</td>
+          <td style="padding:9px 0;text-align:right;font-size:13px">${r.bank===null||r.bank===undefined?'<span style="color:#999">—</span>':fmt(r.bank)}</td>
+          <td style="padding:9px 0;text-align:right;font-size:13px;color:${dcolor(r.diff)};font-weight:${dweight(r.diff)}">${fmt(r.diff)}</td>
+          <td style="padding:9px 0;text-align:center">${estadoBadge(r.diff)}</td>
+        </tr>`).join('')}
+        <tr style="border-top:1.5px solid #5DCAA5;font-weight:600;background:#E1F5EE">
+          <td style="padding:9px 6px;color:#0F6E56">Total ingresos</td>
+          <td style="padding:9px 0;text-align:right;color:#0F6E56">${fmt(totIngApp)}</td>
+          <td style="padding:9px 0;text-align:right;color:#999">—</td>
+          <td style="padding:9px 0;text-align:right;color:#0F6E56">${fmt(totIngBank)}</td>
+          <td style="padding:9px 0;text-align:right;color:#0F6E56">${fmt(totIngDiff)}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>`:'';
 
-  return warning+`<div style="${mismatchMonth?'opacity:.5;pointer-events:none':''}">${tableHtml}</div>`;
+  // --- Tabla EGRESOS ---
+  const totEgApp=Math.round(rowsEg.reduce((s,r)=>s+(r.app||0),0)*100)/100;
+  const totEgBank=Math.round(rowsEg.reduce((s,r)=>s+(r.bank||0),0)*100)/100;
+  const totEgDiff=Math.round((totEgApp-totEgBank)*100)/100;
+  const egHtml=rowsEg.length?`
+    <p style="font-size:13px;font-weight:600;color:#7A1F1D;margin:18px 0 6px;border-bottom:1.5px solid #F09595;padding-bottom:3px">Egresos</p>
+    <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <thead><tr style="border-bottom:1px solid #EEE">
+        <th style="text-align:left;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Concepto</th>
+        <th style="text-align:right;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">En app</th>
+        <th style="text-align:right;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Banco</th>
+        <th style="text-align:right;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Diferencia</th>
+        <th style="text-align:center;padding:7px 0;font-size:10px;color:#AAA;text-transform:uppercase;font-weight:500">Estado</th>
+      </tr></thead>
+      <tbody>
+        ${rowsEg.map(r=>`<tr style="border-bottom:1px solid #F5F5F0">
+          <td style="padding:9px 0;font-size:13px">${r.concepto}</td>
+          <td style="padding:9px 0;text-align:right;font-size:13px;font-weight:500">${fmt(r.app)}</td>
+          <td style="padding:9px 0;text-align:right;font-size:13px">${fmt(r.bank)}</td>
+          <td style="padding:9px 0;text-align:right;font-size:13px;color:${dcolor(r.diff)};font-weight:${dweight(r.diff)}">${fmt(r.diff)}</td>
+          <td style="padding:9px 0;text-align:center">${estadoBadge(r.diff)}</td>
+        </tr>`).join('')}
+        <tr style="border-top:1.5px solid #F09595;font-weight:600;background:#FCEBEB">
+          <td style="padding:9px 6px;color:#7A1F1D">Total egresos</td>
+          <td style="padding:9px 0;text-align:right;color:#7A1F1D">${fmt(totEgApp)}</td>
+          <td style="padding:9px 0;text-align:right;color:#7A1F1D">${fmt(totEgBank)}</td>
+          <td style="padding:9px 0;text-align:right;color:#7A1F1D">${fmt(totEgDiff)}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>`:'';
+
+  return warning+`<div style="${mismatchMonth?'opacity:.5;pointer-events:none':''}">${ingHtml}${egHtml}</div>`;
 }
 
 async function exportarCierreExcel(modo){
@@ -4862,6 +4910,7 @@ async function exportarCierreExcel(modo){
   const wsRes=XLSX.utils.aoa_to_sheet(resRows);
   wsRes['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}];
   wsRes['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+  if(wsRes['!ref'])wsRes['!autofilter']={ref:wsRes['!ref']};
   XLSX.utils.book_append_sheet(wb,wsRes,'Reservas');
 
   // === HOJA 2: DETALLE PAGOS ===
@@ -4979,6 +5028,7 @@ async function exportarCierreExcel(modo){
     ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}]
     : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
   ws1['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+  if(ws1['!ref'])ws1['!autofilter']={ref:ws1['!ref']};
   if(!isConta)XLSX.utils.book_append_sheet(wb,ws1,'Detalle Pagos');
 
   // === HOJA: PAGO x CONCEPTO (agrupado por reserva + Concepto CFDI + fecha pago + método pago) ===
@@ -5100,6 +5150,7 @@ async function exportarCierreExcel(modo){
     ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12}]
     : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:13}];
   wsPxc['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+  if(wsPxc['!ref'])wsPxc['!autofilter']={ref:wsPxc['!ref']};
   XLSX.utils.book_append_sheet(wb,wsPxc,'PagoxConcepto');
   const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
@@ -5167,20 +5218,45 @@ async function exportarCierreExcel(modo){
   XLSX.utils.book_append_sheet(wb,ws3,'Por Método');
   // === HOJA EGRESOS ===
   const egMesAll=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  // Mapa de estatus de reconciliación por uuid de egreso (solo si hay banco cargado del mes)
+  const _exRec=window._recLastEgresos;
+  const _egRecOk=new Set();      // uuids que matchearon banco
+  const _egRecFail=new Set();    // uuids sin banco
+  if(_exRec){
+    (_exRec.facturaMatches||[]).forEach(m=>{const u=m.egreso&&m.egreso.uuid;if(!u)return;if(m.ok)_egRecOk.add(u);else _egRecFail.add(u);});
+    (_exRec.ncMatches||[]).forEach(m=>{const u=m.egreso&&m.egreso.uuid;if(!u)return;if(m.ok)_egRecOk.add(u);else _egRecFail.add(u);});
+  }
+  const _egRecStatus=(e)=>{
+    if(!_exRec)return {v:''};                                  // sin banco cargado → vacío
+    if(e.egresoInformativo)return {v:'— N.A.',s:{font:{color:{rgb:'999999'}}}};
+    if(_egRecOk.has(e.uuid))return {v:'✓ Reconciliado',s:{font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};
+    if(_egRecFail.has(e.uuid))return {v:'✗ Sin banco',s:{font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
+    return {v:'✗ Sin banco',s:{font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
+  };
+  // Nota de reconciliación del egreso (bloque 'egresos', referencia 'eg-'+uuid)
+  const _egRecNota=(e)=>{
+    const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
+    const ref='eg-'+(e.uuid||(e.rfc+'-'+e.fecha+'-'+Math.round(monto*100)));
+    const n=_recGetNote(prefix,'egresos',ref);
+    return n?n.nota:'';
+  };
   // Las retenciones de plataformas van debajo del TOTAL (no se suman)
   const egNormales=egMesAll.filter(e=>e.categoria!=='Retenciones plataformas');
   const egReten=egMesAll.filter(e=>e.categoria==='Retenciones plataformas');
-  const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Fuente','Moneda orig.','Monto orig.','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota'];
+  const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Fuente','Moneda orig.','Monto orig.','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota factura','Reconciliación','Notas reconciliación'];
   const egData=[egHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
   const egRow=(e,bg)=>{
     const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
     const nm=v=>({v,t:'n',z:'#,##0.00',s:cs});
+    const rec=_egRecStatus(e);
     return [
       {v:e.fecha||'',s:cs},{v:e.rfc||'',s:cs},{v:e.proveedor||'',s:cs},
       {v:e.descripcion||'',s:cs},{v:e.tipoDoc||'Factura',s:cs},{v:e.fuente||'cfdi',s:cs},{v:e.monedaOriginal||e.moneda||'MXN',s:cs},{v:e.montoOriginal||e.total||0,s:{...cs,t:'n',z:'#,##0.00'}},
       {v:e.formaPago||'',s:cs},{v:e.metodoPago||'',s:cs},
       nm(e.subtotal||0),nm(e.descuento||0),nm(e.iva||0),nm(e.total||0),
-      {v:e.categoria||'',s:cs},{v:e.nota||'',s:cs}
+      {v:e.categoria||'',s:cs},{v:e.nota||'',s:cs},
+      rec.s?{v:rec.v,s:{...cs,...rec.s}}:{v:rec.v,s:cs},
+      {v:_egRecNota(e),s:cs}
     ];
   };
   egNormales.forEach((e,i)=>{egData.push(egRow(e,i%2===0?null:'F2F2F2'));});
@@ -5191,18 +5267,70 @@ async function exportarCierreExcel(modo){
   egData.push([
     {v:'TOTAL',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},
     egTotNum('K'),egTotNum('L'),egTotNum('M'),egTotNum('N'),
-    {v:'',s:egTotStyle},{v:'',s:egTotStyle}
+    {v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle}
   ]);
   // Retenciones de plataformas DEBAJO del total (no suman)
   if(egReten.length){
     egData.push(egHdrs.map(()=>({v:''}))); // separador
-    egData.push([{v:'RETENCIONES DE PLATAFORMAS (no suman al total)',s:{font:{bold:true,italic:true,color:{rgb:'633806'}},fill:{fgColor:{rgb:'FAEEDA'}}}},...Array(15).fill({v:'',s:{fill:{fgColor:{rgb:'FAEEDA'}}}})]);
+    egData.push([{v:'RETENCIONES DE PLATAFORMAS (no suman al total)',s:{font:{bold:true,italic:true,color:{rgb:'633806'}},fill:{fgColor:{rgb:'FAEEDA'}}}},...Array(17).fill({v:'',s:{fill:{fgColor:{rgb:'FAEEDA'}}}})]);
     egReten.forEach((e,i)=>{egData.push(egRow(e,i%2===0?null:'F2F2F2'));});
   }
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
-  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20}];
+  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20},{wch:16},{wch:28}];
   wsEg['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+  if(wsEg['!ref'])wsEg['!autofilter']={ref:wsEg['!ref']};
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
+
+  // === HOJA MOVIMIENTOS BANCO (TODOS los movimientos de las 3 cuentas) ===
+  // Cargo/Abono separados. Estatus: cargos = Reconciliado/Sin factura; abonos = "—" (paso siguiente).
+  // Se construye aquí pero se AGREGA AL FINAL del libro (última pestaña).
+  let wsBankDeferred=null;
+  const _bx=window._recLastEgresos;
+  const hayBanco=Array.isArray(window._recBbvaRows)||Array.isArray(window._recBbvaSndaRows)||Array.isArray(window._recSantanderRows);
+  if(hayBanco){
+    const allMov=_recAllBankRows().filter(r=>String(r.fecha||'').startsWith(prefix));
+    const cargosOk=new Set();
+    if(_bx){(_bx.facturaMatches||[]).forEach(m=>{if(m.ok&&m.bankAcc)cargosOk.add(m.bankAcc+'|'+m.bankFecha+'|'+Math.round((m.total||0)*100));});}
+    allMov.sort((a,b)=>String(a._acc).localeCompare(String(b._acc))||String(a.fecha).localeCompare(String(b.fecha)));
+    const bHdrs=['Banco','Fecha','Descripción','Cargo','Abono','Reconciliación'];
+    const bData=[bHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
+    allMov.forEach((r,i)=>{
+      const bg=i%2===0?null:'F2F2F2';
+      const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
+      const cargo=(typeof r.cargo==='number'&&r.cargo<0)?Math.abs(r.cargo):0;
+      const abono=(typeof r.abono==='number'&&r.abono>0)?r.abono:0;
+      let recCell;
+      if(_recIsComisionBancaria(r.descripcion)){
+        recCell={v:'Comisión bancaria',s:{...cs,font:{color:{rgb:'888888'}}}};
+      }else if(cargo>0){
+        const key=r._acc+'|'+r.fecha+'|'+Math.round(cargo*100);
+        if(cargosOk.has(key))recCell={v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};
+        else recCell={v:'✗ Sin factura',s:{...cs,font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
+      }else{
+        recCell={v:'—',s:{...cs,font:{color:{rgb:'999999'}}}};
+      }
+      bData.push([
+        {v:r._acc||'',s:cs},{v:String(r.fecha||'').slice(0,10),s:cs},{v:String(r.descripcion||''),s:cs},
+        {v:cargo||'',t:cargo?'n':'s',z:cargo?'#,##0.00':undefined,s:cs},
+        {v:abono||'',t:abono?'n':'s',z:abono?'#,##0.00':undefined,s:cs},
+        recCell
+      ]);
+    });
+    if(allMov.length){
+      const bFirst=2,bLast=bData.length;
+      const bTot={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
+      bData.push([
+        {v:'TOTAL ('+allMov.length+' movimientos)',s:bTot},{v:'',s:bTot},{v:'',s:bTot},
+        {f:`SUM(D${bFirst}:D${bLast})`,v:0,t:'n',z:'#,##0.00',s:bTot},
+        {f:`SUM(E${bFirst}:E${bLast})`,v:0,t:'n',z:'#,##0.00',s:bTot},
+        {v:'',s:bTot}
+      ]);
+      wsBankDeferred=XLSX.utils.aoa_to_sheet(bData);
+      wsBankDeferred['!cols']=[{wch:18},{wch:12},{wch:46},{wch:13},{wch:13},{wch:16}];
+      wsBankDeferred['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+      if(wsBankDeferred['!ref'])wsBankDeferred['!autofilter']={ref:wsBankDeferred['!ref']};
+    }
+  }
 
   // === HOJA RETENCIÓN (retenciones de plataformas del mes) ===
   const retMes=gd(KE).filter(e=>(e.fecha||'').startsWith(prefix)&&e.categoria==='Retenciones plataformas')
@@ -5262,23 +5390,43 @@ async function exportarCierreExcel(modo){
     }
   }
 
+  // Movimientos banco: SIEMPRE como última pestaña
+  if(wsBankDeferred)XLSX.utils.book_append_sheet(wb,wsBankDeferred,'Movimientos banco');
+
+  // Colores de pestaña por grupo (xlsx-js-style no los escribe; se inyectan en el post-proceso)
+  const TAB_VERDE='1D9E75', TAB_NARANJA='E07A1F', TAB_AMARILLO='F2C400';
+  const tabColores={
+    'Reservas':TAB_VERDE,'Detalle Pagos':TAB_VERDE,'PagoxConcepto':TAB_VERDE,'CFDI global':TAB_VERDE,'Por Método':TAB_VERDE,
+    'Egresos':TAB_NARANJA,'Retención':TAB_NARANJA,
+    'Reconciliación':TAB_AMARILLO,'Movimientos banco':TAB_AMARILLO
+  };
+  (wb.SheetNames||[]).forEach(nm=>{const c=tabColores[nm];if(c&&wb.Sheets[nm])wb.Sheets[nm]['!tabColor']={rgb:c};});
+
   // xlsx-js-style 1.2.0 no escribe freeze panes; se inyectan post-proceso en el XML
   const nombreArchivo='Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx';
   try{
     const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
     const JSZip=await loadJSZip();
     const zip=await JSZip.loadAsync(buf);
-    const hojas=Object.keys(zip.files).filter(f=>/^xl\/worksheets\/sheet\d+\.xml$/.test(f));
+    const hojas=Object.keys(zip.files).filter(f=>/^xl\/worksheets\/sheet\d+\.xml$/.test(f))
+      .sort((a,b)=>parseInt(a.match(/sheet(\d+)/)[1])-parseInt(b.match(/sheet(\d+)/)[1]));
     const pane='<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/>';
-    for(const h of hojas){
+    for(let idx=0;idx<hojas.length;idx++){
+      const h=hojas[idx];
       let xml=await zip.file(h).async('string');
-      if(xml.includes('<pane '))continue;
-      if(/<sheetView[^>]*\/>/.test(xml)){
-        // sheetView auto-cerrado → expandir e insertar pane
-        xml=xml.replace(/<sheetView([^>]*)\/>/, '<sheetView$1>'+pane+'</sheetView>');
-      }else{
-        // sheetView con contenido → insertar pane justo tras la apertura
-        xml=xml.replace(/(<sheetView[^>]*>)/, '$1'+pane);
+      // 1) Color de pestaña (tabColor) — sheetN.xml corresponde a wb.SheetNames[N-1]
+      const nm=(wb.SheetNames||[])[idx];
+      const col=nm&&wb.Sheets[nm]&&wb.Sheets[nm]['!tabColor']?wb.Sheets[nm]['!tabColor'].rgb:null;
+      if(col&&!xml.includes('<tabColor')){
+        const sheetPr='<sheetPr><tabColor rgb="FF'+col+'"/></sheetPr>';
+        if(/<sheetPr[^>]*\/>/.test(xml))xml=xml.replace(/<sheetPr[^>]*\/>/,sheetPr);
+        else if(/<sheetPr[^>]*>[\s\S]*?<\/sheetPr>/.test(xml))xml=xml.replace(/<sheetPr[^>]*>[\s\S]*?<\/sheetPr>/,sheetPr);
+        else xml=xml.replace(/(<worksheet[^>]*>)/,'$1'+sheetPr);
+      }
+      // 2) Freeze pane
+      if(!xml.includes('<pane ')){
+        if(/<sheetView[^>]*\/>/.test(xml))xml=xml.replace(/<sheetView([^>]*)\/>/, '<sheetView$1>'+pane+'</sheetView>');
+        else xml=xml.replace(/(<sheetView[^>]*>)/, '$1'+pane);
       }
       zip.file(h,xml);
     }
@@ -6741,12 +6889,26 @@ function _renderReconcilDebito(prefix){
   });
   const pendientesList=Object.values(pendGrouped).sort((a,b)=>a.fecha.localeCompare(b.fecha));
 
+  // Enriquecer cada cierre con los huéspedes emparejados (para el detalle del Excel)
+  const cierresParaExcel=cierresInfo.map(ci=>{
+    const hs=(ci.cobrosIdx||[]).map(i=>appPagos[i]&&appPagos[i].huesped).filter(Boolean);
+    const huespedesMatch=[...new Set(hs)];
+    return {
+      fecha:ci.fecha,
+      bruto:ci.bruto,
+      comisionTotal:ci.comisionTotal,
+      matchOk:ci.matchOk,
+      huespedes:huespedesMatch,                 // con quién cuadró
+      huespedesTentativos:ci.huespedesTentativos||[] // candidatos si no cuadró
+    };
+  });
+
   window._recLastDebito={
     appBruto:appBruto,
     bankTotal:bankBruto,
     comisionTotal:bankComTotal,
     diff:diff,
-    cierres:cierresInfo,
+    cierres:cierresParaExcel,
     pendientesCount:pendientesIdx.length,
     pendientesTotal:pendientesTotal,
     pendientesList:pendientesList
@@ -6884,18 +7046,27 @@ function _recExtractRfc(desc){
   return m?(m[1]+m[2]+m[3]).toUpperCase():'';
 }
 
+function _recIsComisionBancaria(desc){
+  // Comisiones bancarias sin factura: el movimiento en cuenta ES el comprobante.
+  const d=String(desc||'').toUpperCase();
+  return d.includes('COM VTAS TDC')
+      || d.includes('IVA COM VTAS TDC')
+      || d.includes('COM SERV BCA')
+      || d.includes('IVA COM SERV BCA')
+      || d.includes('SERV BCA INTERNET')
+      || d.includes('TASA DE DESC CREDITO')   // crédito: IVA TASA DE DESC CREDITO
+      || d.includes('TASA DE DES CREDITO');    // crédito: APLI TASA DE DES CREDITO
+}
+
 function _recIsInternalMovement(desc){
   // Movimientos internos del banco a excluir del matching de egresos
   const d=String(desc||'').toUpperCase();
   return d.includes('TRASPASO CUENTAS PROPIAS')
-      || d.includes('SERV BCA INTERNET')
-      || d.includes('IVA COM SERV BCA')
-      || d.includes('COM SERV BCA')
       || d.includes('SPEI ENVIADO')&&d.includes('CUENTAS PROPIAS')
       || d.includes('VENTAS TDC INTER')      // ingresos
-      || d.includes('COM VTAS TDC')          // ya tratado en débito
-      || d.includes('IVA COM VTAS TDC')
-      || d.includes('SPEI RECIBIDO');        // ingresos
+      || d.includes('VENTAS CREDITO')        // ingresos (crédito)
+      || d.includes('SPEI RECIBIDO')         // ingresos
+      || _recIsComisionBancaria(desc);       // comisiones bancarias sin factura
 }
 
 function _renderReconcilEgresos(prefix){
@@ -7489,6 +7660,23 @@ function _buildReconcilExcelData(prefix){
   if(dx){
     const est=Math.abs(dx.diff)<=1?'✓':'⚠';
     data.push(mkRow(['Débito','TOTAL (banco bruto)',dx.appBruto,'',dx.bankTotal,dx.diff,est,''],stTotalBase,true));
+    // Detalle de cada cierre TDC del banco (igual que en pantalla)
+    if(dx.cierres&&dx.cierres.length){
+      sectionRow('Débito','DETALLE CIERRES TDC');
+      dx.cierres.forEach(ci=>{
+        let concept, estC;
+        if(ci.matchOk){
+          concept='Cierre '+ci.fecha+' ↔ '+(ci.huespedes.length?ci.huespedes.join(', '):'(emparejado)');
+          estC='✓';
+        }else{
+          const cand=ci.huespedesTentativos&&ci.huespedesTentativos.length?' · candidatos: '+ci.huespedesTentativos.join(', '):' · sin cobros que cuadren';
+          concept='Cierre '+ci.fecha+' ✗ sin emparejar'+cand;
+          estC='✗';
+        }
+        const comTxt=ci.comisionTotal?' · comisión '+fmt(ci.comisionTotal):'';
+        data.push(mkRow(['Débito',concept+comTxt,'','',ci.bruto,'',estC,''],stDetailBase,false));
+      });
+    }
     // Si hay diferencia, listar pendientes de cierre (huésped + fecha + total)
     if(Math.abs(dx.diff)>1&&dx.pendientesList&&dx.pendientesList.length){
       sectionRow('Débito','PENDIENTES DE CIERRE');
@@ -7500,7 +7688,19 @@ function _buildReconcilExcelData(prefix){
     sep();
   }
 
-  // ====== EGRESOS ======
+  // ====== INGRESOS ADICIONALES ======
+  const ax=window._recLastIngAdic;
+  if(ax&&ax.items&&ax.items.length){
+    data.push(mkRow(['Ingresos adic.','TOTAL ingresos adicionales','','',ax.total,'','—',''],stTotalBase,true));
+    sectionRow('Ingresos adic.','DETALLE INGRESOS ADICIONALES');
+    ax.items.forEach((it,i)=>{
+      const ref='ingadic-'+it.cuenta+'-'+it.fecha+'-'+Math.round(it.monto*100)+'-'+i;
+      const note=getNote('ingresos_adic',ref);
+      const concept=(it.cuenta||'')+' · '+it.fecha+' · '+(it.descripcion||'');
+      data.push(mkRow(['Ingresos adic.',concept,'','',it.monto,'','—',note],stDetailBase,false));
+    });
+    sep();
+  }
   const ex=window._recLastEgresos;
   if(ex){
     const diff=Math.round((ex.appBruto-ex.bankTotal)*100)/100;
