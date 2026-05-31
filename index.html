@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.16.3</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.17.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.16.3</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.17.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -3182,7 +3182,7 @@ function renderEgresos(){
   if(catFilter)egresos=egresos.filter(e=>(e.categoria||'').toLowerCase().includes(catFilter.toLowerCase()));
   if(soloSin)egresos=egresos.filter(e=>!e.categoria);
   const _sc=window._egrSortCol||'fecha';
-  const _sd=window._egrSortDir||'desc';
+  const _sd=window._egrSortDir||'asc';
   const _egrVal=(e,col)=>{
     if(col==='total')return e.total||0;
     if(col==='iva')return e.iva||0;
@@ -6579,10 +6579,11 @@ function _renderReconcilDebito(prefix){
   });
   const appBruto=Math.round(appPagos.reduce((s,p)=>s+p.monto,0)*100)/100;
 
-  // Banco: cierres TDC (VENTAS TDC INTER) y sus comisiones (COM VTAS TDC INTER, IVA COM VTAS TDC INTER)
+  // Banco: cierres de terminal — VENTAS TDC INTER (débito) + VENTAS CREDITO (crédito).
+  // En la app, 'debito' = cualquier pago con tarjeta bancaria, así que ambos cuentan.
   const cierres=window._recBbvaRows.filter(r=>{
     const d=String(r.descripcion||'').toUpperCase();
-    return r.abono>0&&d.includes('VENTAS TDC')&&!d.includes('COM')&&String(r.fecha||'').startsWith(prefix);
+    return r.abono>0&&(d.includes('VENTAS TDC')||d.includes('VENTAS CREDITO'))&&!d.includes('COM')&&String(r.fecha||'').startsWith(prefix);
   });
   const comisionesAll=window._recBbvaRows.filter(r=>{
     const d=String(r.descripcion||'').toUpperCase();
@@ -6610,40 +6611,43 @@ function _renderReconcilDebito(prefix){
   // Comisiones huérfanas (sin cierre del mismo día) van apilladas como "no asociadas"
   const comHuerfanas=comisionesAll.filter((cm,i)=>!usedCom.has(i));
 
-  // Acumulación greedy por fecha: para cada cierre TDC (ordenado por fecha asc),
-  // acumular cobros app por fechas ascendentes hasta llegar al bruto del cierre.
-  // Si la suma cuadra → match (con tolerancia $1). Si se pasa o no llega → no match.
+  // Matching por HUÉSPED: para cada cierre (orden cronológico), agrupar los cobros
+  // candidatos (no usados, fecha ≤ cierre) por huésped, y buscar la combinación de
+  // huéspedes cuyo total sume el bruto del cierre (tolerancia $1). Esto evita mezclar
+  // a dos huéspedes del mismo día en un solo cierre.
   const usedPago=new Set();
-  // Ordenar cierres por fecha ascendente para procesar en orden cronológico
   cierresInfo.sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
 
   cierresInfo.forEach(ci=>{
-    // Cobros candidatos: no usados, fecha ≤ fecha del cierre. Agrupar por fecha asc.
-    const cands=appPagos.map((p,idx)=>({idx,monto:p.monto,fecha:p.fecha}))
-      .filter(c=>!usedPago.has(c.idx)&&c.fecha<=ci.fecha)
-      .sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
-    // Acumular por fecha completa (atómicamente día por día)
-    const byDate={};
-    cands.forEach(c=>{(byDate[c.fecha]=byDate[c.fecha]||[]).push(c);});
-    const dates=Object.keys(byDate).sort();
-    let acc=0;
-    const selectedIdx=[];
-    let matched=false;
-    for(const d of dates){
-      const dayItems=byDate[d];
-      const daySum=dayItems.reduce((s,c)=>s+c.monto,0);
-      acc+=daySum;
-      dayItems.forEach(c=>selectedIdx.push(c.idx));
-      if(Math.abs(acc-ci.bruto)<=1){matched=true;break;}
-      if(acc>ci.bruto+1){matched=false;break;} // se pasó: no cuadra
+    const cands=appPagos.map((p,idx)=>({idx,monto:p.monto,fecha:p.fecha,huesped:p.huesped}))
+      .filter(c=>!usedPago.has(c.idx)&&c.fecha<=ci.fecha);
+    // Agrupar por huésped (un bloque por huésped: suma de sus cobros)
+    const porHuesped={};
+    cands.forEach(c=>{(porHuesped[c.huesped]=porHuesped[c.huesped]||{huesped:c.huesped,total:0,idxs:[]});porHuesped[c.huesped].total+=c.monto;porHuesped[c.huesped].idxs.push(c.idx);});
+    const bloques=Object.values(porHuesped);
+    // Buscar subconjunto de bloques que sume el bruto (tolerancia $1). Bloques suelen ser ≤10.
+    let mejor=null;
+    const n=bloques.length;
+    if(n<=18){
+      for(let mask=1;mask<(1<<n);mask++){
+        let suma=0;const sel=[];
+        for(let b=0;b<n;b++){if(mask&(1<<b)){suma+=bloques[b].total;sel.push(b);}}
+        if(Math.abs(suma-ci.bruto)<=1){
+          // Preferir la combinación con menos bloques (match más limpio)
+          if(!mejor||sel.length<mejor.sel.length){mejor={sel,suma};}
+        }
+      }
     }
-    ci.cobrosIdx=matched?selectedIdx:[];
-    ci.matchOk=matched;
-    ci.brutoCalculado=Math.round(acc*100)/100;
-    // Guardamos también los huéspedes "tentativamente" involucrados aunque no cuadre,
-    // para mostrar la lista resumida en caso de no-match
-    ci.huespedesTentativos=matched?[]:[...new Set(selectedIdx.map(i=>appPagos[i].huesped))];
-    if(matched)selectedIdx.forEach(idx=>usedPago.add(idx));
+    if(mejor){
+      const selectedIdx=mejor.sel.flatMap(b=>bloques[b].idxs);
+      ci.cobrosIdx=selectedIdx;ci.matchOk=true;ci.brutoCalculado=Math.round(mejor.suma*100)/100;
+      ci.huespedesTentativos=[];
+      selectedIdx.forEach(idx=>usedPago.add(idx));
+    }else{
+      ci.cobrosIdx=[];ci.matchOk=false;
+      ci.brutoCalculado=Math.round(bloques.reduce((s,b)=>s+b.total,0)*100)/100;
+      ci.huespedesTentativos=bloques.map(b=>b.huesped);
+    }
   });
 
   // Cobros app no emparejados a ningún cierre
