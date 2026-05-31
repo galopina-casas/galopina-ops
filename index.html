@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.22.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.22.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.22.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.22.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5277,53 +5277,50 @@ async function exportarCierreExcel(modo){
   wsEg['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
 
-  // === HOJA MOVIMIENTOS BANCO (cargos / egresos) ===
-  // Lista los cargos de las 3 cuentas con su estatus de reconciliación.
-  // Solo si hay reconciliación de egresos cargada del mes.
+  // === HOJA MOVIMIENTOS BANCO (TODOS los movimientos de las 3 cuentas) ===
+  // Cargo/Abono separados. Estatus: cargos = Reconciliado/Sin factura; abonos = "—" (paso siguiente).
   const _bx=window._recLastEgresos;
-  if(_bx){
-    const cargosRows=[];
-    // Cargos que matchearon una factura → Reconciliado
-    (_bx.facturaMatches||[]).forEach(m=>{
-      if(!m.ok)return; // sin banco no es un cargo bancario reconciliado
-      cargosRows.push({
-        cuenta:m.bankAcc||'',fecha:m.bankFecha||m.fecha||'',
-        descripcion:m.bankDesc||'',monto:m.total||0,
-        estatus:'Reconciliado',proveedor:m.proveedor||''
-      });
+  const hayBanco=Array.isArray(window._recBbvaRows)||Array.isArray(window._recBbvaSndaRows)||Array.isArray(window._recSantanderRows);
+  if(hayBanco){
+    const allMov=_recAllBankRows().filter(r=>String(r.fecha||'').startsWith(prefix));
+    // Set de "cargos reconciliados": clave cuenta|fecha|monto (de las facturas que matchearon banco)
+    const cargosOk=new Set();
+    if(_bx){(_bx.facturaMatches||[]).forEach(m=>{if(m.ok&&m.bankAcc)cargosOk.add(m.bankAcc+'|'+m.bankFecha+'|'+Math.round((m.total||0)*100));});}
+    // ordenar por cuenta, luego fecha
+    allMov.sort((a,b)=>String(a._acc).localeCompare(String(b._acc))||String(a.fecha).localeCompare(String(b.fecha)));
+    const bHdrs=['Banco','Fecha','Descripción','Cargo','Abono','Reconciliación'];
+    const bData=[bHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
+    allMov.forEach((r,i)=>{
+      const bg=i%2===0?null:'F2F2F2';
+      const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
+      const cargo=(typeof r.cargo==='number'&&r.cargo<0)?Math.abs(r.cargo):0;
+      const abono=(typeof r.abono==='number'&&r.abono>0)?r.abono:0;
+      let recCell;
+      if(cargo>0){
+        const key=r._acc+'|'+r.fecha+'|'+Math.round(cargo*100);
+        if(cargosOk.has(key))recCell={v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};
+        else recCell={v:'✗ Sin factura',s:{...cs,font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
+      }else{
+        recCell={v:'—',s:{...cs,font:{color:{rgb:'999999'}}}}; // abonos: paso siguiente
+      }
+      bData.push([
+        {v:r._acc||'',s:cs},{v:String(r.fecha||'').slice(0,10),s:cs},{v:String(r.descripcion||''),s:cs},
+        {v:cargo||'',t:cargo?'n':'s',z:cargo?'#,##0.00':undefined,s:cs},
+        {v:abono||'',t:abono?'n':'s',z:abono?'#,##0.00':undefined,s:cs},
+        recCell
+      ]);
     });
-    // Cargos huérfanos → Sin factura
-    (_bx.huerfanosBank||[]).forEach(h=>{
-      cargosRows.push({
-        cuenta:h.acc||'',fecha:h.fecha||'',
-        descripcion:h.desc||'',monto:h.monto||0,
-        estatus:'Sin factura',proveedor:''
-      });
-    });
-    if(cargosRows.length){
-      cargosRows.sort((a,b)=>String(a.cuenta).localeCompare(String(b.cuenta))||String(a.fecha).localeCompare(String(b.fecha)));
-      const bHdrs=['Banco','Fecha','Descripción','Proveedor (factura)','Monto','Reconciliación'];
-      const bData=[bHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
-      cargosRows.forEach((c,i)=>{
-        const bg=i%2===0?null:'F2F2F2';
-        const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
-        const recCell=c.estatus==='Reconciliado'
-          ?{v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}}
-          :{v:'✗ Sin factura',s:{...cs,font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
-        bData.push([
-          {v:c.cuenta,s:cs},{v:c.fecha,s:cs},{v:c.descripcion,s:cs},{v:c.proveedor,s:cs},
-          {v:c.monto,t:'n',z:'#,##0.00',s:cs},recCell
-        ]);
-      });
-      // Total
+    if(allMov.length){
       const bFirst=2,bLast=bData.length;
       const bTot={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
       bData.push([
-        {v:'TOTAL ('+cargosRows.length+' cargos)',s:bTot},{v:'',s:bTot},{v:'',s:bTot},{v:'',s:bTot},
-        {f:`SUM(E${bFirst}:E${bLast})`,v:0,t:'n',z:'#,##0.00',s:bTot},{v:'',s:bTot}
+        {v:'TOTAL ('+allMov.length+' movimientos)',s:bTot},{v:'',s:bTot},{v:'',s:bTot},
+        {f:`SUM(D${bFirst}:D${bLast})`,v:0,t:'n',z:'#,##0.00',s:bTot},
+        {f:`SUM(E${bFirst}:E${bLast})`,v:0,t:'n',z:'#,##0.00',s:bTot},
+        {v:'',s:bTot}
       ]);
       const wsBank=XLSX.utils.aoa_to_sheet(bData);
-      wsBank['!cols']=[{wch:18},{wch:12},{wch:42},{wch:28},{wch:13},{wch:16}];
+      wsBank['!cols']=[{wch:18},{wch:12},{wch:46},{wch:13},{wch:13},{wch:16}];
       wsBank['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
       XLSX.utils.book_append_sheet(wb,wsBank,'Movimientos banco');
     }
