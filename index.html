@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.19.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.20.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.19.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.20.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -6789,12 +6789,26 @@ function _renderReconcilDebito(prefix){
   });
   const pendientesList=Object.values(pendGrouped).sort((a,b)=>a.fecha.localeCompare(b.fecha));
 
+  // Enriquecer cada cierre con los huéspedes emparejados (para el detalle del Excel)
+  const cierresParaExcel=cierresInfo.map(ci=>{
+    const hs=(ci.cobrosIdx||[]).map(i=>appPagos[i]&&appPagos[i].huesped).filter(Boolean);
+    const huespedesMatch=[...new Set(hs)];
+    return {
+      fecha:ci.fecha,
+      bruto:ci.bruto,
+      comisionTotal:ci.comisionTotal,
+      matchOk:ci.matchOk,
+      huespedes:huespedesMatch,                 // con quién cuadró
+      huespedesTentativos:ci.huespedesTentativos||[] // candidatos si no cuadró
+    };
+  });
+
   window._recLastDebito={
     appBruto:appBruto,
     bankTotal:bankBruto,
     comisionTotal:bankComTotal,
     diff:diff,
-    cierres:cierresInfo,
+    cierres:cierresParaExcel,
     pendientesCount:pendientesIdx.length,
     pendientesTotal:pendientesTotal,
     pendientesList:pendientesList
@@ -7537,6 +7551,23 @@ function _buildReconcilExcelData(prefix){
   if(dx){
     const est=Math.abs(dx.diff)<=1?'✓':'⚠';
     data.push(mkRow(['Débito','TOTAL (banco bruto)',dx.appBruto,'',dx.bankTotal,dx.diff,est,''],stTotalBase,true));
+    // Detalle de cada cierre TDC del banco (igual que en pantalla)
+    if(dx.cierres&&dx.cierres.length){
+      sectionRow('Débito','DETALLE CIERRES TDC');
+      dx.cierres.forEach(ci=>{
+        let concept, estC;
+        if(ci.matchOk){
+          concept='Cierre '+ci.fecha+' ↔ '+(ci.huespedes.length?ci.huespedes.join(', '):'(emparejado)');
+          estC='✓';
+        }else{
+          const cand=ci.huespedesTentativos&&ci.huespedesTentativos.length?' · candidatos: '+ci.huespedesTentativos.join(', '):' · sin cobros que cuadren';
+          concept='Cierre '+ci.fecha+' ✗ sin emparejar'+cand;
+          estC='✗';
+        }
+        const comTxt=ci.comisionTotal?' · comisión '+fmt(ci.comisionTotal):'';
+        data.push(mkRow(['Débito',concept+comTxt,'','',ci.bruto,'',estC,''],stDetailBase,false));
+      });
+    }
     // Si hay diferencia, listar pendientes de cierre (huésped + fecha + total)
     if(Math.abs(dx.diff)>1&&dx.pendientesList&&dx.pendientesList.length){
       sectionRow('Débito','PENDIENTES DE CIERRE');
@@ -7548,7 +7579,19 @@ function _buildReconcilExcelData(prefix){
     sep();
   }
 
-  // ====== EGRESOS ======
+  // ====== INGRESOS ADICIONALES ======
+  const ax=window._recLastIngAdic;
+  if(ax&&ax.items&&ax.items.length){
+    data.push(mkRow(['Ingresos adic.','TOTAL ingresos adicionales','','',ax.total,'','—',''],stTotalBase,true));
+    sectionRow('Ingresos adic.','DETALLE INGRESOS ADICIONALES');
+    ax.items.forEach((it,i)=>{
+      const ref='ingadic-'+it.cuenta+'-'+it.fecha+'-'+Math.round(it.monto*100)+'-'+i;
+      const note=getNote('ingresos_adic',ref);
+      const concept=(it.cuenta||'')+' · '+it.fecha+' · '+(it.descripcion||'');
+      data.push(mkRow(['Ingresos adic.',concept,'','',it.monto,'','—',note],stDetailBase,false));
+    });
+    sep();
+  }
   const ex=window._recLastEgresos;
   if(ex){
     const diff=Math.round((ex.appBruto-ex.bankTotal)*100)/100;
