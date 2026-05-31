@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.24.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.25.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.24.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.25.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -4910,6 +4910,7 @@ async function exportarCierreExcel(modo){
   const wsRes=XLSX.utils.aoa_to_sheet(resRows);
   wsRes['!cols']=[{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}];
   wsRes['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+  if(wsRes['!ref'])wsRes['!autofilter']={ref:wsRes['!ref']};
   XLSX.utils.book_append_sheet(wb,wsRes,'Reservas');
 
   // === HOJA 2: DETALLE PAGOS ===
@@ -5027,6 +5028,7 @@ async function exportarCierreExcel(modo){
     ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14}]
     : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:22},{wch:22},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:10},{wch:12},{wch:14},{wch:12},{wch:12},{wch:14},{wch:13}];
   ws1['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+  if(ws1['!ref'])ws1['!autofilter']={ref:ws1['!ref']};
   if(!isConta)XLSX.utils.book_append_sheet(wb,ws1,'Detalle Pagos');
 
   // === HOJA: PAGO x CONCEPTO (agrupado por reserva + Concepto CFDI + fecha pago + método pago) ===
@@ -5148,6 +5150,7 @@ async function exportarCierreExcel(modo){
     ? [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12}]
     : [{wch:18},{wch:14},{wch:13},{wch:13},{wch:25},{wch:20},{wch:28},{wch:13},{wch:16},{wch:12},{wch:10},{wch:10},{wch:12},{wch:12},{wch:13}];
   wsPxc['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+  if(wsPxc['!ref'])wsPxc['!autofilter']={ref:wsPxc['!ref']};
   XLSX.utils.book_append_sheet(wb,wsPxc,'PagoxConcepto');
   const rep=rows.filter(r=>METODOS_REPORTABLES.includes(r.pago));
   const hospR=rep.filter(r=>r.tipo==='hospedaje');
@@ -5275,6 +5278,7 @@ async function exportarCierreExcel(modo){
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
   wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20},{wch:16},{wch:28}];
   wsEg['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+  if(wsEg['!ref'])wsEg['!autofilter']={ref:wsEg['!ref']};
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
 
   // === HOJA MOVIMIENTOS BANCO (TODOS los movimientos de las 3 cuentas) ===
@@ -5324,6 +5328,7 @@ async function exportarCierreExcel(modo){
       wsBankDeferred=XLSX.utils.aoa_to_sheet(bData);
       wsBankDeferred['!cols']=[{wch:18},{wch:12},{wch:46},{wch:13},{wch:13},{wch:16}];
       wsBankDeferred['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
+      if(wsBankDeferred['!ref'])wsBankDeferred['!autofilter']={ref:wsBankDeferred['!ref']};
     }
   }
 
