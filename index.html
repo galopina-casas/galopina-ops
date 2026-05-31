@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.17.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.17.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.17.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.17.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -690,6 +690,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
     <div id="rec-trans-block"></div>
     <div id="rec-debito-block"></div>
     <div id="rec-egresos-block"></div>
+    <div id="rec-otros-block"></div>
   </div>
 
   <div class="sec" id="sec-cierre">
@@ -6999,21 +7000,29 @@ function _renderReconcilEgresos(prefix){
 
   // Matching notas de crédito → abono banco
   const usedAbono=new Set();
+  // Casar nota de crédito ↔ abono del banco: monto (±1) Y (proveedor coincide O fecha ±15 días)
+  const _provEnDesc=(prov,desc)=>{
+    const limpia=s=>String(s||'').toUpperCase().replace(/[^A-Z0-9Ñ ]/g,' ').split(/\s+/).filter(w=>w.length>=4);
+    const pal=limpia(prov);const d=String(desc||'').toUpperCase();
+    return pal.some(w=>d.includes(w));
+  };
+  const win15=15*24*60*60*1000;
   const ncMatches=notasCredito.map(e=>{
     const monto=Math.abs(parseFloat(e.montoMXN||e.total)||0);
     const cfdiDate=new Date(String(e.fecha||'').slice(0,10));
-    const ventana=60*24*60*60*1000;
     const elegibles=abonosBank.filter((a,i)=>{
       if(usedAbono.has(i))return false;
       if(Math.abs(a.abono-monto)>1)return false;
-      const bd=new Date(a.fecha);
-      const diff=bd-cfdiDate;
-      return diff>=-ventana&&diff<=ventana;
+      const diff=new Date(a.fecha)-cfdiDate;
+      const fechaCerca=diff>=-win15&&diff<=win15;
+      const provOk=_provEnDesc(e.proveedor,a.descripcion);
+      return provOk||fechaCerca; // monto ya coincide; basta proveedor O fecha cercana
     });
     if(elegibles.length>=1){
       const idx=abonosBank.indexOf(elegibles[0]);
       usedAbono.add(idx);
-      return {egreso:e,bank:elegibles[0],how:'monto'};
+      const how=_provEnDesc(e.proveedor,elegibles[0].descripcion)?'monto+proveedor':'monto+fecha';
+      return {egreso:e,bank:elegibles[0],how};
     }
     return {egreso:e,bank:null,how:'sin_match'};
   });
