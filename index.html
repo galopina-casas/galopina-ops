@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.23.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.24.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.23.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.24.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5296,7 +5296,9 @@ async function exportarCierreExcel(modo){
       const cargo=(typeof r.cargo==='number'&&r.cargo<0)?Math.abs(r.cargo):0;
       const abono=(typeof r.abono==='number'&&r.abono>0)?r.abono:0;
       let recCell;
-      if(cargo>0){
+      if(_recIsComisionBancaria(r.descripcion)){
+        recCell={v:'Comisión bancaria',s:{...cs,font:{color:{rgb:'888888'}}}};
+      }else if(cargo>0){
         const key=r._acc+'|'+r.fecha+'|'+Math.round(cargo*100);
         if(cargosOk.has(key))recCell={v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};
         else recCell={v:'✗ Sin factura',s:{...cs,font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
@@ -7039,18 +7041,27 @@ function _recExtractRfc(desc){
   return m?(m[1]+m[2]+m[3]).toUpperCase():'';
 }
 
+function _recIsComisionBancaria(desc){
+  // Comisiones bancarias sin factura: el movimiento en cuenta ES el comprobante.
+  const d=String(desc||'').toUpperCase();
+  return d.includes('COM VTAS TDC')
+      || d.includes('IVA COM VTAS TDC')
+      || d.includes('COM SERV BCA')
+      || d.includes('IVA COM SERV BCA')
+      || d.includes('SERV BCA INTERNET')
+      || d.includes('TASA DE DESC CREDITO')   // crédito: IVA TASA DE DESC CREDITO
+      || d.includes('TASA DE DES CREDITO');    // crédito: APLI TASA DE DES CREDITO
+}
+
 function _recIsInternalMovement(desc){
   // Movimientos internos del banco a excluir del matching de egresos
   const d=String(desc||'').toUpperCase();
   return d.includes('TRASPASO CUENTAS PROPIAS')
-      || d.includes('SERV BCA INTERNET')
-      || d.includes('IVA COM SERV BCA')
-      || d.includes('COM SERV BCA')
       || d.includes('SPEI ENVIADO')&&d.includes('CUENTAS PROPIAS')
       || d.includes('VENTAS TDC INTER')      // ingresos
-      || d.includes('COM VTAS TDC')          // ya tratado en débito
-      || d.includes('IVA COM VTAS TDC')
-      || d.includes('SPEI RECIBIDO');        // ingresos
+      || d.includes('VENTAS CREDITO')        // ingresos (crédito)
+      || d.includes('SPEI RECIBIDO')         // ingresos
+      || _recIsComisionBancaria(desc);       // comisiones bancarias sin factura
 }
 
 function _renderReconcilEgresos(prefix){
