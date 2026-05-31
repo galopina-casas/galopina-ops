@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.26.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.25.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.26.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.25.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -7571,13 +7571,15 @@ function _buildReconcilExcelData(prefix){
       const estNeto=Math.abs(diffNeto)<=1?'✓':'✗';
       data.push(mkRow(['Stripe','TOTAL neto (banco)','',sx.plataformaNeto,sx.bankTotal,diffNeto,estNeto,''],stTotalBase,true));
     }
-    // Detalle: TODAS las transacciones (lo que cuadró y lo que no), como en Débito
+    // Detalle problemas
     const probs=[];
     sx.matches.forEach(m=>{
       const ref='s-'+(m.stripe.payoutId||'')+'-'+m.stripeDt+'-'+Math.round((m.gross||0)*100);
       const note=getNote('stripe',ref);
-      const concept=(m.stripeName||'(sin nombre)')+' · '+m.stripeDt+(m.ok?' ↔ '+m.matchName+(m.matchTipo?' ('+m.matchTipo+')':''):' ✗ sin reserva');
-      probs.push({bloque:'Stripe',concept,app:'',plat:m.gross,bank:'',diff:m.ok?0:m.gross,est:m.ok?'✓':'✗',note});
+      if(!m.ok||note){
+        const concept=(m.stripeName||'(sin nombre)')+' · '+m.stripeDt+(m.ok?' ↔ '+m.matchName:'');
+        probs.push({bloque:'Stripe',concept,app:'',plat:m.gross,bank:'',diff:m.ok?0:m.gross,est:m.ok?'✓':'✗',note});
+      }
     });
     sx.huerfanosApp.forEach(h=>{
       const ref='s-app-'+(h.nombre||'')+'-'+h.tipo+'-'+Math.round((h.monto||0)*100);
@@ -7586,7 +7588,7 @@ function _buildReconcilExcelData(prefix){
       probs.push({bloque:'Stripe',concept,app:h.monto,plat:'',bank:'',diff:-h.monto,est:'⚠',note});
     });
     if(probs.length){
-      sectionRow('Stripe','DETALLE STRIPE');
+      sectionRow('Stripe','DETALLE ERRORES STRIPE');
       probs.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
     }
     sep();
@@ -7607,8 +7609,10 @@ function _buildReconcilExcelData(prefix){
     cx.matches.forEach(m=>{
       const ref='cb-'+(m.cb.txId||(m.cbId+'-'+m.cbDate));
       const note=getNote('cloudbeds',ref);
-      const concept=(m.cbName||'(sin nombre)')+' · '+m.cbDate+(m.ok?' ↔ '+m.matchName+(m.matchTipo?' ('+m.matchTipo+')':''):' ✗ sin reserva');
-      probs.push({bloque:'CloudBeds',concept,app:'',plat:m.bruto,bank:'',diff:m.ok?0:m.bruto,est:m.ok?'✓':'✗',note});
+      if(!m.ok||note){
+        const concept=(m.cbName||'(sin nombre)')+' · '+m.cbDate+(m.ok?' ↔ '+m.matchName:'');
+        probs.push({bloque:'CloudBeds',concept,app:'',plat:m.bruto,bank:'',diff:m.ok?0:m.bruto,est:m.ok?'✓':'✗',note});
+      }
     });
     cx.huerfanosApp.forEach(h=>{
       const ref='cb-app-'+(h.nombre||'')+'-'+h.tipo+'-'+Math.round((h.monto||0)*100);
@@ -7617,7 +7621,7 @@ function _buildReconcilExcelData(prefix){
       probs.push({bloque:'CloudBeds',concept,app:h.monto,plat:'',bank:'',diff:-h.monto,est:'⚠',note});
     });
     if(probs.length){
-      sectionRow('CloudBeds','DETALLE CLOUDBEDS');
+      sectionRow('CloudBeds','DETALLE ERRORES CLOUDBEDS');
       probs.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
     }
     sep();
@@ -7633,8 +7637,10 @@ function _buildReconcilExcelData(prefix){
     tx.matches.forEach(m=>{
       const ref='t-'+(m.bankAcc||'')+'-'+m.bankFecha+'-'+Math.round((m.bankAbono||0)*100);
       const note=getNote('transferencias',ref);
-      const concept=(m.bankAcc||'')+' · '+m.bankFecha+' · SPEI'+(m.ok?' ↔ '+m.matchName:' ✗ sin cobro app');
-      probs.push({bloque:'Transferencias',concept,app:'',plat:'',bank:m.bankAbono,diff:m.ok?0:m.bankAbono,est:m.ok?'✓':'✗',note});
+      if(!m.ok||note){
+        const concept=(m.bankAcc||'')+' · '+m.bankFecha+' · SPEI'+(m.ok?' ↔ '+m.matchName:'');
+        probs.push({bloque:'Transferencias',concept,app:'',plat:'',bank:m.bankAbono,diff:m.ok?0:m.bankAbono,est:m.ok?'✓':'✗',note});
+      }
     });
     tx.huerfanosApp.forEach(h=>{
       const ref='t-app-'+(h.reservaId||'')+'-'+h.fecha+'-'+Math.round(h.monto*100);
@@ -7643,7 +7649,7 @@ function _buildReconcilExcelData(prefix){
       probs.push({bloque:'Transferencias',concept,app:h.monto,plat:'',bank:'',diff:-h.monto,est:'⚠',note});
     });
     if(probs.length){
-      sectionRow('Transferencias','DETALLE TRANSFERENCIAS');
+      sectionRow('Transferencias','DETALLE ERRORES TRANSFERENCIAS');
       probs.forEach(p=>data.push(mkRow([p.bloque,p.concept,p.app,p.plat,p.bank,p.diff,p.est,p.note],stDetailBase,false)));
     }
     sep();
