@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.15.3-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.16.3-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.15.3-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.16.3-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -1198,16 +1198,35 @@ function renderDash(){
   const res=gd(KR),cons=gd(KC);
   const m=new Date().getMonth(),y=new Date().getFullYear();
   const prefix=y+'-'+String(m+1).padStart(2,'0');
-  const anti=res.filter(r=>(r.antiFecha||'').startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd').reduce((s,r)=>s+(r.anticipo||0),0);
-  const saldos=res.filter(r=>(r.saldFecha||'').startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd').reduce((s,r)=>s+(r.saldo||0),0);
+  // Hospedaje cobrado este mes — SIN la parte de cenas incluidas (esas van a Consumos)
+  // Cada pago (anticipo/saldo) se divide en porción hospedaje y porción cena según cenasRatio = consumoCena/total
+  let anti=0, saldos=0, cenasIncCobradas=0;
+  res.forEach(r=>{
+    const tot=r.total||0;
+    const cenasRatio=tot>0?(r.consumoCena||0)/tot:0;
+    const hospRatio=1-cenasRatio;
+    if((r.antiFecha||'').startsWith(prefix)&&r.antiPago&&r.antiPago!=='tbd'){
+      const a=r.anticipo||0;
+      anti+=a*hospRatio;
+      cenasIncCobradas+=a*cenasRatio;
+    }
+    if((r.saldFecha||'').startsWith(prefix)&&r.saldPago&&r.saldPago!=='tbd'){
+      const s=r.saldo||0;
+      saldos+=s*hospRatio;
+      cenasIncCobradas+=s*cenasRatio;
+    }
+  });
+  anti=Math.round(anti*100)/100;
+  saldos=Math.round(saldos*100)/100;
+  cenasIncCobradas=Math.round(cenasIncCobradas*100)/100;
   let totCons=0;cons.forEach(c=>{(c.items||[]).forEach(it=>{if(String(it.fechaPago||'').startsWith(prefix))totCons+=(it.precio||0)*(it.cantidad||0);});});
-  totCons=Math.round(totCons*100)/100;
+  totCons=Math.round((totCons+cenasIncCobradas)*100)/100;
   const pendHosp=res.filter(r=>!r.saldFecha&&(r.saldo||0)>0).reduce((s,r)=>s+(r.saldo||0),0);
   const enCasa=res.filter(r=>r.estado==='checkin').length;
   const nReservaciones=res.filter(r=>fmtDate(r.checkout).startsWith(prefix)&&r.estado!=='cancelada').length;
   const _mb='<p style="font-size:10px;color:#aaa;margin-top:2px">Bruto</p>';
   document.getElementById('dash-metrics').innerHTML=`
-    <div class="metric"><p class="mlabel">Cobrado este mes</p><p class="mval" style="color:#185FA5">${fmt(anti+saldos)}</p>${_mb}</div>
+    <div class="metric"><p class="mlabel">Hospedaje este mes</p><p class="mval" style="color:#185FA5">${fmt(anti+saldos)}</p>${_mb}</div>
     <div class="metric"><p class="mlabel">Consumos este mes</p><p class="mval" style="color:#1D9E75">${fmt(totCons)}</p>${_mb}</div>
     <div class="metric"><p class="mlabel">Saldos pendientes</p><p class="mval" style="color:#E24B4A">${fmt(pendHosp)}</p>${_mb}</div>
     <div class="metric"><p class="mlabel">Reservaciones</p><p class="mval">${nReservaciones}</p></div>`;
@@ -3032,7 +3051,7 @@ async function procesarZip(input){
     if(duplicadas)msg+=` · ${duplicadas} duplicada(s)`;
     if(cp01)msg+=` · ${cp01} complemento(s) de pago omitido(s)`;
     if(otros)msg+=` · ${otros} otro(s) tipo(s) omitido(s)`;
-    showAlert(msg,'success',true);
+    showAlert(msg,'success',8000);
   }catch(e){
     console.error(e);
     showAlert('Error al procesar ZIP: '+e.message,'error');
@@ -3279,20 +3298,18 @@ function openEgModal(uuid){
   const e=gd(KE).find(x=>x.uuid===uuid);
   if(!e)return;
   const cats=gd(KCE);
-  const grupos=[...new Set(cats.map(c=>c.grupo).filter(Boolean))];
-  const optsHtml=grupos.map(g=>`
-    <optgroup label="${g}">
-      ${cats.filter(c=>c.grupo===g).map(c=>`<option value="${c.nombre}" ${c.nombre===e.categoria?'selected':''}>${c.nombre}</option>`).join('')}
-    </optgroup>`).join('');
+  // Opciones planas para el datalist (autocompletado). Ordenadas por grupo y nombre.
+  const catsSorted=[...cats].filter(c=>c.nombre).sort((a,b)=>
+    (a.grupo||'').localeCompare(b.grupo||'')||(a.nombre||'').localeCompare(b.nombre||''));
+  const optsHtml=catsSorted.map(c=>`<option value="${c.nombre.replace(/"/g,'&quot;')}">${c.grupo?c.grupo:''}</option>`).join('');
   const isDeducible=(cat)=>{const c=gd(KCE).find(x=>x.nombre===cat);return c&&(c.deducibleAnual===true||c.deducibleAnual==='TRUE'||c.deducibleAnual===1);};
   document.getElementById('eg-modal-title').textContent=e.proveedor||'Factura';
   document.getElementById('eg-modal-body').innerHTML=`
     <p style="font-size:12px;color:#888;margin-bottom:4px">RFC: ${e.rfc} · ${e.fecha} · ${fmt(e.total)}</p>
     <p style="font-size:12px;color:#888;margin-bottom:14px;font-style:italic">${e.descripcion||''}</p>
     <p style="font-size:11px;color:#AAA;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Categoría</p>
-    <select id="eg-cat-sel" style="width:100%;margin-bottom:10px" onchange="egModalCatChange(this.value,'${uuid}')">
-      <option value="">— Sin categoría —</option>${optsHtml}
-    </select>
+    <input id="eg-cat-sel" list="eg-cat-list" value="${(e.categoria||'').replace(/"/g,'&quot;')}" placeholder="Escribe o elige una categoría…" autocomplete="off" style="width:100%;margin-bottom:10px;font-size:13px" onchange="egModalCatChange(this.value,'${uuid}')">
+    <datalist id="eg-cat-list">${optsHtml}</datalist>
     <div style="display:flex;gap:10px;margin-bottom:10px">
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;padding:8px 12px;border:0.5px solid ${e.gastoPersonal?'#BA7517':'#d5d5cf'};border-radius:6px;background:${e.gastoPersonal?'#FAEEDA':'#F5F5F2'};flex:1">
         <input type="checkbox" id="eg-gasto-personal" style="width:14px;height:14px;accent-color:#BA7517" ${e.gastoPersonal?'checked':''}>
@@ -3342,7 +3359,12 @@ function closeEgModal(){
 }
 
 async function saveEgCategoria(uuid){
-  const cat=document.getElementById('eg-cat-sel').value;
+  const cat=document.getElementById('eg-cat-sel').value.trim();
+  // Validar: si se escribió algo, debe coincidir con una categoría existente (autocompletado libre)
+  if(cat&&!gd(KCE).some(x=>x.nombre===cat)){
+    showAlert('"'+cat+'" no es una categoría válida. Elige una de la lista.','error');
+    return;
+  }
   const nota=document.getElementById('eg-nota-inp').value;
   const saveRule=document.getElementById('eg-save-rule').checked;
   const gastoPersonal=document.getElementById('eg-gasto-personal')?.checked||false;
@@ -3615,7 +3637,7 @@ async function confirmarNoCFDI(){
   if(nDates[0])_egPostImportMes=nDates[0];
   cerrarPreviewNoCFDI();
   initEgresos();
-  showAlert(`${totalPend} factura(s) detectada(s) · ${guardadas} guardada(s)${duplicadas?' · '+duplicadas+' duplicada(s) omitida(s)':''}`,'success',true);
+  showAlert(`${totalPend} factura(s) detectada(s) · ${guardadas} guardada(s)${duplicadas?' · '+duplicadas+' duplicada(s) omitida(s)':''}`,'success',8000);
 }
 
 function abrirFormNoCFDI(){
@@ -4064,7 +4086,10 @@ var _alertTimer=null;
 function showAlert(msg,type='success',persist=false){
   const b=document.getElementById('alert-box');b.textContent=msg;b.className='alert '+type;b.style.display='block';
   if(_alertTimer){clearTimeout(_alertTimer);_alertTimer=null;}
-  if(!persist)_alertTimer=setTimeout(()=>{b.style.display='none';_alertTimer=null;},3500);
+  // persist: true = no desaparece; número = ms hasta ocultar; false/omitido = 3500ms
+  if(persist===true)return;
+  const ms=(typeof persist==='number'&&persist>0)?persist:3500;
+  _alertTimer=setTimeout(()=>{b.style.display='none';_alertTimer=null;},ms);
 }
 document.addEventListener('click',e=>{
   if(!e.target.closest('.ac-wrap'))document.querySelectorAll('.ac-dd').forEach(d=>d.style.display='none');
