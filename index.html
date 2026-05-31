@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.22.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.23.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.22.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.23.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5279,14 +5279,14 @@ async function exportarCierreExcel(modo){
 
   // === HOJA MOVIMIENTOS BANCO (TODOS los movimientos de las 3 cuentas) ===
   // Cargo/Abono separados. Estatus: cargos = Reconciliado/Sin factura; abonos = "—" (paso siguiente).
+  // Se construye aquí pero se AGREGA AL FINAL del libro (última pestaña).
+  let wsBankDeferred=null;
   const _bx=window._recLastEgresos;
   const hayBanco=Array.isArray(window._recBbvaRows)||Array.isArray(window._recBbvaSndaRows)||Array.isArray(window._recSantanderRows);
   if(hayBanco){
     const allMov=_recAllBankRows().filter(r=>String(r.fecha||'').startsWith(prefix));
-    // Set de "cargos reconciliados": clave cuenta|fecha|monto (de las facturas que matchearon banco)
     const cargosOk=new Set();
     if(_bx){(_bx.facturaMatches||[]).forEach(m=>{if(m.ok&&m.bankAcc)cargosOk.add(m.bankAcc+'|'+m.bankFecha+'|'+Math.round((m.total||0)*100));});}
-    // ordenar por cuenta, luego fecha
     allMov.sort((a,b)=>String(a._acc).localeCompare(String(b._acc))||String(a.fecha).localeCompare(String(b.fecha)));
     const bHdrs=['Banco','Fecha','Descripción','Cargo','Abono','Reconciliación'];
     const bData=[bHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
@@ -5301,7 +5301,7 @@ async function exportarCierreExcel(modo){
         if(cargosOk.has(key))recCell={v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};
         else recCell={v:'✗ Sin factura',s:{...cs,font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
       }else{
-        recCell={v:'—',s:{...cs,font:{color:{rgb:'999999'}}}}; // abonos: paso siguiente
+        recCell={v:'—',s:{...cs,font:{color:{rgb:'999999'}}}};
       }
       bData.push([
         {v:r._acc||'',s:cs},{v:String(r.fecha||'').slice(0,10),s:cs},{v:String(r.descripcion||''),s:cs},
@@ -5319,10 +5319,9 @@ async function exportarCierreExcel(modo){
         {f:`SUM(E${bFirst}:E${bLast})`,v:0,t:'n',z:'#,##0.00',s:bTot},
         {v:'',s:bTot}
       ]);
-      const wsBank=XLSX.utils.aoa_to_sheet(bData);
-      wsBank['!cols']=[{wch:18},{wch:12},{wch:46},{wch:13},{wch:13},{wch:16}];
-      wsBank['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
-      XLSX.utils.book_append_sheet(wb,wsBank,'Movimientos banco');
+      wsBankDeferred=XLSX.utils.aoa_to_sheet(bData);
+      wsBankDeferred['!cols']=[{wch:18},{wch:12},{wch:46},{wch:13},{wch:13},{wch:16}];
+      wsBankDeferred['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
     }
   }
 
@@ -5384,23 +5383,43 @@ async function exportarCierreExcel(modo){
     }
   }
 
+  // Movimientos banco: SIEMPRE como última pestaña
+  if(wsBankDeferred)XLSX.utils.book_append_sheet(wb,wsBankDeferred,'Movimientos banco');
+
+  // Colores de pestaña por grupo (xlsx-js-style no los escribe; se inyectan en el post-proceso)
+  const TAB_VERDE='1D9E75', TAB_NARANJA='E07A1F', TAB_AMARILLO='F2C400';
+  const tabColores={
+    'Reservas':TAB_VERDE,'Detalle Pagos':TAB_VERDE,'PagoxConcepto':TAB_VERDE,'CFDI global':TAB_VERDE,'Por Método':TAB_VERDE,
+    'Egresos':TAB_NARANJA,'Retención':TAB_NARANJA,
+    'Reconciliación':TAB_AMARILLO,'Movimientos banco':TAB_AMARILLO
+  };
+  (wb.SheetNames||[]).forEach(nm=>{const c=tabColores[nm];if(c&&wb.Sheets[nm])wb.Sheets[nm]['!tabColor']={rgb:c};});
+
   // xlsx-js-style 1.2.0 no escribe freeze panes; se inyectan post-proceso en el XML
   const nombreArchivo='Galopina_Cierre_'+(isConta?'Conta_':'Ops_')+mesNombre.replace(' ','_')+'.xlsx';
   try{
     const buf=XLSX.write(wb,{type:'array',bookType:'xlsx'});
     const JSZip=await loadJSZip();
     const zip=await JSZip.loadAsync(buf);
-    const hojas=Object.keys(zip.files).filter(f=>/^xl\/worksheets\/sheet\d+\.xml$/.test(f));
+    const hojas=Object.keys(zip.files).filter(f=>/^xl\/worksheets\/sheet\d+\.xml$/.test(f))
+      .sort((a,b)=>parseInt(a.match(/sheet(\d+)/)[1])-parseInt(b.match(/sheet(\d+)/)[1]));
     const pane='<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/><selection pane="bottomLeft"/>';
-    for(const h of hojas){
+    for(let idx=0;idx<hojas.length;idx++){
+      const h=hojas[idx];
       let xml=await zip.file(h).async('string');
-      if(xml.includes('<pane '))continue;
-      if(/<sheetView[^>]*\/>/.test(xml)){
-        // sheetView auto-cerrado → expandir e insertar pane
-        xml=xml.replace(/<sheetView([^>]*)\/>/, '<sheetView$1>'+pane+'</sheetView>');
-      }else{
-        // sheetView con contenido → insertar pane justo tras la apertura
-        xml=xml.replace(/(<sheetView[^>]*>)/, '$1'+pane);
+      // 1) Color de pestaña (tabColor) — sheetN.xml corresponde a wb.SheetNames[N-1]
+      const nm=(wb.SheetNames||[])[idx];
+      const col=nm&&wb.Sheets[nm]&&wb.Sheets[nm]['!tabColor']?wb.Sheets[nm]['!tabColor'].rgb:null;
+      if(col&&!xml.includes('<tabColor')){
+        const sheetPr='<sheetPr><tabColor rgb="FF'+col+'"/></sheetPr>';
+        if(/<sheetPr[^>]*\/>/.test(xml))xml=xml.replace(/<sheetPr[^>]*\/>/,sheetPr);
+        else if(/<sheetPr[^>]*>[\s\S]*?<\/sheetPr>/.test(xml))xml=xml.replace(/<sheetPr[^>]*>[\s\S]*?<\/sheetPr>/,sheetPr);
+        else xml=xml.replace(/(<worksheet[^>]*>)/,'$1'+sheetPr);
+      }
+      // 2) Freeze pane
+      if(!xml.includes('<pane ')){
+        if(/<sheetView[^>]*\/>/.test(xml))xml=xml.replace(/<sheetView([^>]*)\/>/, '<sheetView$1>'+pane+'</sheetView>');
+        else xml=xml.replace(/(<sheetView[^>]*>)/, '$1'+pane);
       }
       zip.file(h,xml);
     }
