@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.26.3-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.26.6-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.26.3-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.26.6-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5290,12 +5290,14 @@ async function exportarCierreExcel(modo){
   const hayBanco=Array.isArray(window._recBbvaRows)||Array.isArray(window._recBbvaSndaRows)||Array.isArray(window._recSantanderRows);
   if(hayBanco){
     const allMov=_recAllBankRows().filter(r=>String(r.fecha||'').startsWith(prefix));
-    // Map cargo→nFactura de la factura que casó (clave cuenta|fecha|monto)
+    // Map cargo→nFactura usando bankRef único (cuenta|fecha|monto|ocurrencia) para no colapsar
+    // dos cargos idénticos el mismo día. El bankRef proviene del MISMO emparejamiento que decide el estatus.
     const cargoFactura=new Map();
-    if(_bx){(_bx.facturaMatches||[]).forEach(m=>{if(m.ok&&m.bankAcc){const k=m.bankAcc+'|'+m.bankFecha+'|'+Math.round((m.total||0)*100);cargoFactura.set(k,(m.egreso&&m.egreso.nFactura)||'');}});}
+    if(_bx){(_bx.facturaMatches||[]).forEach(m=>{if(m.ok&&m.bankRef)cargoFactura.set(m.bankRef,(m.egreso&&m.egreso.nFactura)||'');});}
     allMov.sort((a,b)=>String(a._acc).localeCompare(String(b._acc))||String(a.fecha).localeCompare(String(b.fecha)));
     const bHdrs=['Banco','Fecha','Descripción','Cargo','Abono','Reconciliación','N° Factura'];
     const bData=[bHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
+    const _occBank={}; // numerar ocurrencias de cada clave en el mismo esquema que el matching
     allMov.forEach((r,i)=>{
       const bg=i%2===0?null:'F2F2F2';
       const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
@@ -5305,8 +5307,10 @@ async function exportarCierreExcel(modo){
       if(_recIsComisionBancaria(r.descripcion)){
         recCell={v:'Comisión bancaria',s:{...cs,font:{color:{rgb:'888888'}}}};
       }else if(cargo>0){
-        const key=r._acc+'|'+r.fecha+'|'+Math.round(cargo*100);
-        if(cargoFactura.has(key)){recCell={v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};nFact=cargoFactura.get(key)||'';}
+        const baseKey=(r._acc||'')+'|'+r.fecha+'|'+Math.round(cargo*100);
+        const occ=_occBank[baseKey]||0; _occBank[baseKey]=occ+1;
+        const ref=baseKey+'|'+occ;
+        if(cargoFactura.has(ref)){recCell={v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};nFact=cargoFactura.get(ref)||'';}
         else recCell={v:'✗ Sin factura',s:{...cs,font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
       }else{
         recCell={v:'—',s:{...cs,font:{color:{rgb:'999999'}}}};
@@ -7160,7 +7164,7 @@ function _renderReconcilEgresos(prefix){
     if(el.length===1){
       usedCargo.add(el[0].i);
       const dd=Math.round(dayDiff(el[0].c.fecha,d.cfdiDate));
-      facturaMatches[fi]={egreso:d.e,bank:el[0].c,how:'RFC+monto',dateDiffDays:dd};
+      facturaMatches[fi]={egreso:d.e,bank:el[0].c,bankIdx:el[0].i,how:'RFC+monto',dateDiffDays:dd};
     }
   });
 
@@ -7192,7 +7196,7 @@ function _renderReconcilEgresos(prefix){
       if(usadosFi.has(p.fi)||usadosCi.has(p.ci)||usedCargo.has(p.ci))return;
       usadosFi.add(p.fi);usadosCi.add(p.ci);
       usedCargo.add(p.ci);
-      facturaMatches[p.fi]={egreso:p.d.e,bank:p.c,how:'RFC+monto · greedy',dateDiffDays:Math.round(p.dd)};
+      facturaMatches[p.fi]={egreso:p.d.e,bank:p.c,bankIdx:p.ci,how:'RFC+monto · greedy',dateDiffDays:Math.round(p.dd)};
     });
   });
 
@@ -7203,7 +7207,7 @@ function _renderReconcilEgresos(prefix){
     if(el.length===1){
       usedCargo.add(el[0].i);
       const dd=Math.round(dayDiff(el[0].c.fecha,d.cfdiDate));
-      facturaMatches[fi]={egreso:d.e,bank:el[0].c,how:'monto',dateDiffDays:dd};
+      facturaMatches[fi]={egreso:d.e,bank:el[0].c,bankIdx:el[0].i,how:'monto',dateDiffDays:dd};
     }
   });
 
@@ -7232,7 +7236,7 @@ function _renderReconcilEgresos(prefix){
       if(usadosFi.has(p.fi)||usadosCi.has(p.ci)||usedCargo.has(p.ci))return;
       usadosFi.add(p.fi);usadosCi.add(p.ci);
       usedCargo.add(p.ci);
-      facturaMatches[p.fi]={egreso:p.d.e,bank:p.c,how:'monto · greedy',dateDiffDays:Math.round(p.dd)};
+      facturaMatches[p.fi]={egreso:p.d.e,bank:p.c,bankIdx:p.ci,how:'monto · greedy',dateDiffDays:Math.round(p.dd)};
     });
   });
 
@@ -7244,7 +7248,38 @@ function _renderReconcilEgresos(prefix){
     facturaMatches[fi]={egreso:d.e,bank:null,how:el.length>1?'ambiguo':'sin_match'};
   });
 
+  // GARANTÍA DURA 1-a-1: ningún cargo bancario puede estar asignado a más de una factura.
+  // Si dos facturas apuntan al mismo bankIdx, solo la más cercana en fecha conserva el match;
+  // la otra queda sin banco (✗). Esto asegura coherencia total estatus ↔ movimiento real.
+  const _bankIdxOwner=new Map(); // bankIdx → fi que lo conserva
+  facturaMatches.forEach((m,fi)=>{
+    if(!m||!m.bank||m.bankIdx===undefined)return;
+    if(!_bankIdxOwner.has(m.bankIdx)){_bankIdxOwner.set(m.bankIdx,fi);return;}
+    // conflicto: decidir quién se queda con el cargo (menor dateDiffDays)
+    const prevFi=_bankIdxOwner.get(m.bankIdx);
+    const prev=facturaMatches[prevFi];
+    const prevDD=typeof prev.dateDiffDays==='number'?prev.dateDiffDays:9999;
+    const curDD=typeof m.dateDiffDays==='number'?m.dateDiffDays:9999;
+    if(curDD<prevDD){
+      // la actual gana; la previa queda sin banco
+      facturaMatches[prevFi]={egreso:prev.egreso,bank:null,how:'sin_match'};
+      _bankIdxOwner.set(m.bankIdx,fi);
+    }else{
+      // la previa gana; la actual queda sin banco
+      facturaMatches[fi]={egreso:m.egreso,bank:null,how:'sin_match'};
+    }
+  });
+
   const cargosHuerfanos=cargosBank.filter((c,i)=>!usedCargo.has(i)&&String(c.fecha||'').startsWith(prefix));
+
+  // [DIAGNÓSTICO TEMPORAL] — quitar tras depurar el caso Meta/$405
+  try{
+    const fmt405=facturaMatches.filter(m=>Math.abs(Math.abs(parseFloat(m.egreso.montoMXN||m.egreso.total)||0)-405)<1.5);
+    console.log('%c[DIAG egresos] cargosBank total:'+cargosBank.length+' | cargos $405:'+cargosBank.filter(c=>Math.abs(Math.abs(c.cargo)-405)<1.5).length,'color:#E07A1F;font-weight:bold');
+    console.log('[DIAG] cargos $405 detalle:',cargosBank.filter(c=>Math.abs(Math.abs(c.cargo)-405)<1.5).map(c=>c._acc+'|'+c.fecha));
+    console.log('[DIAG] facturas $405:'+fmt405.length+' →');
+    fmt405.forEach(m=>console.log('   '+(m.egreso.nFactura||'?')+' '+(m.egreso.fecha||'')+' → '+(m.bank?('OK idx'+m.bankIdx+' '+m.bank.fecha):'SIN BANCO')));
+  }catch(diagErr){console.warn('diag err',diagErr);}
 
   // Matching notas de crédito → abono banco
   const usedAbono=new Set();
@@ -7294,6 +7329,22 @@ function _renderReconcilEgresos(prefix){
     return;
   }
 
+  // Para distinguir cargos idénticos (misma cuenta|fecha|monto el mismo día),
+  // numeramos la ocurrencia de cada cargo dentro de su clave. Esto da un bankRef único
+  // que se usa TANTO para el estatus de la factura COMO para asignar el nº de factura
+  // al movimiento en la pestaña "Movimientos banco" (coherencia garantizada).
+  const _occCounter={};
+  const _cargoOcc=new Map(); // índice en cargosBank → ocurrencia
+  cargosBank.forEach((c,i)=>{
+    const k=(c._acc||'')+'|'+c.fecha+'|'+Math.round(Math.abs(c.cargo)*100);
+    const n=_occCounter[k]||0; _occCounter[k]=n+1; _cargoOcc.set(i,n);
+  });
+  const _bankRefOf=(c,idx)=>{
+    if(!c)return '';
+    const occ=(idx!==undefined&&_cargoOcc.has(idx))?_cargoOcc.get(idx):0;
+    return (c._acc||'')+'|'+c.fecha+'|'+Math.round(Math.abs(c.cargo)*100)+'|'+occ;
+  };
+
   // Captura resultados para Excel
   window._recLastEgresos={
     appBruto:appBruto,
@@ -7310,7 +7361,8 @@ function _renderReconcilEgresos(prefix){
       how:m.how,
       bankAcc:m.bank?m.bank._acc:'',
       bankFecha:m.bank?m.bank.fecha:'',
-      bankDesc:m.bank?String(m.bank.descripcion||''):''
+      bankDesc:m.bank?String(m.bank.descripcion||''):'',
+      bankRef:m.bank?_bankRefOf(m.bank,m.bankIdx):''
     })),
     huerfanosBank:cargosHuerfanos.map(c=>({
       fecha:c.fecha,
