@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.26.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.26.3</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.26.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.26.3</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -3116,6 +3116,7 @@ function parseCFDI(xmlStr){
     return {
       uuid,
       fecha:(comp.getAttribute('Fecha')||'').slice(0,10),
+      nFactura:(uuid||'').toUpperCase(),  // Folio fiscal (UUID) del CFDI
       proveedor:emisor?emisor.getAttribute('Nombre'):'',
       rfc:emisor?emisor.getAttribute('Rfc'):'',
       descripcion:desc,
@@ -5243,14 +5244,14 @@ async function exportarCierreExcel(modo){
   // Las retenciones de plataformas van debajo del TOTAL (no se suman)
   const egNormales=egMesAll.filter(e=>e.categoria!=='Retenciones plataformas');
   const egReten=egMesAll.filter(e=>e.categoria==='Retenciones plataformas');
-  const egHdrs=['Fecha','RFC','Nombre','Descripción','Tipo','Fuente','Moneda orig.','Monto orig.','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota factura','Reconciliación','Notas reconciliación'];
+  const egHdrs=['Fecha','N° Factura','RFC','Nombre','Descripción','Tipo','Fuente','Moneda orig.','Monto orig.','FormaPago','MetodoPago','SubTotal','Descuento','IVA','Total','Categoría','Nota factura','Reconciliación','Notas reconciliación'];
   const egData=[egHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
   const egRow=(e,bg)=>{
     const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
     const nm=v=>({v,t:'n',z:'#,##0.00',s:cs});
     const rec=_egRecStatus(e);
     return [
-      {v:e.fecha||'',s:cs},{v:e.rfc||'',s:cs},{v:e.proveedor||'',s:cs},
+      {v:e.fecha||'',s:cs},{v:e.nFactura||'',s:cs},{v:e.rfc||'',s:cs},{v:e.proveedor||'',s:cs},
       {v:e.descripcion||'',s:cs},{v:e.tipoDoc||'Factura',s:cs},{v:e.fuente||'cfdi',s:cs},{v:e.monedaOriginal||e.moneda||'MXN',s:cs},{v:e.montoOriginal||e.total||0,s:{...cs,t:'n',z:'#,##0.00'}},
       {v:e.formaPago||'',s:cs},{v:e.metodoPago||'',s:cs},
       nm(e.subtotal||0),nm(e.descuento||0),nm(e.iva||0),nm(e.total||0),
@@ -5260,23 +5261,23 @@ async function exportarCierreExcel(modo){
     ];
   };
   egNormales.forEach((e,i)=>{egData.push(egRow(e,i%2===0?null:'F2F2F2'));});
-  // Fila TOTAL con fórmulas Excel (suma solo las filas de egresos normales)
+  // Fila TOTAL con fórmulas Excel (SubTotal/Descuento/IVA/Total = columnas L,M,N,O tras insertar N° Factura)
   const egFirst=2, egLast=egData.length; // filas de datos (sin encabezado)
   const egTotStyle={font:{bold:true},fill:{fgColor:{rgb:'E2EFDA'}},border:{top:{style:'thin',color:{rgb:'888888'}}}};
   const egTotNum=col=>({f:`SUM(${col}${egFirst}:${col}${egLast})`,v:0,t:'n',z:'#,##0.00',s:egTotStyle});
   egData.push([
-    {v:'TOTAL',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},
-    egTotNum('K'),egTotNum('L'),egTotNum('M'),egTotNum('N'),
+    {v:'TOTAL',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},
+    egTotNum('L'),egTotNum('M'),egTotNum('N'),egTotNum('O'),
     {v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle},{v:'',s:egTotStyle}
   ]);
   // Retenciones de plataformas DEBAJO del total (no suman)
   if(egReten.length){
     egData.push(egHdrs.map(()=>({v:''}))); // separador
-    egData.push([{v:'RETENCIONES DE PLATAFORMAS (no suman al total)',s:{font:{bold:true,italic:true,color:{rgb:'633806'}},fill:{fgColor:{rgb:'FAEEDA'}}}},...Array(17).fill({v:'',s:{fill:{fgColor:{rgb:'FAEEDA'}}}})]);
+    egData.push([{v:'RETENCIONES DE PLATAFORMAS (no suman al total)',s:{font:{bold:true,italic:true,color:{rgb:'633806'}},fill:{fgColor:{rgb:'FAEEDA'}}}},...Array(18).fill({v:'',s:{fill:{fgColor:{rgb:'FAEEDA'}}}})]);
     egReten.forEach((e,i)=>{egData.push(egRow(e,i%2===0?null:'F2F2F2'));});
   }
   const wsEg=XLSX.utils.aoa_to_sheet(egData);
-  wsEg['!cols']=[{wch:12},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20},{wch:16},{wch:28}];
+  wsEg['!cols']=[{wch:12},{wch:20},{wch:16},{wch:28},{wch:35},{wch:16},{wch:10},{wch:12},{wch:12},{wch:10},{wch:8},{wch:12},{wch:10},{wch:10},{wch:12},{wch:22},{wch:20},{wch:16},{wch:28}];
   wsEg['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
   if(wsEg['!ref'])wsEg['!autofilter']={ref:wsEg['!ref']};
   XLSX.utils.book_append_sheet(wb,wsEg,'Egresos');
@@ -5289,22 +5290,23 @@ async function exportarCierreExcel(modo){
   const hayBanco=Array.isArray(window._recBbvaRows)||Array.isArray(window._recBbvaSndaRows)||Array.isArray(window._recSantanderRows);
   if(hayBanco){
     const allMov=_recAllBankRows().filter(r=>String(r.fecha||'').startsWith(prefix));
-    const cargosOk=new Set();
-    if(_bx){(_bx.facturaMatches||[]).forEach(m=>{if(m.ok&&m.bankAcc)cargosOk.add(m.bankAcc+'|'+m.bankFecha+'|'+Math.round((m.total||0)*100));});}
+    // Map cargo→nFactura de la factura que casó (clave cuenta|fecha|monto)
+    const cargoFactura=new Map();
+    if(_bx){(_bx.facturaMatches||[]).forEach(m=>{if(m.ok&&m.bankAcc){const k=m.bankAcc+'|'+m.bankFecha+'|'+Math.round((m.total||0)*100);cargoFactura.set(k,(m.egreso&&m.egreso.nFactura)||'');}});}
     allMov.sort((a,b)=>String(a._acc).localeCompare(String(b._acc))||String(a.fecha).localeCompare(String(b.fecha)));
-    const bHdrs=['Banco','Fecha','Descripción','Cargo','Abono','Reconciliación'];
+    const bHdrs=['Banco','Fecha','Descripción','Cargo','Abono','Reconciliación','N° Factura'];
     const bData=[bHdrs.map(h=>({v:h,s:{font:{bold:true},border:{bottom:{style:'thin',color:{rgb:'888888'}}}}}))];
     allMov.forEach((r,i)=>{
       const bg=i%2===0?null:'F2F2F2';
       const cs=bg?{fill:{fgColor:{rgb:bg}}}:{};
       const cargo=(typeof r.cargo==='number'&&r.cargo<0)?Math.abs(r.cargo):0;
       const abono=(typeof r.abono==='number'&&r.abono>0)?r.abono:0;
-      let recCell;
+      let recCell, nFact='';
       if(_recIsComisionBancaria(r.descripcion)){
         recCell={v:'Comisión bancaria',s:{...cs,font:{color:{rgb:'888888'}}}};
       }else if(cargo>0){
         const key=r._acc+'|'+r.fecha+'|'+Math.round(cargo*100);
-        if(cargosOk.has(key))recCell={v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};
+        if(cargoFactura.has(key)){recCell={v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};nFact=cargoFactura.get(key)||'';}
         else recCell={v:'✗ Sin factura',s:{...cs,font:{color:{rgb:'7A1F1D'},bold:true},fill:{fgColor:{rgb:'FCEBEB'}}}};
       }else{
         recCell={v:'—',s:{...cs,font:{color:{rgb:'999999'}}}};
@@ -5313,7 +5315,8 @@ async function exportarCierreExcel(modo){
         {v:r._acc||'',s:cs},{v:String(r.fecha||'').slice(0,10),s:cs},{v:String(r.descripcion||''),s:cs},
         {v:cargo||'',t:cargo?'n':'s',z:cargo?'#,##0.00':undefined,s:cs},
         {v:abono||'',t:abono?'n':'s',z:abono?'#,##0.00':undefined,s:cs},
-        recCell
+        recCell,
+        {v:nFact,s:cs}
       ]);
     });
     if(allMov.length){
@@ -5323,10 +5326,10 @@ async function exportarCierreExcel(modo){
         {v:'TOTAL ('+allMov.length+' movimientos)',s:bTot},{v:'',s:bTot},{v:'',s:bTot},
         {f:`SUM(D${bFirst}:D${bLast})`,v:0,t:'n',z:'#,##0.00',s:bTot},
         {f:`SUM(E${bFirst}:E${bLast})`,v:0,t:'n',z:'#,##0.00',s:bTot},
-        {v:'',s:bTot}
+        {v:'',s:bTot},{v:'',s:bTot}
       ]);
       wsBankDeferred=XLSX.utils.aoa_to_sheet(bData);
-      wsBankDeferred['!cols']=[{wch:18},{wch:12},{wch:46},{wch:13},{wch:13},{wch:16}];
+      wsBankDeferred['!cols']=[{wch:18},{wch:12},{wch:46},{wch:13},{wch:13},{wch:16},{wch:38}];
       wsBankDeferred['!views']=[{state:'frozen',ySplit:1,xSplit:0,topLeftCell:'A2'}];
       if(wsBankDeferred['!ref'])wsBankDeferred['!autofilter']={ref:wsBankDeferred['!ref']};
     }
