@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.26.4</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.26.5</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.26.4</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.26.5</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -7246,6 +7246,28 @@ function _renderReconcilEgresos(prefix){
     const d=facData[fi];
     const el=elegiblesFor(d,false);
     facturaMatches[fi]={egreso:d.e,bank:null,how:el.length>1?'ambiguo':'sin_match'};
+  });
+
+  // GARANTÍA DURA 1-a-1: ningún cargo bancario puede estar asignado a más de una factura.
+  // Si dos facturas apuntan al mismo bankIdx, solo la más cercana en fecha conserva el match;
+  // la otra queda sin banco (✗). Esto asegura coherencia total estatus ↔ movimiento real.
+  const _bankIdxOwner=new Map(); // bankIdx → fi que lo conserva
+  facturaMatches.forEach((m,fi)=>{
+    if(!m||!m.bank||m.bankIdx===undefined)return;
+    if(!_bankIdxOwner.has(m.bankIdx)){_bankIdxOwner.set(m.bankIdx,fi);return;}
+    // conflicto: decidir quién se queda con el cargo (menor dateDiffDays)
+    const prevFi=_bankIdxOwner.get(m.bankIdx);
+    const prev=facturaMatches[prevFi];
+    const prevDD=typeof prev.dateDiffDays==='number'?prev.dateDiffDays:9999;
+    const curDD=typeof m.dateDiffDays==='number'?m.dateDiffDays:9999;
+    if(curDD<prevDD){
+      // la actual gana; la previa queda sin banco
+      facturaMatches[prevFi]={egreso:prev.egreso,bank:null,how:'sin_match'};
+      _bankIdxOwner.set(m.bankIdx,fi);
+    }else{
+      // la previa gana; la actual queda sin banco
+      facturaMatches[fi]={egreso:m.egreso,bank:null,how:'sin_match'};
+    }
   });
 
   const cargosHuerfanos=cargosBank.filter((c,i)=>!usedCargo.has(i)&&String(c.fecha||'').startsWith(prefix));
