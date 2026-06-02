@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.27.1-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.28.0-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.27.1-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.28.0-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5310,7 +5310,15 @@ async function exportarCierreExcel(modo){
       const abono=(typeof r.abono==='number'&&r.abono>0)?r.abono:0;
       let recCell, nFact='';
       if(_recIsComisionBancaria(r.descripcion)){
-        recCell={v:'✓ Comisión bancaria',s:{...cs,font:{color:{rgb:'444441'},bold:true},fill:{fgColor:{rgb:'F1EFE8'}}}};
+        // Si la factura del banco cuadró con la suma de comisiones → reconciliada con su nº factura
+        const cm=window._recComisionMatch;
+        const refC=(r._acc||'')+'|'+r.fecha+'|'+Math.round(cargo*100);
+        if(cm&&cm.refs&&cm.refs.indexOf(refC)>=0){
+          recCell={v:'✓ Reconciliado',s:{...cs,font:{color:{rgb:'0F6E56'},bold:true},fill:{fgColor:{rgb:'E1F5EE'}}}};
+          nFact=cm.nFactura||'';
+        }else{
+          recCell={v:'✓ Comisión bancaria',s:{...cs,font:{color:{rgb:'444441'},bold:true},fill:{fgColor:{rgb:'F1EFE8'}}}};
+        }
       }else if(_recIsTraspaso(r.descripcion)){
         recCell={v:'✓ Movimiento interno',s:{...cs,font:{color:{rgb:'444441'},bold:true},fill:{fgColor:{rgb:'F1EFE8'}}}};
       }else if(cargo>0){
@@ -7068,6 +7076,8 @@ function _recIsComisionBancaria(desc){
       || d.includes('COM SERV BCA')
       || d.includes('IVA COM SERV BCA')
       || d.includes('SERV BCA INTERNET')
+      || d.includes('SERV BANCA INTERNET')     // variante con 'BANCA' completo
+      || d.includes('OPS SERV BCA')            // variante OPS SERV BCA IN
       || d.includes('TASA DE DESC CREDITO')   // crédito: IVA TASA DE DESC CREDITO
       || d.includes('TASA DE DES CREDITO');    // crédito: APLI TASA DE DES CREDITO
 }
@@ -7157,9 +7167,13 @@ function _renderReconcilEgresos(prefix){
   });
 
   const elegiblesFor=(d,useRfc)=>{
+    // Rondas con RFC (1-2): tolerancia normal (±$1 MXN, o % para USD).
+    // Rondas por monto solo (3-4): monto EXACTO (sin tolerancia), para no casar
+    // facturas con cargos de monto parecido pero distinto (ej. comisiones).
+    const tol=useRfc?d.tolerancia:0.005;
     return cargosBank.map((c,i)=>({c,i})).filter(({c,i})=>{
       if(usedCargo.has(i))return false;
-      if(Math.abs(Math.abs(c.cargo)-d.monto)>d.tolerancia)return false;
+      if(Math.abs(Math.abs(c.cargo)-d.monto)>tol)return false;
       const bd=new Date(c.fecha);
       const diff=bd-d.cfdiDate;
       if(diff<-ventana||diff>ventana)return false;
@@ -7286,6 +7300,37 @@ function _renderReconcilEgresos(prefix){
 
   const cargosHuerfanos=cargosBank.filter((c,i)=>!usedCargo.has(i)&&String(c.fecha||'').startsWith(prefix));
 
+  // ===== COMISIONES BANCARIAS vs FACTURA DEL BANCO =====
+  // Suma de los cargos de comisión bancaria del mes. Si cuadra con una factura
+  // (por monto total, ±$1), esa factura se reconcilia contra el conjunto de comisiones
+  // y todos esos cargos se marcan reconciliados con su nº de factura.
+  const cargosComision=allBank.filter(r=>r.cargo<0&&String(r.fecha||'').startsWith(prefix)&&_recIsComisionBancaria(r.descripcion));
+  const sumaComisiones=Math.round(cargosComision.reduce((s,c)=>s+Math.abs(c.cargo),0)*100)/100;
+  let comisionFacturaNF='';      // nº de factura del banco (si cuadra)
+  window._recComisionMatch=null;
+  if(sumaComisiones>0){
+    // Buscar factura no usada cuyo total cuadre con la suma de comisiones (±$1)
+    let fiComision=-1;
+    for(let fi=0;fi<facData.length;fi++){
+      const m=facturaMatches[fi];
+      if(m&&m.bank)continue;               // ya casada con un cargo real
+      if(Math.abs(facData[fi].monto-sumaComisiones)<=1){fiComision=fi;break;}
+    }
+    if(fiComision>=0){
+      const eg=facData[fiComision].e;
+      comisionFacturaNF=eg.nFactura||'';
+      // Marcar la factura como reconciliada (match sintético: contra el conjunto de comisiones)
+      facturaMatches[fiComision]={egreso:eg,bank:{_acc:cargosComision[0]?cargosComision[0]._acc:'',fecha:'',descripcion:'Comisiones del mes ('+cargosComision.length+' cargos)'},how:'comisiones',dateDiffDays:0,esComisionSet:true};
+      // Guardar para la pestaña Movimientos banco: qué cargos y con qué factura
+      window._recComisionMatch={
+        nFactura:comisionFacturaNF,
+        uuid:eg.uuid||'',
+        suma:sumaComisiones,
+        refs:cargosComision.map(c=>(c._acc||'')+'|'+c.fecha+'|'+Math.round(Math.abs(c.cargo)*100))
+      };
+    }
+  }
+
   // Matching notas de crédito → abono banco
   const usedAbono=new Set();
   // Casar nota de crédito ↔ abono del banco: monto (±1) Y (proveedor coincide O fecha ±15 días)
@@ -7368,7 +7413,7 @@ function _renderReconcilEgresos(prefix){
       bankFecha:m.bank?m.bank.fecha:'',
       bankDesc:m.bank?String(m.bank.descripcion||''):'',
       bankRef:m.bank?_bankRefOf(m.bank,m.bankIdx):'',
-      notaAuto:(m.bank&&m.bank.fecha&&!String(m.bank.fecha).startsWith(prefix))?('Pagada '+String(m.bank.fecha).slice(0,10)+', fuera del mes'):''
+      notaAuto:(m.bank&&!m.esComisionSet&&m.bank.fecha&&!String(m.bank.fecha).startsWith(prefix))?('Pagada '+String(m.bank.fecha).slice(0,10)+', fuera del mes'):''
     })),
     huerfanosBank:cargosHuerfanos.map(c=>({
       fecha:c.fecha,
