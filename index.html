@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.27.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.27.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.27.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.27.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5310,7 +5310,9 @@ async function exportarCierreExcel(modo){
       const abono=(typeof r.abono==='number'&&r.abono>0)?r.abono:0;
       let recCell, nFact='';
       if(_recIsComisionBancaria(r.descripcion)){
-        recCell={v:'Comisión bancaria',s:{...cs,font:{color:{rgb:'888888'}}}};
+        recCell={v:'✓ Comisión bancaria',s:{...cs,font:{color:{rgb:'444441'},bold:true},fill:{fgColor:{rgb:'F1EFE8'}}}};
+      }else if(_recIsTraspaso(r.descripcion)){
+        recCell={v:'✓ Movimiento interno',s:{...cs,font:{color:{rgb:'444441'},bold:true},fill:{fgColor:{rgb:'F1EFE8'}}}};
       }else if(cargo>0){
         const baseKey=(r._acc||'')+'|'+r.fecha+'|'+Math.round(cargo*100);
         const occ=_occBank[baseKey]||0; _occBank[baseKey]=occ+1;
@@ -7068,6 +7070,13 @@ function _recIsComisionBancaria(desc){
       || d.includes('SERV BCA INTERNET')
       || d.includes('TASA DE DESC CREDITO')   // crédito: IVA TASA DE DESC CREDITO
       || d.includes('TASA DE DES CREDITO');    // crédito: APLI TASA DE DES CREDITO
+}
+
+function _recIsTraspaso(desc){
+  // Traspasos / movimientos entre cuentas propias (no son egreso real ni comisión)
+  const d=String(desc||'').toUpperCase();
+  return d.includes('TRASPASO CUENTAS PROPIAS')
+      || (d.includes('SPEI ENVIADO')&&d.includes('CUENTAS PROPIAS'));
 }
 
 function _recIsInternalMovement(desc){
