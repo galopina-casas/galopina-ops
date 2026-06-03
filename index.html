@@ -126,7 +126,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.28.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.28.1</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +149,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.28.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.28.1</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -5558,7 +5558,12 @@ function _recNoteBtn(mes,bloque,referencia){
   const escaped=has?String(note.nota).replace(/"/g,'&quot;'):'';
   const refSafe=String(referencia).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
   const onclick=`_recOpenNoteModal('${mes}','${bloque}','${refSafe}')`;
-  return `<button onclick="${onclick}" title="${has?escaped:'Agregar nota'}" style="background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;opacity:${has?1:.4}">💬</button>`;
+  const btnId='recnote-'+_recNoteKey(mes,bloque,referencia);
+  return `<button id="${btnId}" onclick="${onclick}" title="${has?escaped:'Agregar nota'}" style="background:none;border:none;cursor:pointer;padding:2px 6px;font-size:14px;opacity:${has?1:.4}">💬</button>`;
+}
+// Clave estable (sin caracteres problemáticos) para el id del botón de nota
+function _recNoteKey(mes,bloque,referencia){
+  return String(mes+'_'+bloque+'_'+referencia).replace(/[^A-Za-z0-9]/g,'_');
 }
 
 function _recOpenNoteModal(mes,bloque,referencia){
@@ -5591,18 +5596,31 @@ async function _recSaveNoteFromModal(){
   const ov=document.getElementById('rec-note-modal-overlay');if(!ov)return;
   const t=document.getElementById('rec-note-textarea');
   const txt=t?t.value:'';
-  const ok=await _recSaveNote(ov.dataset.mes,ov.dataset.bloque,ov.dataset.referencia,txt);
+  const mes=ov.dataset.mes,bloque=ov.dataset.bloque,ref=ov.dataset.referencia;
+  const ok=await _recSaveNote(mes,bloque,ref,txt);
   if(!ok){showAlert('No se pudo guardar la nota. Revisa tu conexión e intenta de nuevo.','error');return;}
   ov.remove();
-  renderReconcil();
+  _recRefreshNoteBtn(mes,bloque,ref);   // actualiza solo ese botón, conserva filtros/scroll
 }
 
 async function _recDeleteNoteFromModal(){
   const ov=document.getElementById('rec-note-modal-overlay');if(!ov)return;
-  const ok=await _recSaveNote(ov.dataset.mes,ov.dataset.bloque,ov.dataset.referencia,'');
+  const mes=ov.dataset.mes,bloque=ov.dataset.bloque,ref=ov.dataset.referencia;
+  const ok=await _recSaveNote(mes,bloque,ref,'');
   if(!ok){showAlert('No se pudo borrar la nota. Revisa tu conexión e intenta de nuevo.','error');return;}
   ov.remove();
-  renderReconcil();
+  _recRefreshNoteBtn(mes,bloque,ref);
+}
+
+// Reemplaza en el DOM solo el botón de nota afectado (sin re-renderizar toda la sección)
+function _recRefreshNoteBtn(mes,bloque,ref){
+  const id='recnote-'+_recNoteKey(mes,bloque,ref);
+  const btn=document.getElementById(id);
+  if(!btn){return;}  // si no está visible, no hay nada que actualizar
+  const tmp=document.createElement('div');
+  tmp.innerHTML=_recNoteBtn(mes,bloque,ref);
+  const nuevo=tmp.firstElementChild;
+  if(nuevo)btn.replaceWith(nuevo);
 }
 window._recBbvaRows=null;     // BBVA Principal (cuenta ingresos+egresos)
 window._recBbvaSndaRows=null; // BBVA Snda (solo egresos)
