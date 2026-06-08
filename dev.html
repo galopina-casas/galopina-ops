@@ -133,7 +133,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.30.0-dev</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.30.1-dev</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -156,7 +156,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.30.0-dev</span></p>
+    <p class="logo">Galopina <em style="color:#E07A1F;font-style:normal">Ops</em> <span class="ver">v33.30.1-dev</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2038,11 +2038,20 @@ function renderTimelineView(){
       const ci=_parseYMD(r.checkin),co=_parseYMD(r.checkout);if(!ci||!co)return '';
       // recortar al rango visible
       const s0=ci<start?start:ci, e0=co>_addDays(end,1)?_addDays(end,1):co;
-      const off=Math.round((s0-start)/86400000); const len=Math.round((e0-s0)/86400000);
-      if(len<=0||off>=14)return '';
+      const offDias=Math.round((s0-start)/86400000); const lenDias=Math.round((e0-s0)/86400000);
+      if(lenDias<=0||offDias>=14)return '';
+      // La barra ocupa de MEDIA columna del checkin a MEDIA columna del checkout:
+      // si la reserva empieza dentro del rango, +0.5 día; si quedó recortada al borde, no.
+      const empiezaVisible=(ci>=start);
+      const terminaVisible=(co<=_addDays(end,1));
+      const off=offDias+(empiezaVisible?0.5:0);
+      // largo = noches; +0.5 al final si el checkout es visible (llega a media columna),
+      // y se compensa el medio día inicial si aplica.
+      let len=lenDias+(terminaVisible?0.5:0)-(empiezaVisible?0.5:0);
+      if(len<=0)return '';
       const col=ORIGEN_COLORS[r.origen]||ORIGEN_COLORS.otro;
-      return `<div class="tl-bar" title="${(r.nombre||'').replace(/"/g,'')} · ${r.origen||''}" onclick="editRes('${r.id}')"
-        style="left:calc(120px + (100% - 120px)*${off}/14 + 2px);width:calc((100% - 120px)*${len}/14 - 4px);background:${col}">${r.nombre||''}</div>`;
+      return `<div class="tl-bar" title="${(r.nombre||'').replace(/"/g,'')} · ${r.origen||''}" onclick="_tlInfo('${r.id}')"
+        style="left:calc(120px + (100% - 120px)*${off}/14 + 1px);width:calc((100% - 120px)*${len}/14 - 2px);background:${col}">${r.nombre||''}</div>`;
     }).join('');
     return `<div class="tl-row"><div class="tl-room">${hab}</div>${barras}</div>`;
   };
@@ -2069,6 +2078,32 @@ function renderTimelineView(){
 }
 function _tlMove(n){_tlStart=_addDays(_tlStart,n);renderTimelineView();}
 function _tlHoy(){_tlStart=_lunesDe(new Date());renderTimelineView();}
+
+// Popup de info rápida al hacer clic en una barra del Timeline
+function _tlInfo(id){
+  const r=gd(KR).find(x=>String(x.id)===String(id));if(!r)return;
+  const costoTotal=(r.consumoCena||0)>0?((r.hospTotal||0)+(r.consumoCena||0)):(r.total||0);
+  const ov=document.createElement('div');
+  ov.id='tl-info-overlay';
+  ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;display:flex;align-items:center;justify-content:center';
+  ov.onclick=e=>{if(e.target===ov)ov.remove();};
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;padding:20px 22px;min-width:300px;max-width:90%;box-shadow:0 8px 30px rgba(0,0,0,.2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <strong style="font-size:15px">Reserva</strong>
+      <button onclick="document.getElementById('tl-info-overlay').remove()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#888;line-height:1">✕</button>
+    </div>
+    <div style="font-size:14px;line-height:2">
+      <div><strong>${r.nombre||'—'}</strong></div>
+      <div>${paisFlag(r.pais)} ${paisNombre(r.pais)||'—'}</div>
+      <div style="color:#666">${r.habitacion||''} · ${String(r.checkin||'').slice(0,10)} → ${String(r.checkout||'').slice(0,10)}</div>
+      <div style="margin-top:6px;font-size:16px;font-weight:600;color:#0F6E56">Total: $${costoTotal.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+    </div>
+    <div style="margin-top:14px;text-align:right">
+      <button class="btn btn-sm" onclick="document.getElementById('tl-info-overlay').remove();editRes('${r.id}')">Ver / editar →</button>
+    </div>
+  </div>`;
+  document.body.appendChild(ov);
+}
 
 function renderRes(){
   // Populate month selector (always refresh to pick up new imports)
