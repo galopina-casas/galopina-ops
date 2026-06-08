@@ -134,7 +134,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.30.2</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.31.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -157,15 +157,15 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.30.2</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.31.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
   <div class="tabs">
-    <button class="tab active" onclick="showTab('dashboard')">Dashboard</button>
-    <button class="tab" onclick="showTab('reservas')">Reservas</button>
-    <button class="tab" onclick="showTab('consumos')">Consumos</button>
-    <button class="tab" onclick="showTab('ingresos')">Resumen Ingresos</button>
+    <button class="tab active" id="tab-dashboard" onclick="showTab('dashboard')">Dashboard</button>
+    <button class="tab" id="tab-reservas" onclick="showTab('reservas')">Reservas</button>
+    <button class="tab" id="tab-consumos" onclick="showTab('consumos')">Consumos</button>
+    <button class="tab" id="tab-ingresos" onclick="showTab('ingresos')">Resumen Ingresos</button>
   <button class="tab" id="tab-egresos" onclick="showTab('egresos')">Resumen Egresos</button>
   <button class="tab" id="tab-reconcil" onclick="showTab('reconcil')">🔗 Reconciliación</button>
     <button class="tab" id="tcierre" onclick="showTab('cierre')">📊 Cierre Mensual</button>
@@ -200,8 +200,8 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
   <div class="sec" id="sec-reservas">
     <div class="sh"><h2>Reservas</h2>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-sm" onclick="showTab('importar')">⬆ Importar</button>
-        <button class="btn btn-primary btn-sm" onclick="showNuevaRes()">+ Nueva</button>
+        <button class="btn btn-sm" id="res-btn-importar" onclick="showTab('importar')">⬆ Importar</button>
+        <button class="btn btn-primary btn-sm" id="res-btn-nueva" onclick="showNuevaRes()">+ Nueva</button>
       </div>
     </div>
 
@@ -908,8 +908,9 @@ function login(rol){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('main-screen').style.display='block';
   document.getElementById('loading-overlay').style.display='flex';
-  document.getElementById('ulabel').textContent=rol==='admin'?'Admin':'Staff';
+  document.getElementById('ulabel').textContent=rol==='admin'?'Admin':(rol==='gerente'?'Gerente':'Staff');
   if(rol!=='admin')document.getElementById('tab-admin').style.display='none';
+  aplicarPermisosRol(rol);
   showAlert('Cargando datos...','info');
   loadAllSheets().then((st)=>{
     if(st&&st.authFail){forceLogout('Tu sesión expiró. Vuelve a entrar.');return;}
@@ -923,6 +924,7 @@ function login(rol){
     document.getElementById('import-preview').innerHTML='';
     const fi=document.getElementById('file-input');if(fi)fi.value='';
     showAlert('Datos cargados correctamente','success');
+    if(rol==='gerente')showTab('reservas');   // gerente arranca en Reservas
   }).catch(()=>{
     document.getElementById('loading-overlay').style.display='none';
     showAlert('Error conectando con Google Sheets','error');
@@ -931,7 +933,24 @@ function login(rol){
     document.getElementById('inp-fecha').value=today();
     document.getElementById('r-antifecha').value='';
     populateAll();renderDash();
+    if(rol==='gerente')showTab('reservas');
   });
+}
+
+// Aplica restricciones visuales según el rol. Gerente: solo Reservas (vistas Día/Timeline, solo lectura).
+function aplicarPermisosRol(rol){
+  const esGerente=(rol==='gerente');
+  // Pestañas: el gerente solo ve Reservas
+  const tabsOcultar=['tab-dashboard','tab-consumos','tab-ingresos','tab-egresos','tab-reconcil','tcierre','tab-admin'];
+  tabsOcultar.forEach(id=>{const el=document.getElementById(id);if(el)el.style.display=esGerente?'none':'';});
+  // Dentro de Reservas: ocultar Importar, +Nueva, y la vista Lista (solo Día/Timeline)
+  const impBtn=document.getElementById('res-btn-importar');
+  const newBtn=document.getElementById('res-btn-nueva');
+  if(impBtn)impBtn.style.display=esGerente?'none':'';
+  if(newBtn)newBtn.style.display=esGerente?'none':'';
+  const rvLista=document.getElementById('rv-lista');
+  if(rvLista)rvLista.style.display=esGerente?'none':'';
+  window._rolGerente=esGerente;
 }
 
 function logout(){SESSION_TOKEN=null;CU=null;document.getElementById('main-screen').style.display='none';document.getElementById('login-screen').style.display='block'}
@@ -965,7 +984,7 @@ function showTab(t){
   document.getElementById('sec-'+t).classList.add('active');
   if(t==='dashboard')renderDash();
   if(t==='cierre')setTimeout(initCierre,50);
-  if(t==='reservas'){setResView('lista');if(window._scrollResList!=null){const sy=window._scrollResList;window._scrollResList=null;setTimeout(()=>window.scrollTo(0,sy),0);}}
+  if(t==='reservas'){setResView(window._rolGerente?'dia':'lista');if(window._scrollResList!=null){const sy=window._scrollResList;window._scrollResList=null;setTimeout(()=>window.scrollTo(0,sy),0);}}
   if(t==='consumos'){initConsList();renderConsList();if(window._scrollConsList!=null){const sy=window._scrollConsList;window._scrollConsList=null;setTimeout(()=>window.scrollTo(0,sy),0);}}
   if(t==='ingresos'){populateIngMeses();renderIngresos()}
   if(t==='admin')renderAdmin();
@@ -1940,6 +1959,8 @@ let _diaRef=new Date();              // fecha activa de la vista Día
 let _tlStart=null;                   // lunes de inicio del Timeline (2 semanas)
 
 function setResView(v){
+  // El gerente no tiene vista Lista: forzar Día
+  if(window._rolGerente && v==='lista')v='dia';
   _resView=v;
   // botones
   [['lista','rv-lista'],['dia','rv-dia'],['timeline','rv-timeline']].forEach(([k,id])=>{
@@ -1988,12 +2009,12 @@ function renderDiaView(){
   const salen =res.filter(r=>String(r.checkout||'').slice(0,10)===refY);
   const quedan=res.filter(r=>{const ci=_parseYMD(r.checkin),co=_parseYMD(r.checkout);return ci&&co&&ci<ref&&co>ref;});
 
-  const filaR=r=>`<tr style="border-bottom:1px solid var(--color-border-300,#E8E6E0);cursor:pointer" onclick="editRes('${r.id}')">
+  const filaR=r=>`<tr style="border-bottom:1px solid var(--color-border-300,#E8E6E0);cursor:pointer" onclick="${window._rolGerente?`_tlInfo('${r.id}')`:`editRes('${r.id}')`}">
       <td style="padding:8px 0">${r.nombre||''}</td>
       <td style="color:#666">${paisFlag(r.pais)} ${r.habitacion||''}</td>
       <td style="color:#888;font-size:12px">${r.noches||''} noche${r.noches==1?'':'s'}</td>
       <td style="text-align:right">${_pillPago(r)}</td></tr>`;
-  const filaS=r=>`<tr style="border-bottom:1px solid var(--color-border-300,#E8E6E0);cursor:pointer" onclick="editRes('${r.id}')">
+  const filaS=r=>`<tr style="border-bottom:1px solid var(--color-border-300,#E8E6E0);cursor:pointer" onclick="${window._rolGerente?`_tlInfo('${r.id}')`:`editRes('${r.id}')`}">
       <td style="padding:8px 0">${r.nombre||''}</td>
       <td style="color:#666">${paisFlag(r.pais)} ${r.habitacion||''}</td>
       <td style="text-align:right">${_pillPago(r)}</td></tr>`;
@@ -2100,7 +2121,7 @@ function _tlInfo(id){
     <div style="background:#1D9E75;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px">
       <span style="color:#fff;font-size:15px;font-weight:500">${r.nombre||'—'}</span>
       <div style="display:flex;align-items:center;gap:10px">
-        <span onclick="document.getElementById('tl-info-overlay').remove();editRes('${r.id}')" title="Editar" style="color:#fff;font-size:16px;cursor:pointer;opacity:.9">✏️</span>
+        ${window._rolGerente?'':`<span onclick="document.getElementById('tl-info-overlay').remove();editRes('${r.id}')" title="Editar" style="color:#fff;font-size:16px;cursor:pointer;opacity:.9">✏️</span>`}
         <span onclick="document.getElementById('tl-info-overlay').remove()" title="Cerrar" style="color:#fff;font-size:18px;cursor:pointer;opacity:.9;line-height:1">✕</span>
       </div>
     </div>
