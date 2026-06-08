@@ -119,6 +119,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .co-dd-item{padding:9px 13px;cursor:pointer;font-size:13px;border-bottom:0.5px solid #EFEDE8;overflow:hidden}
 .co-dd-item:hover{background:#F8F7F4}
 .co-dd-item:last-child{border-bottom:none}
+.tl-head{display:grid;grid-template-columns:120px repeat(14,1fr);font-size:10px;color:#888;background:var(--color-bg-200,#F7F6F2);border-bottom:1px solid var(--color-border-300,#E8E6E0)}
+.tl-head div{padding:6px 2px;text-align:center;border-left:1px solid #F0EEE8}
+.tl-head div:first-child{border-left:none}
+.tl-head .tl-wknd{background:#EFEDE6}
+.tl-row{display:grid;grid-template-columns:120px repeat(14,1fr);align-items:center;border-bottom:1px solid #F4F2EC;position:relative;min-height:40px}
+.tl-room{font-size:12px;font-weight:500;padding:8px 10px;background:var(--color-bg-200,#F7F6F2);height:100%;display:flex;align-items:center;border-right:1px solid var(--color-border-300,#E8E6E0)}
+.tl-bar{position:absolute;height:26px;border-radius:6px;font-size:11px;color:#fff;display:flex;align-items:center;padding:0 8px;overflow:hidden;white-space:nowrap;top:7px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -126,7 +133,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.29.0</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.30.0</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -149,7 +156,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.29.0</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.30.0</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -196,6 +203,16 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
         <button class="btn btn-primary btn-sm" onclick="showNuevaRes()">+ Nueva</button>
       </div>
     </div>
+
+    <!-- Selector de vista: Lista (default) / Día / Timeline -->
+    <div id="res-viewsel" style="display:inline-flex;background:var(--color-bg-200,#F2F0EA);border:1px solid var(--color-border-300,#E8E6E0);border-radius:9px;padding:3px;gap:2px;margin-bottom:.8rem">
+      <button id="rv-lista" class="rv-btn" onclick="setResView('lista')" style="border:none;background:#fff;color:var(--color-accent-main-000,#1D9E75);box-shadow:0 1px 2px rgba(0,0,0,.08);padding:7px 16px;font-size:13px;font-weight:500;border-radius:7px;cursor:pointer">Lista</button>
+      <button id="rv-dia" class="rv-btn" onclick="setResView('dia')" style="border:none;background:none;color:#888;padding:7px 16px;font-size:13px;font-weight:500;border-radius:7px;cursor:pointer">📅 Día</button>
+      <button id="rv-timeline" class="rv-btn" onclick="setResView('timeline')" style="border:none;background:none;color:#888;padding:7px 16px;font-size:13px;font-weight:500;border-radius:7px;cursor:pointer">📊 Timeline</button>
+    </div>
+
+    <!-- VISTA LISTA (default) -->
+    <div id="vista-lista">
     <div style="font-size:11px;color:#888;margin-bottom:.8rem;display:flex;gap:10px">
       <span><span class="dot-cb"></span>Cloudbeds</span><span><span class="dot-m"></span>Manual</span>
     </div>
@@ -215,6 +232,13 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
       </div>
     </div>
     <div id="lista-res"></div>
+    </div>
+
+    <!-- VISTA DÍA -->
+    <div id="vista-dia" style="display:none"></div>
+
+    <!-- VISTA TIMELINE -->
+    <div id="vista-timeline" style="display:none"></div>
   </div>
 
   <div class="sec" id="sec-importar">
@@ -940,7 +964,7 @@ function showTab(t){
   document.getElementById('sec-'+t).classList.add('active');
   if(t==='dashboard')renderDash();
   if(t==='cierre')setTimeout(initCierre,50);
-  if(t==='reservas'){renderRes();if(window._scrollResList!=null){const sy=window._scrollResList;window._scrollResList=null;setTimeout(()=>window.scrollTo(0,sy),0);}}
+  if(t==='reservas'){setResView('lista');if(window._scrollResList!=null){const sy=window._scrollResList;window._scrollResList=null;setTimeout(()=>window.scrollTo(0,sy),0);}}
   if(t==='consumos'){initConsList();renderConsList();if(window._scrollConsList!=null){const sy=window._scrollConsList;window._scrollConsList=null;setTimeout(()=>window.scrollTo(0,sy),0);}}
   if(t==='ingresos'){populateIngMeses();renderIngresos()}
   if(t==='admin')renderAdmin();
@@ -1908,6 +1932,143 @@ async function guardarRes(){
     showAlert('Reserva guardada correctamente','success');
   }
 }
+
+// ===== VISTAS DE RESERVAS: Lista / Día / Timeline =====
+let _resView='lista';
+let _diaRef=new Date();              // fecha activa de la vista Día
+let _tlStart=null;                   // lunes de inicio del Timeline (2 semanas)
+
+function setResView(v){
+  _resView=v;
+  // botones
+  [['lista','rv-lista'],['dia','rv-dia'],['timeline','rv-timeline']].forEach(([k,id])=>{
+    const b=document.getElementById(id);if(!b)return;
+    const on=(k===v);
+    b.style.background=on?'#fff':'none';
+    b.style.color=on?'var(--color-accent-main-000,#1D9E75)':'#888';
+    b.style.boxShadow=on?'0 1px 2px rgba(0,0,0,.08)':'none';
+  });
+  // contenedores
+  const cl=document.getElementById('vista-lista'),cd=document.getElementById('vista-dia'),ct=document.getElementById('vista-timeline');
+  if(cl)cl.style.display=(v==='lista')?'':'none';
+  if(cd)cd.style.display=(v==='dia')?'':'none';
+  if(ct)ct.style.display=(v==='timeline')?'':'none';
+  if(v==='lista')renderRes();
+  else if(v==='dia')renderDiaView();
+  else if(v==='timeline')renderTimelineView();
+}
+
+// Helpers de fecha (local, sin desfase de zona)
+function _ymd(d){return d.toISOString().slice(0,10);}
+function _parseYMD(s){const p=String(s||'').slice(0,10).split('-');return p.length===3?new Date(+p[0],+p[1]-1,+p[2]):null;}
+function _addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function _lunesDe(d){const x=new Date(d);const dow=(x.getDay()+6)%7;return _addDays(x,-dow);} // lunes=0
+const _MESES_ES=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const _DIAS_ES=['Lunes','Martes','Miércoles','Jueves','Viernes','Sábado','Domingo'];
+function _fechaLarga(d){const dow=(d.getDay()+6)%7;return `${_DIAS_ES[dow]} ${d.getDate()} de ${_MESES_ES[d.getMonth()]}, ${d.getFullYear()}`;}
+
+function _resSaldoPend(r){
+  const tot=(r.consumoCena||0)>0?((r.hospTotal||0)+(r.consumoCena||0)):(r.total||0);
+  return Math.round((tot-(r.anticipo||0)-(r.saldo||0))*100)/100;
+}
+function _pillPago(r){
+  const s=_resSaldoPend(r);
+  if(s>0.5)return `<span class="pill" style="background:#FCEBEB;color:#7A1F1D;padding:2px 9px;border-radius:5px;font-size:11px;font-weight:500">Saldo $${s.toLocaleString('es-MX')}</span>`;
+  return `<span class="pill" style="background:#E1F5EE;color:#0F6E56;padding:2px 9px;border-radius:5px;font-size:11px;font-weight:500">Pagado</span>`;
+}
+
+// ---- VISTA DÍA ----
+function renderDiaView(){
+  const cont=document.getElementById('vista-dia');if(!cont)return;
+  const ref=new Date(_diaRef.getFullYear(),_diaRef.getMonth(),_diaRef.getDate());
+  const refY=_ymd(ref);
+  const res=gd(KR).filter(r=>String(r.estado||'')!=='cancelado');
+  const llegan=res.filter(r=>String(r.checkin||'').slice(0,10)===refY);
+  const salen =res.filter(r=>String(r.checkout||'').slice(0,10)===refY);
+  const quedan=res.filter(r=>{const ci=_parseYMD(r.checkin),co=_parseYMD(r.checkout);return ci&&co&&ci<ref&&co>ref;});
+
+  const filaR=r=>`<tr style="border-bottom:1px solid var(--color-border-300,#E8E6E0);cursor:pointer" onclick="editRes('${r.id}')">
+      <td style="padding:8px 0">${r.nombre||''}</td>
+      <td style="color:#666">${paisFlag(r.pais)} ${r.habitacion||''}</td>
+      <td style="color:#888;font-size:12px">${r.noches||''} noche${r.noches==1?'':'s'}</td>
+      <td style="text-align:right">${_pillPago(r)}</td></tr>`;
+  const filaS=r=>`<tr style="border-bottom:1px solid var(--color-border-300,#E8E6E0);cursor:pointer" onclick="editRes('${r.id}')">
+      <td style="padding:8px 0">${r.nombre||''}</td>
+      <td style="color:#666">${paisFlag(r.pais)} ${r.habitacion||''}</td>
+      <td style="text-align:right">${_pillPago(r)}</td></tr>`;
+
+  cont.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+      <div style="font-size:16px;font-weight:600">${_fechaLarga(ref)}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="_diaMove(-1)">‹ Ayer</button>
+        <button class="btn btn-sm" onclick="_diaHoy()">Hoy</button>
+        <button class="btn btn-sm" onclick="_diaMove(1)">Mañana ›</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px">
+      <div style="background:#E1F5EE;border-radius:10px;padding:14px"><div style="font-size:11px;text-transform:uppercase;font-weight:600;color:#0F6E56">↓ Llegadas</div><div style="font-size:30px;font-weight:600;color:#0F6E56;line-height:1.15">${llegan.length}</div><div style="font-size:11px;color:#0F6E56">reservas</div></div>
+      <div style="background:#FAECE7;border-radius:10px;padding:14px"><div style="font-size:11px;text-transform:uppercase;font-weight:600;color:#993C1D">↑ Salidas</div><div style="font-size:30px;font-weight:600;color:#993C1D;line-height:1.15">${salen.length}</div><div style="font-size:11px;color:#993C1D">reservas</div></div>
+      <div style="background:#E6F1FB;border-radius:10px;padding:14px"><div style="font-size:11px;text-transform:uppercase;font-weight:600;color:#185FA5">● Se quedan</div><div style="font-size:30px;font-weight:600;color:#185FA5;line-height:1.15">${quedan.length}</div><div style="font-size:11px;color:#185FA5">habitaciones ocupadas</div></div>
+    </div>
+    <div style="font-size:12px;font-weight:600;color:#0F6E56;margin:14px 0 6px">↓ Llegan hoy</div>
+    ${llegan.length?`<table style="width:100%;border-collapse:collapse;font-size:13px">${llegan.map(filaR).join('')}</table>`:'<div style="font-size:13px;color:#999;padding:6px 0">Sin llegadas</div>'}
+    <div style="font-size:12px;font-weight:600;color:#993C1D;margin:16px 0 6px">↑ Salen hoy</div>
+    ${salen.length?`<table style="width:100%;border-collapse:collapse;font-size:13px">${salen.map(filaS).join('')}</table>`:'<div style="font-size:13px;color:#999;padding:6px 0">Sin salidas</div>'}`;
+}
+function _diaMove(n){_diaRef=_addDays(_diaRef,n);renderDiaView();}
+function _diaHoy(){_diaRef=new Date();renderDiaView();}
+
+// ---- VISTA TIMELINE (2 semanas) ----
+function renderTimelineView(){
+  const cont=document.getElementById('vista-timeline');if(!cont)return;
+  if(!_tlStart)_tlStart=_lunesDe(new Date());
+  const start=_tlStart, dias=[...Array(14)].map((_,i)=>_addDays(start,i));
+  const end=_addDays(start,13);
+  // Habitaciones del catálogo (orden del catálogo)
+  const habs=gd(KH).map(h=>h.nombre).filter(Boolean);
+  const res=gd(KR).filter(r=>String(r.estado||'')!=='cancelado');
+
+  const rango=`${start.getDate()} ${_MESES_ES[start.getMonth()].slice(0,3)} – ${end.getDate()} ${_MESES_ES[end.getMonth()].slice(0,3)} ${end.getFullYear()}`;
+  const headCells=dias.map(d=>{const dow=(d.getDay()+6)%7;const wknd=dow>=5;return `<div${wknd?' class="tl-wknd"':''}>${_DIAS_ES[dow].slice(0,1)}${d.getDate()}</div>`;}).join('');
+
+  // Para cada habitación, las reservas que la ocupan (la habitacion puede ser "A + B")
+  const filaHab=hab=>{
+    const barras=res.filter(r=>String(r.habitacion||'').split(' + ').map(s=>s.trim()).includes(hab)).map(r=>{
+      const ci=_parseYMD(r.checkin),co=_parseYMD(r.checkout);if(!ci||!co)return '';
+      // recortar al rango visible
+      const s0=ci<start?start:ci, e0=co>_addDays(end,1)?_addDays(end,1):co;
+      const off=Math.round((s0-start)/86400000); const len=Math.round((e0-s0)/86400000);
+      if(len<=0||off>=14)return '';
+      const col=ORIGEN_COLORS[r.origen]||ORIGEN_COLORS.otro;
+      return `<div class="tl-bar" title="${(r.nombre||'').replace(/"/g,'')} · ${r.origen||''}" onclick="editRes('${r.id}')"
+        style="left:calc(120px + (100% - 120px)*${off}/14 + 2px);width:calc((100% - 120px)*${len}/14 - 4px);background:${col}">${r.nombre||''}</div>`;
+    }).join('');
+    return `<div class="tl-row"><div class="tl-room">${hab}</div>${barras}</div>`;
+  };
+
+  cont.innerHTML=`
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div style="font-size:14px;font-weight:600">${rango}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" onclick="_tlMove(-7)">‹ Semana ant.</button>
+        <button class="btn btn-sm" onclick="_tlHoy()">Hoy</button>
+        <button class="btn btn-sm" onclick="_tlMove(7)">Semana sig. ›</button>
+      </div>
+    </div>
+    <div style="overflow-x:auto;border:1px solid var(--color-border-300,#E8E6E0);border-radius:10px">
+      <div style="min-width:920px">
+        <div class="tl-head"><div style="text-align:left;padding-left:10px">Habitación</div>${headCells}</div>
+        ${habs.map(filaHab).join('')}
+      </div>
+    </div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#888">
+      ${Object.entries(ORIGEN_COLORS).map(([k,c])=>`<span style="display:inline-flex;align-items:center;gap:5px"><span style="width:10px;height:10px;border-radius:3px;background:${c}"></span>${ORIGEN_LABELS[k]||k}</span>`).join('')}
+    </div>
+    <div style="font-size:11px;color:#999;margin-top:8px">Clic en una barra abre el detalle de la reserva. Celdas vacías = habitación libre.</div>`;
+}
+function _tlMove(n){_tlStart=_addDays(_tlStart,n);renderTimelineView();}
+function _tlHoy(){_tlStart=_lunesDe(new Date());renderTimelineView();}
 
 function renderRes(){
   // Populate month selector (always refresh to pick up new imports)
@@ -4587,6 +4748,7 @@ const CAT_LABELS={
   'hospedaje':'Hospedaje'
 };
 const ORIGEN_COLORS={directo:'#1D9E75',booking:'#003580',airbnb:'#FF5A5F',whatsapp:'#25D366',agencia:'#85B7EB',tablet:'#8B6914',otro:'#B4B2A9'};
+const ORIGEN_LABELS={directo:'Directo',booking:'Booking',airbnb:'Airbnb',whatsapp:'WhatsApp',agencia:'Agencia',tablet:'Tablet',otro:'Otro'};
 const ORDER=['efectivo','transferencia','debito','stripe','cloudbeds','mercadopago','efectivo-nd'];
 const METODOS_LABELS={efectivo:'Efectivo','efectivo-nd':'Efectivo ND',transferencia:'Transferencia',debito:'Débito',mercadopago:'Mercado Pago',stripe:'Stripe',cloudbeds:'CloudBeds'};
 
