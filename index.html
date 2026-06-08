@@ -124,6 +124,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 .tl-head div:first-child{border-left:none}
 .tl-head .tl-wknd{background:#EFEDE6}
 .tl-row{display:grid;grid-template-columns:120px repeat(14,1fr);align-items:center;border-bottom:1px solid #F4F2EC;position:relative;min-height:40px}
+.tl-row.tl-alt{background:#FAF9F6}
 .tl-room{font-size:12px;font-weight:500;padding:8px 10px;background:var(--color-bg-200,#F7F6F2);height:100%;display:flex;align-items:center;border-right:1px solid var(--color-border-300,#E8E6E0)}
 .tl-bar{position:absolute;height:26px;border-radius:6px;font-size:11px;color:#fff;display:flex;align-items:center;padding:0 8px;overflow:hidden;white-space:nowrap;top:7px;cursor:pointer}
 </style>
@@ -133,7 +134,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.30.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.30.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -156,7 +157,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.30.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.30.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -2033,7 +2034,7 @@ function renderTimelineView(){
   const headCells=dias.map(d=>{const dow=(d.getDay()+6)%7;const wknd=dow>=5;return `<div${wknd?' class="tl-wknd"':''}>${_DIAS_ES[dow].slice(0,1)}${d.getDate()}</div>`;}).join('');
 
   // Para cada habitación, las reservas que la ocupan (la habitacion puede ser "A + B")
-  const filaHab=hab=>{
+  const filaHab=(hab,idx)=>{
     const barras=res.filter(r=>String(r.habitacion||'').split(' + ').map(s=>s.trim()).includes(hab)).map(r=>{
       const ci=_parseYMD(r.checkin),co=_parseYMD(r.checkout);if(!ci||!co)return '';
       // recortar al rango visible
@@ -2053,7 +2054,7 @@ function renderTimelineView(){
       return `<div class="tl-bar" title="${(r.nombre||'').replace(/"/g,'')} · ${r.origen||''}" onclick="_tlInfo('${r.id}')"
         style="left:calc(120px + (100% - 120px)*${off}/14 + 1px);width:calc((100% - 120px)*${len}/14 - 2px);background:${col}">${r.nombre||''}</div>`;
     }).join('');
-    return `<div class="tl-row"><div class="tl-room">${hab}</div>${barras}</div>`;
+    return `<div class="tl-row${idx%2?' tl-alt':''}"><div class="tl-room">${hab}</div>${barras}</div>`;
   };
 
   cont.innerHTML=`
@@ -2083,23 +2084,42 @@ function _tlHoy(){_tlStart=_lunesDe(new Date());renderTimelineView();}
 function _tlInfo(id){
   const r=gd(KR).find(x=>String(x.id)===String(id));if(!r)return;
   const costoTotal=(r.consumoCena||0)>0?((r.hospTotal||0)+(r.consumoCena||0)):(r.total||0);
+  const anticipo=r.anticipo||0;
+  const antiPct=r.antiPct||(costoTotal>0?Math.round(anticipo/costoTotal*100):0);
+  const saldoPend=Math.round((costoTotal-anticipo-(r.saldo||0))*100)/100;
+  const fmtM=n=>'$'+Number(n).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const fechas=`${String(r.checkin||'').slice(0,10)} → ${String(r.checkout||'').slice(0,10)}`;
+  const saldoLinea=saldoPend>0.5
+    ? `<span style="font-weight:500;color:#A32D2D">${fmtM(saldoPend)}</span>`
+    : `<span style="font-weight:500;color:#0F6E56">Pagado</span>`;
   const ov=document.createElement('div');
   ov.id='tl-info-overlay';
   ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:9999;display:flex;align-items:center;justify-content:center';
   ov.onclick=e=>{if(e.target===ov)ov.remove();};
-  ov.innerHTML=`<div style="background:#fff;border-radius:12px;padding:20px 22px;min-width:300px;max-width:90%;box-shadow:0 8px 30px rgba(0,0,0,.2)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <strong style="font-size:15px">Reserva</strong>
-      <button onclick="document.getElementById('tl-info-overlay').remove()" style="border:none;background:none;font-size:18px;cursor:pointer;color:#888;line-height:1">✕</button>
+  ov.innerHTML=`<div style="background:#fff;border-radius:12px;width:340px;max-width:90%;overflow:hidden;box-shadow:0 8px 30px rgba(0,0,0,.2)">
+    <div style="background:#1D9E75;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <span style="color:#fff;font-size:15px;font-weight:500">${r.nombre||'—'}</span>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span onclick="document.getElementById('tl-info-overlay').remove();editRes('${r.id}')" title="Editar" style="color:#fff;font-size:16px;cursor:pointer;opacity:.9">✏️</span>
+        <span onclick="document.getElementById('tl-info-overlay').remove()" title="Cerrar" style="color:#fff;font-size:18px;cursor:pointer;opacity:.9;line-height:1">✕</span>
+      </div>
     </div>
-    <div style="font-size:14px;line-height:2">
-      <div><strong>${r.nombre||'—'}</strong></div>
-      <div>${paisFlag(r.pais)} ${paisNombre(r.pais)||'—'}</div>
-      <div style="color:#666">${r.habitacion||''} · ${String(r.checkin||'').slice(0,10)} → ${String(r.checkout||'').slice(0,10)}</div>
-      <div style="margin-top:6px;font-size:16px;font-weight:600;color:#0F6E56">Total: $${costoTotal.toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
-    </div>
-    <div style="margin-top:14px;text-align:right">
-      <button class="btn btn-sm" onclick="document.getElementById('tl-info-overlay').remove();editRes('${r.id}')">Ver / editar →</button>
+    <div style="padding:16px 18px">
+      <div style="display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:10px">
+        <span style="font-size:18px">${paisFlag(r.pais)}</span><span>${paisNombre(r.pais)||'—'}</span>
+      </div>
+      <div style="font-size:13px;color:#666;margin-bottom:14px">${r.habitacion||''} · ${fechas}</div>
+      <div style="border-top:0.5px solid #E8E6E0;padding-top:12px">
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0">
+          <span style="color:#666">Costo total</span><span style="font-weight:500">${fmtM(costoTotal)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0">
+          <span style="color:#666">Anticipo (${antiPct}%)</span><span style="color:#0F6E56">${fmtM(anticipo)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:13px;padding:5px 0;border-top:0.5px solid #E8E6E0;margin-top:4px">
+          <span style="color:#666">Saldo pendiente</span>${saldoLinea}
+        </div>
+      </div>
     </div>
   </div>`;
   document.body.appendChild(ov);
