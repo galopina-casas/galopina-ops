@@ -134,7 +134,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;font-family:sans-serif">
   <div style="width:100%;max-width:340px;background:#FFF;border:0.5px solid #E0DDD8;border-radius:12px;padding:2rem;box-shadow:0 8px 30px rgba(0,0,0,.08)">
-    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.31.1</span></p>
+    <p style="font-size:22px;font-weight:700;margin-bottom:4px">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.31.2</span></p>
     <p style="font-size:13px;color:#888;margin-bottom:1.5rem">Sistema de gestión</p>
     <div style="display:flex;flex-direction:column;gap:12px">
       <div><label style="font-size:12px;color:#666;display:block;margin-bottom:4px">Usuario</label>
@@ -157,7 +157,7 @@ input[type=number]::-webkit-outer-spin-button,input[type=number]::-webkit-inner-
 
 <div id="main-screen" style="display:none">
   <div class="header">
-    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.31.1</span></p>
+    <p class="logo">Galopina <em style="color:#1D9E75;font-style:normal">Ops</em> <span class="ver">v33.31.2</span></p>
     <button class="ubadge" onclick="logout()">👤 <span id="ulabel">Admin</span> · Salir</button>
   </div>
   <div id="alert-box" class="alert"></div>
@@ -822,7 +822,7 @@ const sd=async(k,v)=>{
 // Load all sheets into cache
 async function loadAllSheets(){
   const keys=['KR','KP','KH','KC','KE','KRE','KCE','KRN'];
-  let authFail=false;
+  let authFail=false; const loaded={};
   await Promise.all(keys.map(async k=>{
     try{
       const res=await fetch(SCRIPT_URL,{
@@ -832,10 +832,13 @@ async function loadAllSheets(){
       });
       const json=await res.json();
       if(json&&json.ok===false&&json.error==='No autorizado'){authFail=true;return;}
-      if(json.ok&&Array.isArray(json.data)&&json.data.length)CACHE[k]=sanitizeDates(json.data);
-    }catch(e){console.error('Load error',k,e);}
+      if(json&&json.ok===true&&Array.isArray(json.data)){
+        if(json.data.length)CACHE[k]=sanitizeDates(json.data);
+        loaded[k]=true;   // la hoja respondió OK (aunque venga vacía legítimamente)
+      }
+    }catch(e){console.error('Load error',k,e);}   // loaded[k] queda undefined si falló la carga
   }));
-  return {authFail};
+  return {authFail, loaded};
 }
 
 // Clear session and return to login (used on logout and on expired/invalid token)
@@ -914,9 +917,17 @@ function login(rol){
   showAlert('Cargando datos...','info');
   loadAllSheets().then((st)=>{
     if(st&&st.authFail){forceLogout('Tu sesión expiró. Vuelve a entrar.');return;}
-    if(!gd(KP).length)sd(KP,DP);
-    if(!gd(KH).length)sd(KH,DEFAULT_HABS);
-    if(!gd(KR).length)sd(KR,[...CLOUDBEDS_RES]);
+    const loaded=(st&&st.loaded)||{};
+    // Reservas: si NO cargó (fallo de red/respuesta no-JSON), abortar SIN escribir nada.
+    // Nunca sembrar Reservas con vacío (eso borraría la hoja en el backend).
+    if(!loaded.KR){
+      document.getElementById('loading-overlay').style.display='none';
+      showAlert('No se pudieron cargar las reservas. Recarga la página; no guardes nada todavía.','error');
+      return;
+    }
+    // Catálogos: sembrar defaults solo si la hoja respondió OK y vino vacía (primer uso real).
+    if(loaded.KP && !gd(KP).length)sd(KP,DP);
+    if(loaded.KH && !gd(KH).length)sd(KH,DEFAULT_HABS);
     document.getElementById('inp-fecha').value=today();
     document.getElementById('r-antifecha').value='';
     populateAll();renderDash();
@@ -926,14 +937,9 @@ function login(rol){
     showAlert('Datos cargados correctamente','success');
     if(rol==='gerente')showTab('reservas');   // gerente arranca en Reservas
   }).catch(()=>{
+    // Fallo de conexión: NO re-sembrar nada (evita escrituras con cache vacío). Solo avisar.
     document.getElementById('loading-overlay').style.display='none';
-    showAlert('Error conectando con Google Sheets','error');
-    if(!gd(KP).length)sd(KP,DP);
-    if(!gd(KH).length)sd(KH,DEFAULT_HABS);
-    document.getElementById('inp-fecha').value=today();
-    document.getElementById('r-antifecha').value='';
-    populateAll();renderDash();
-    if(rol==='gerente')showTab('reservas');
+    showAlert('Error conectando con Google Sheets. Recarga la página; no guardes nada todavía.','error');
   });
 }
 
